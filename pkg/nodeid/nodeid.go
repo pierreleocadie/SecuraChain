@@ -19,6 +19,6 @@ func NewNodeID() *NodeID {
 }
 
 // String provides a string representation of the NodeID, which is the UUID string.
-func (nodeId NodeID) String() string {
+func (nodeId *NodeID) String() string {
 	return nodeId.identifier.String()
 }
