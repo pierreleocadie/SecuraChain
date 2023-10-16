@@ -51,6 +51,7 @@ tests:
 all-check: lint secure tests
 
 clean:
+	go clean
 	rm -rf ../bin ../temp
 
 all: all-check build-all
