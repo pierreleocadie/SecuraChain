@@ -64,3 +64,4 @@ linters-settings:
           - github.com/pierreleocadie/SecuraChain
   lll:
     line-length: 150
+
