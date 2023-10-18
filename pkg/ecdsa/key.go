@@ -13,8 +13,8 @@ import (
 type ECDSAKeyPair interface {
 	PrivateKeyString() (string, error)
 	PublicKeyString() (string, error)
-	GetPrivateKey() *ecdsa.PrivateKey
-	GetPublicKey() *ecdsa.PublicKey
+	PrivateKey() *ecdsa.PrivateKey
+	PublicKey() *ecdsa.PublicKey
 	Sign(hash []byte) ([]byte, error)
 	VerifySignature(hash, signature []byte) bool
 	SaveKeys(privateKeyFilename, publicKeyFilename, storagePath string) error
@@ -74,11 +74,11 @@ func (keyPair *ecdsaKeyPair) PublicKeyString() (string, error) {
 	return fmt.Sprintf("%x", bytes), nil
 }
 
-func (keyPair *ecdsaKeyPair) GetPrivateKey() *ecdsa.PrivateKey {
+func (keyPair *ecdsaKeyPair) PrivateKey() *ecdsa.PrivateKey {
 	return keyPair.privateKey
 }
 
-func (keyPair *ecdsaKeyPair) GetPublicKey() *ecdsa.PublicKey {
+func (keyPair *ecdsaKeyPair) PublicKey() *ecdsa.PublicKey {
 	return keyPair.publicKey
 }
 
