@@ -1,5 +1,5 @@
 // Package ecdsakeypair provides utilities for generating and managing ECDSA key pairs.
-package ecdsakeypair
+package ecdsa
 
 import (
 	"crypto/ecdsa"

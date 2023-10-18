@@ -1,4 +1,4 @@
-package ecdsakeypair
+package ecdsa
 
 import (
 	"encoding/pem"
