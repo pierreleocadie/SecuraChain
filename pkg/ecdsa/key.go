@@ -1,4 +1,4 @@
-// Package ecdsakeypair provides utilities for generating and managing ECDSA key pairs.
+// Package ecdsa provides utilities for generating and managing ECDSA key pairs.
 package ecdsa
 
 import (
