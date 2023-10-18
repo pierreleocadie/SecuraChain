@@ -9,8 +9,8 @@ import (
 	"fmt"
 )
 
-// ECDSAKeyPair represents the interface to interact with an ECDSA key pair.
-type ECDSAKeyPair interface {
+// KeyPair represents the interface to interact with an ECDSA key pair.
+type KeyPair interface {
 	PrivateKeyString() (string, error)
 	PublicKeyString() (string, error)
 	PrivateKey() *ecdsa.PrivateKey
@@ -28,7 +28,7 @@ type ecdsaKeyPair struct {
 
 // NewECDSAKeyPair initializes a new ECDSA key pair using the P-256 elliptic curve.
 // It returns a pointer to an ecdsaKeyPair instance and an error, if any occurred during key generation.
-func NewECDSAKeyPair() (ECDSAKeyPair, error) {
+func NewECDSAKeyPair() (KeyPair, error) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err
