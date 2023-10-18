@@ -1,4 +1,4 @@
-package ecdsakeypair
+package ecdsa
 
 import (
 	"encoding/pem"
@@ -51,7 +51,7 @@ func (keyPair *ecdsaKeyPair) saveKeyToFile(keyFunc func() ([]byte, error), filen
 }
 
 // LoadKeys retrieves the private and public keys from specified files and constructs an ECDSA key pair.
-func LoadKeys(privateKeyFilename, publicKeyFilename, storagePath string) (ECDSAKeyPair, error) {
+func LoadKeys(privateKeyFilename, publicKeyFilename, storagePath string) (KeyPair, error) {
 	privateKeyBytes, err := loadKeyFromFile(privateKeyFilename, storagePath)
 	if err != nil {
 		return nil, err

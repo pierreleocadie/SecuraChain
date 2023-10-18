@@ -1,5 +1,5 @@
-// Package ecdsakeypair provides utilities for generating and managing ECDSA key pairs.
-package ecdsakeypair
+// Package ecdsa provides utilities for generating and managing ECDSA key pairs.
+package ecdsa
 
 import (
 	"crypto/ecdsa"
@@ -9,12 +9,12 @@ import (
 	"fmt"
 )
 
-// ECDSAKeyPair represents the interface to interact with an ECDSA key pair.
-type ECDSAKeyPair interface {
+// KeyPair represents the interface to interact with an ECDSA key pair.
+type KeyPair interface {
 	PrivateKeyString() (string, error)
 	PublicKeyString() (string, error)
-	GetPrivateKey() *ecdsa.PrivateKey
-	GetPublicKey() *ecdsa.PublicKey
+	PrivateKey() *ecdsa.PrivateKey
+	PublicKey() *ecdsa.PublicKey
 	Sign(hash []byte) ([]byte, error)
 	VerifySignature(hash, signature []byte) bool
 	SaveKeys(privateKeyFilename, publicKeyFilename, storagePath string) error
@@ -28,7 +28,7 @@ type ecdsaKeyPair struct {
 
 // NewECDSAKeyPair initializes a new ECDSA key pair using the P-256 elliptic curve.
 // It returns a pointer to an ecdsaKeyPair instance and an error, if any occurred during key generation.
-func NewECDSAKeyPair() (ECDSAKeyPair, error) {
+func NewECDSAKeyPair() (KeyPair, error) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err
@@ -74,11 +74,11 @@ func (keyPair *ecdsaKeyPair) PublicKeyString() (string, error) {
 	return fmt.Sprintf("%x", bytes), nil
 }
 
-func (keyPair *ecdsaKeyPair) GetPrivateKey() *ecdsa.PrivateKey {
+func (keyPair *ecdsaKeyPair) PrivateKey() *ecdsa.PrivateKey {
 	return keyPair.privateKey
 }
 
-func (keyPair *ecdsaKeyPair) GetPublicKey() *ecdsa.PublicKey {
+func (keyPair *ecdsaKeyPair) PublicKey() *ecdsa.PublicKey {
 	return keyPair.publicKey
 }
 
