@@ -1,17 +1,15 @@
-package ecdsa_test
+package ecdsa
 
 import (
 	"crypto/sha256"
 	"os"
 	"testing"
-
-	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
 func TestECDSAKeyPairGeneration(t *testing.T) {
 	t.Parallel()
 
-	keyPair, err := ecdsa.NewECDSAKeyPair()
+	keyPair, err := NewECDSAKeyPair()
 	if err != nil {
 		t.Fatalf("Failed to generate ECDSA key pair: %v", err)
 	}
@@ -30,7 +28,7 @@ func TestECDSASignAndVerify(t *testing.T) {
 
 	data := []byte("Hello, SecuraChain!")
 	hash := sha256.Sum256(data)
-	keyPair, _ := ecdsa.NewECDSAKeyPair()
+	keyPair, _ := NewECDSAKeyPair()
 	signature, err := keyPair.Sign(hash[:])
 
 	if err != nil {
@@ -50,7 +48,7 @@ func TestSaveAndLoadKeys(t *testing.T) {
 	publicKeyFile := "temp_public"
 	storagePath := "../../temp"
 
-	keyPair, _ := ecdsa.NewECDSAKeyPair()
+	keyPair, _ := NewECDSAKeyPair()
 
 	err := keyPair.SaveKeys(privateKeyFile, publicKeyFile, storagePath)
 
@@ -58,7 +56,7 @@ func TestSaveAndLoadKeys(t *testing.T) {
 		t.Fatalf("Failed to save keys: %v", err)
 	}
 
-	loadedKeyPair, err := ecdsa.LoadKeys(privateKeyFile, publicKeyFile, storagePath)
+	loadedKeyPair, err := LoadKeys(privateKeyFile, publicKeyFile, storagePath)
 
 	if err != nil {
 		t.Fatalf("Failed to load keys: %v", err)

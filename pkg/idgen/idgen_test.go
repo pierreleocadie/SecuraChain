@@ -1,11 +1,10 @@
 // Package nodeid contains tests for the nodeid package functionalities.
-package idgen_test
+package idgen
 
 import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/pierreleocadie/SecuraChain/pkg/idgen"
 )
 
 // TestNewIdentifier tests the NewIdentifier function.
@@ -14,7 +13,7 @@ import (
 func TestNewIdentifier(t *testing.T) {
 	t.Parallel()
 
-	node := idgen.NewIdentifier()
+	node := NewIdentifier()
 
 	if node == nil {
 		t.Fatal("NewIdentifier returned nil")
@@ -33,7 +32,7 @@ func TestNewIdentifier(t *testing.T) {
 func TestIdentifierString(t *testing.T) {
 	t.Parallel()
 
-	node := idgen.NewIdentifier()
+	node := NewIdentifier()
 	_, err := uuid.Parse(node.String())
 	if err != nil {
 		t.Fatalf("String() did not return a valid UUID: %v", err)
@@ -51,7 +50,7 @@ func TestIdentifierUniqueness(t *testing.T) {
 	ids := make(map[string]bool)
 
 	for i := 0; i < iterations; i++ {
-		node := idgen.NewIdentifier()
+		node := NewIdentifier()
 		if _, exists := ids[node.String()]; exists {
 			t.Fatalf("Duplicate UUID generated: %s", node.String())
 		}
