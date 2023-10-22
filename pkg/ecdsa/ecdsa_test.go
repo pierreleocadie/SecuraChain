@@ -1,26 +1,24 @@
-package ecdsakeypair_test
+package ecdsa
 
 import (
 	"crypto/sha256"
 	"os"
 	"testing"
-
-	"github.com/pierreleocadie/SecuraChain/pkg/ecdsakeypair"
 )
 
 func TestECDSAKeyPairGeneration(t *testing.T) {
 	t.Parallel()
 
-	keyPair, err := ecdsakeypair.NewECDSAKeyPair()
+	keyPair, err := NewECDSAKeyPair()
 	if err != nil {
 		t.Fatalf("Failed to generate ECDSA key pair: %v", err)
 	}
 
-	if keyPair.GetPrivateKey() == nil {
+	if keyPair.PrivateKey() == nil {
 		t.Error("Generated ECDSA key pair has nil private key")
 	}
 
-	if keyPair.GetPublicKey() == nil {
+	if keyPair.PublicKey() == nil {
 		t.Error("Generated ECDSA key pair has nil public key")
 	}
 }
@@ -30,7 +28,7 @@ func TestECDSASignAndVerify(t *testing.T) {
 
 	data := []byte("Hello, SecuraChain!")
 	hash := sha256.Sum256(data)
-	keyPair, _ := ecdsakeypair.NewECDSAKeyPair()
+	keyPair, _ := NewECDSAKeyPair()
 	signature, err := keyPair.Sign(hash[:])
 
 	if err != nil {
@@ -50,7 +48,7 @@ func TestSaveAndLoadKeys(t *testing.T) {
 	publicKeyFile := "temp_public"
 	storagePath := "../../temp"
 
-	keyPair, _ := ecdsakeypair.NewECDSAKeyPair()
+	keyPair, _ := NewECDSAKeyPair()
 
 	err := keyPair.SaveKeys(privateKeyFile, publicKeyFile, storagePath)
 
@@ -58,7 +56,7 @@ func TestSaveAndLoadKeys(t *testing.T) {
 		t.Fatalf("Failed to save keys: %v", err)
 	}
 
-	loadedKeyPair, err := ecdsakeypair.LoadKeys(privateKeyFile, publicKeyFile, storagePath)
+	loadedKeyPair, err := LoadKeys(privateKeyFile, publicKeyFile, storagePath)
 
 	if err != nil {
 		t.Fatalf("Failed to load keys: %v", err)
@@ -68,11 +66,11 @@ func TestSaveAndLoadKeys(t *testing.T) {
 	os.Remove(privateKeyFile)
 	os.Remove(publicKeyFile)
 
-	if loadedKeyPair.GetPrivateKey().D.Cmp(keyPair.GetPrivateKey().D) != 0 {
+	if loadedKeyPair.PrivateKey().D.Cmp(keyPair.PrivateKey().D) != 0 {
 		t.Error("Loaded private key does not match saved private key")
 	}
 
-	if loadedKeyPair.GetPublicKey().X.Cmp(keyPair.GetPublicKey().X) != 0 || loadedKeyPair.GetPublicKey().Y.Cmp(keyPair.GetPublicKey().Y) != 0 {
+	if loadedKeyPair.PublicKey().X.Cmp(keyPair.PublicKey().X) != 0 || loadedKeyPair.PublicKey().Y.Cmp(keyPair.PublicKey().Y) != 0 {
 		t.Error("Loaded public key does not match saved public key")
 	}
 }
