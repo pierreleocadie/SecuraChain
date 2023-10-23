@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
-	"strings"
+
+	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
 
 const (
@@ -52,7 +52,7 @@ func (keyPair *ecdsaKeyPair) saveKeyToFile(keyFunc func() ([]byte, error), filen
 
 // LoadKeys retrieves the private and public keys from specified files and constructs an ECDSA key pair.
 func LoadKeys(privateKeyFilename, publicKeyFilename, storagePath string) (KeyPair, error) {
-	privateKeyBytes, err := loadKeyFromFile(privateKeyFilename, storagePath)
+	privateKeyBytes, err := utils.LoadKeyFromFile(privateKeyFilename, storagePath)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func LoadKeys(privateKeyFilename, publicKeyFilename, storagePath string) (KeyPai
 		return nil, err
 	}
 
-	publicKeyBytes, err := loadKeyFromFile(publicKeyFilename, storagePath)
+	publicKeyBytes, err := utils.LoadKeyFromFile(publicKeyFilename, storagePath)
 	if err != nil {
 		return nil, err
 	}
@@ -76,32 +76,4 @@ func LoadKeys(privateKeyFilename, publicKeyFilename, storagePath string) (KeyPai
 		privateKey: privateKey,
 		publicKey:  publicKey,
 	}, nil
-}
-
-// loadKeyFromFile reads a key from a PEM-formatted file and returns its bytes.
-func loadKeyFromFile(filename, storagePath string) ([]byte, error) {
-	// Construct and clean the path
-	filePath := path.Join(storagePath, filename+fileExtPEM)
-	cleanFilePath := filepath.Clean(filePath)
-
-	// Ensure that the cleaned path still has the intended base directory
-	if !strings.HasPrefix(cleanFilePath, storagePath) {
-		return nil, fmt.Errorf("potential path traversal attempt detected")
-	}
-
-	fileBytes, err := os.ReadFile(cleanFilePath)
-	if err != nil {
-		return nil, err
-	}
-
-	// Decode PEM file to get the raw bytes
-	block, extraBytes := pem.Decode(fileBytes)
-	if block == nil {
-		return nil, fmt.Errorf("failed to decode PEM block from %s", filename)
-	}
-	if len(extraBytes) > 0 {
-		return nil, fmt.Errorf("unexpected extra bytes in PEM file %s", filename)
-	}
-
-	return block.Bytes, nil
 }
