@@ -63,8 +63,8 @@ func TestSaveAndLoadKeys(t *testing.T) {
 	}
 
 	// Clean up temp files
-	os.Remove(privateKeyFile)
-	os.Remove(publicKeyFile)
+	defer os.Remove(storagePath + "/" + privateKeyFile + ".pem")
+	defer os.Remove(storagePath + "/" + publicKeyFile + ".pem")
 
 	if loadedKeyPair.PrivateKey().D.Cmp(keyPair.PrivateKey().D) != 0 {
 		t.Error("Loaded private key does not match saved private key")
