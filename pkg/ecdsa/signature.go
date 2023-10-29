@@ -26,6 +26,6 @@ func (keyPair *ecdsaKeyPair) Sign(hash []byte) ([]byte, error) {
 //
 // Returns:
 //   - A boolean indicating whether the verification was successful.
-func (keyPair *ecdsaKeyPair) VerifySignature(hash, signature []byte) bool {
-	return ecdsa.VerifyASN1(keyPair.publicKey, hash, signature)
+func VerifySignature(publicKey *ecdsa.PublicKey, hash, signature []byte) bool {
+	return ecdsa.VerifyASN1(publicKey, hash, signature)
 }
