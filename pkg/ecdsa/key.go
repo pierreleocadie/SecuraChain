@@ -16,7 +16,6 @@ type KeyPair interface {
 	PrivateKey() *ecdsa.PrivateKey
 	PublicKey() *ecdsa.PublicKey
 	Sign(hash []byte) ([]byte, error)
-	VerifySignature(hash, signature []byte) bool
 	SaveKeys(privateKeyFilename, publicKeyFilename, storagePath string) error
 }
 

@@ -35,7 +35,7 @@ func TestECDSASignAndVerify(t *testing.T) {
 		t.Fatalf("Failed to sign data: %v", err)
 	}
 
-	if !keyPair.VerifySignature(hash[:], signature) {
+	if !VerifySignature(keyPair.PublicKey(), hash[:], signature) {
 		t.Error("Failed to verify the signature of the data")
 	}
 }
