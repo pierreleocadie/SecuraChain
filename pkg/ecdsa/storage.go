@@ -18,11 +18,11 @@ const (
 // SaveKeys saves the private and public keys of the ECDSA key pair to specified files.
 // The keys are saved in PEM format.
 func (keyPair *ecdsaKeyPair) SaveKeys(privateKeyFilename, publicKeyFilename, storagePath string) error {
-	if err := keyPair.saveKeyToFile(keyPair.privateKeyToBytes, privateKeyFilename, storagePath); err != nil {
+	if err := keyPair.saveKeyToFile(keyPair.PrivateKeyToBytes, privateKeyFilename, storagePath); err != nil {
 		return fmt.Errorf("failed to save private key: %w", err)
 	}
 
-	if err := keyPair.saveKeyToFile(keyPair.publicKeyToBytes, publicKeyFilename, storagePath); err != nil {
+	if err := keyPair.saveKeyToFile(keyPair.PublicKeyToBytes, publicKeyFilename, storagePath); err != nil {
 		return fmt.Errorf("failed to save public key: %w", err)
 	}
 
@@ -57,7 +57,7 @@ func LoadKeys(privateKeyFilename, publicKeyFilename, storagePath string) (KeyPai
 		return nil, err
 	}
 
-	privateKey, err := privateKeyFromBytes(privateKeyBytes)
+	privateKey, err := PrivateKeyFromBytes(privateKeyBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func LoadKeys(privateKeyFilename, publicKeyFilename, storagePath string) (KeyPai
 		return nil, err
 	}
 
-	publicKey, err := publicKeyFromBytes(publicKeyBytes)
+	publicKey, err := PublicKeyFromBytes(publicKeyBytes)
 	if err != nil {
 		return nil, err
 	}
