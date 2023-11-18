@@ -62,6 +62,9 @@ linters-settings:
           - $gostd
           - github.com/google
           - github.com/pierreleocadie/SecuraChain
+          - github.com/multiformats
+          - github.com/libp2p
+          - github.com/ipfs
   lll:
     line-length: 150
 
