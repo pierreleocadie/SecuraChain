@@ -15,6 +15,8 @@ type KeyPair interface {
 	PublicKeyString() (string, error)
 	PrivateKey() *ecdsa.PrivateKey
 	PublicKey() *ecdsa.PublicKey
+	PrivateKeyToBytes() ([]byte, error)
+	PublicKeyToBytes() ([]byte, error)
 	Sign(hash []byte) ([]byte, error)
 	SaveKeys(privateKeyFilename, publicKeyFilename, storagePath string) error
 }
@@ -41,20 +43,20 @@ func NewECDSAKeyPair() (KeyPair, error) {
 
 // privateKeyToBytes converts the ECDSA private key into a byte slice.
 // It returns an error if the conversion fails.
-func (keyPair *ecdsaKeyPair) privateKeyToBytes() ([]byte, error) {
+func (keyPair *ecdsaKeyPair) PrivateKeyToBytes() ([]byte, error) {
 	return x509.MarshalECPrivateKey(keyPair.privateKey)
 }
 
 // publicKeyToBytes converts the ECDSA public key into a byte slice.
 // It returns an error if the conversion fails.
-func (keyPair *ecdsaKeyPair) publicKeyToBytes() ([]byte, error) {
+func (keyPair *ecdsaKeyPair) PublicKeyToBytes() ([]byte, error) {
 	return x509.MarshalPKIXPublicKey(keyPair.publicKey)
 }
 
 // PrivateKeyString returns a string representation of the ECDSA private key in hexadecimal format.
 // If there's an error during conversion, it returns an error message.
 func (keyPair *ecdsaKeyPair) PrivateKeyString() (string, error) {
-	bytes, err := keyPair.privateKeyToBytes()
+	bytes, err := keyPair.PrivateKeyToBytes()
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal private key to bytes: %s", err)
 	}
@@ -65,7 +67,7 @@ func (keyPair *ecdsaKeyPair) PrivateKeyString() (string, error) {
 // PublicKeyString returns a string representation of the ECDSA public key in hexadecimal format.
 // If there's an error during conversion, it returns an error message.
 func (keyPair *ecdsaKeyPair) PublicKeyString() (string, error) {
-	bytes, err := keyPair.publicKeyToBytes()
+	bytes, err := keyPair.PublicKeyToBytes()
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal public key to bytes: %s", err)
 	}
@@ -83,7 +85,7 @@ func (keyPair *ecdsaKeyPair) PublicKey() *ecdsa.PublicKey {
 
 // privateKeyFromBytes reconstructs an ECDSA private key from a given byte slice.
 // It returns the resulting private key and an error if the conversion fails.
-func privateKeyFromBytes(bytes []byte) (*ecdsa.PrivateKey, error) {
+func PrivateKeyFromBytes(bytes []byte) (*ecdsa.PrivateKey, error) {
 	privateKey, err := x509.ParseECPrivateKey(bytes)
 	if err != nil {
 		return nil, err
@@ -94,7 +96,7 @@ func privateKeyFromBytes(bytes []byte) (*ecdsa.PrivateKey, error) {
 
 // publicKeyFromBytes reconstructs an ECDSA public key from a given byte slice.
 // It returns the resulting public key and an error if the conversion fails.
-func publicKeyFromBytes(bytes []byte) (*ecdsa.PublicKey, error) {
+func PublicKeyFromBytes(bytes []byte) (*ecdsa.PublicKey, error) {
 	publicKey, err := x509.ParsePKIXPublicKey(bytes)
 	if err != nil {
 		return nil, err
