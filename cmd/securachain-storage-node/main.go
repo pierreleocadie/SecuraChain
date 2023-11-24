@@ -25,15 +25,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-/// ------ Setting up the IPFS Repo
-// PART 1 : GETTING AN IPFS NODE RUNNING
-
 // Prepare and set up the plugins
-// / ------ Setting up the IPFS Repo
-// Permert d'initialiser des plugins dans l'application en utilisant IPFS
-// La fonction permet de configurer les plugins
-// externalPluginsPath indique l'emplacement du répertoires où les plugins externes sont stockés
-// Charge, initialiser et injecte des plugins dans l'application
 func setupPlugins(externalPluginsPath string) error {
 	// Load any external plugins if available on externalPluginsPath
 	plugins, err := loader.NewPluginLoader(filepath.Join(externalPluginsPath, "plugins")) // Charger les plugins depuis externalPluginsPath/plugins
@@ -42,7 +34,6 @@ func setupPlugins(externalPluginsPath string) error {
 	}
 
 	// Load preloaded and external plugins
-	// Initialise les plugins
 	if err := plugins.Initialize(); err != nil {
 		return fmt.Errorf("error initializing plugins: %s", err)
 	}
@@ -56,12 +47,25 @@ func setupPlugins(externalPluginsPath string) error {
 }
 
 // Create an IPFS repo
-// Créer un répertoire IPFS temporaire
-func createTempRepo() (string, error) {
-	repoPath, err := os.MkdirTemp("", "ipfs-shell") // Cette fonction créer un répertoire temporaire, 'ipfs-shell' --> nom du fichier avec un suffixe aléatoire pour garantire l'unicité
+// Créer un répertoire IPFS
+func createRepo() (string, error) {
+	// Récupérer le répertoire personnel de l'utilisateur
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("failed to get temp dir: %s", err)
+		return "", fmt.Errorf("failed to get user home directory: %s", err)
 	}
+
+	ipfsPath := filepath.Join(homeDir, ".ipfs-shell")
+
+	err = os.Mkdir(ipfsPath, 0750) // read and execute for everyone and write for the owner
+	if err != nil && !os.IsExist(err) {
+		log.Fatal(err)
+	}
+
+	// path, err := os.Getwd()
+	// if err != nil {
+	// 	log.Println(err)
+	// }
 
 	// Create a config with default options and a 2048 bit key
 	cfg, err := config.Init(io.Discard, 2048) // Initialise une nouvelle configuration IPFS avec une clé de 2048 bits, io.Discard --> ignorer tous les outputs donc aucune sortie n'est affichée.
@@ -88,12 +92,12 @@ func createTempRepo() (string, error) {
 	}
 
 	// Create the repo with the config
-	err = fsrepo.Init(repoPath, cfg) // Initialise le repo IPFS à l'emplacement spécifié
+	err = fsrepo.Init(ipfsPath, cfg) // Initialise le repo IPFS à l'emplacement spécifié
 	if err != nil {
 		return "", fmt.Errorf("failed to init ephemeral node: %s", err)
 	}
 
-	return repoPath, nil
+	return ipfsPath, nil
 }
 
 // Construct the IPFS node instance itself
@@ -130,8 +134,8 @@ func spawnEphemeral(ctx context.Context) (icore.CoreAPI, *core.IpfsNode, error) 
 		return nil, nil, onceErr
 	}
 
-	// Create a Temporary Repo
-	repoPath, err := createTempRepo()
+	// Create a Repo
+	repoPath, err := createRepo()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create temp repo: %s", err)
 	}
@@ -145,17 +149,6 @@ func spawnEphemeral(ctx context.Context) (icore.CoreAPI, *core.IpfsNode, error) 
 
 	return api, node, err
 }
-
-// Add the file to IPFS
-// (dans le main)
-// Prepare the directory to be added to IPFS
-// (dans le main)
-// Add the directory to IPFS
-// (dans le main)
-
-// PART 3: GETTING THE FILE AND DIRECTORY WE ADDED BACK
-// PART 4: GETTING A FILE FROM THE IPFS NETWORK
-// BONUS : SPAWN A DAEMON ON OUR EXISTING IPFS REPO (ON THE DEFAUKT PATH ~/.ipfs)
 
 func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) error {
 	var wg sync.WaitGroup
@@ -190,10 +183,7 @@ func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) err
 	return nil
 }
 
-// PART 2: ADDIND A FILE AND A DIRECTORTY TO IPFS
-
 // Prepare the file to be added to IPFS
-// retourne un noeud de fichier UnixFS --> format de système de fichiers utilisé par IPFS pour stocker des fichiers et des structures de répertoire
 func getUnixfsNode(path string) (files.Node, error) {
 	st, err := os.Stat(path) // recupère les informations sur le fichier ou le répertoire situé au chemin 'path', retourne une structure 'FileInfo' avec des détails sur la taille du fichier , les permissions etc...
 	if err != nil {
@@ -210,6 +200,8 @@ func getUnixfsNode(path string) (files.Node, error) {
 
 var flagExp = flag.Bool("experimental", false, "enable experimental features")
 
+//
+
 func main() {
 	flag.Parse()
 
@@ -221,6 +213,7 @@ func main() {
 	defer cancel()
 
 	// Spawn a local peer using a temporary path, for testing purposes
+	// Continuer sur l'erreur ici
 	ipfsA, nodeA, err := spawnEphemeral(ctx)
 	if err != nil {
 		panic(fmt.Errorf("failed to spawn peer node: %s", err))
@@ -246,7 +239,7 @@ func main() {
 
 	fmt.Println("\n-- Adding and getting back files & directories --")
 
-	inputBasePath := "../example-folder/"
+	inputBasePath := "./example-folder/"
 	inputPathFile := inputBasePath + "ipfs.paper.draft3.pdf"
 	inputPathDirectory := inputBasePath + "test-dir"
 
@@ -312,25 +305,8 @@ func main() {
 
 	peerMa := fmt.Sprintf("/ip4/127.0.0.1/udp/4010/p2p/%s", nodeA.Identity.String())
 	bootstrapNodes := []string{
-		// IPFS Bootstrapper nodes.
-		// "/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
-		// "/dnsaddr/bootstrap.libp2p.io/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
-		// "/dnsaddr/bootstrap.libp2p.io/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
-		// "/dnsaddr/bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
-
-		// IPFS Cluster Pinning nodes
-		// "/ip4/138.201.67.219/tcp/4001/p2p/QmUd6zHcbkbcs7SMxwLs48qZVX3vpcM8errYS7xEczwRMA",
-		// "/ip4/138.201.67.219/udp/4001/quic/p2p/QmUd6zHcbkbcs7SMxwLs48qZVX3vpcM8errYS7xEczwRMA",
-		// "/ip4/138.201.67.220/tcp/4001/p2p/QmNSYxZAiJHeLdkBg38roksAR9So7Y5eojks1yjEcUtZ7i",
-		// "/ip4/138.201.67.220/udp/4001/quic/p2p/QmNSYxZAiJHeLdkBg38roksAR9So7Y5eojks1yjEcUtZ7i",
-		// "/ip4/138.201.68.74/tcp/4001/p2p/QmdnXwLrC8p1ueiq2Qya8joNvk3TVVDAut7PrikmZwubtR",
-		// "/ip4/138.201.68.74/udp/4001/quic/p2p/QmdnXwLrC8p1ueiq2Qya8joNvk3TVVDAut7PrikmZwubtR",
-		// "/ip4/94.130.135.167/tcp/4001/p2p/QmUEMvxS2e7iDrereVYc5SWPauXPyNwxcy9BXZrC1QTcHE",
-		// "/ip4/94.130.135.167/udp/4001/quic/p2p/QmUEMvxS2e7iDrereVYc5SWPauXPyNwxcy9BXZrC1QTcHE",
-
-		// You can add more nodes here, for example, another IPFS node you might have running locally, mine was:
-		// "/ip4/127.0.0.1/tcp/4010/p2p/QmZp2fhDLxjYue2RiUvLwT9MWdnbDxam32qYFnGmxZDh5L",
-		// "/ip4/127.0.0.1/udp/4010/quic/p2p/QmZp2fhDLxjYue2RiUvLwT9MWdnbDxam32qYFnGmxZDh5L",
+		"/ip4/13.37.148.174/tcp/1211/p2p/12D3KooWRJeqfc9RrGevpLNto8WXiYVsPhuF1qtso6dZehEY7FmP",
+		"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWRJeqfc9RrGevpLNto8WXiYVsPhuF1qtso6dZehEY7FmP",
 		peerMa,
 	}
 	go func() {
@@ -359,4 +335,7 @@ func main() {
 	fmt.Printf("Wrote the file to %s\n", outputPath)
 
 	fmt.Println("\nAll done! You just finalized your first tutorial on how to use Kubo as a library")
+
+	nodeID := nodeA.Identity.String()
+	fmt.Printf("%v", nodeID)
 }
