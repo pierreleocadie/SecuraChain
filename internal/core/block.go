@@ -12,7 +12,7 @@ type Header struct {
 	Version    uint32 `json:"version"`     // Blockchain version
 	PrevBlock  []byte `json:"prev_block"`  // 256-bit hash of the previous block header
 	MerkleRoot []byte `json:"merkle_root"` // 256-bit hash based on all of the transactions in the block
-	Difficulty uint32 `json:"difficulty"`  // Difficulty level of the block -> target bits
+	TargetBits uint32 `json:"target_bits"` // Target bits is a way to set the mining difficulty
 	Timestamp  int64  `json:"timestamp"`   // Current timestamp as seconds since 1970-01-01T00:00 UTC
 	Height     uint32 `json:"height"`      // Block height
 	Nonce      uint32 `json:"nonce"`       // 32-bit number (starts at 0) used to generate the required hash
@@ -36,30 +36,35 @@ func NewBlock(transactions []Transaction, prevBlockHash []byte, height uint32, m
 		Header: Header{
 			Version:    1,
 			PrevBlock:  prevBlockHash,
-			Difficulty: 24,
+			TargetBits: 24,
 			Timestamp:  time.Now().Unix(),
 			Height:     height,
 			MinerAddr:  minerAddrBytes,
 		},
 		Transactions: transactions,
 	}
-	block.Header.MerkleRoot = block.calculateMerkleRoot()
+	block.Header.MerkleRoot = block.ComputeMerkleRoot()
 	return block
 }
 
 // calculateMerkleRoot computes the Merkle root of the transactions in the block
-func (b *Block) calculateMerkleRoot() []byte {
+func (b *Block) ComputeMerkleRoot() []byte {
 	var txHashes [][]byte
 	for _, tx := range b.Transactions {
 		txBytes, _ := json.Marshal(tx)
 		txHash := sha256.Sum256(txBytes)
 		txHashes = append(txHashes, txHash[:])
 	}
-	return calculateMerkleRootForHashes(txHashes)
+	return computeMerkleRootForHashes(txHashes)
 }
 
 // calculateMerkleRootForHashes recursively calculates the Merkle root for a slice of transaction hashes
-func calculateMerkleRootForHashes(hashes [][]byte) []byte {
+func computeMerkleRootForHashes(hashes [][]byte) []byte {
+	if len(hashes) == 0 {
+		// Handle the case where there are no transactions
+		return []byte{}
+	}
+
 	if len(hashes) == 1 {
 		return hashes[0]
 	}
@@ -73,7 +78,7 @@ func calculateMerkleRootForHashes(hashes [][]byte) []byte {
 			newLayer = append(newLayer, hashes[i])
 		}
 	}
-	return calculateMerkleRootForHashes(newLayer)
+	return computeMerkleRootForHashes(newLayer)
 }
 
 // Serialize converts the block into a byte slice
@@ -93,12 +98,7 @@ func DeserializeBlock(data []byte) (*Block, error) {
 
 // SignBlock signs the block with the given private key and adds the signature to the block header
 func (b *Block) SignBlock(privateKey ecdsa.KeyPair) error {
-	headerBytes, err := json.Marshal(b.Header)
-	if err != nil {
-		return err
-	}
-
-	headerHash := sha256.Sum256(headerBytes)
+	headerHash := ComputeHash(b)
 	signature, err := privateKey.Sign(headerHash[:])
 	if err != nil {
 		return err
