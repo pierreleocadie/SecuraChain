@@ -15,6 +15,7 @@ import (
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/pierreleocadie/SecuraChain/internal"
 
 	"github.com/ipfs/kubo/config"
 	"github.com/ipfs/kubo/core"
@@ -342,6 +343,9 @@ func main() {
 
 	fmt.Printf("Got directory back from IPFS (IPFS path: %s) and wrote it to %s\n", cidDirectory.String(), outputPathDirectory)
 
+	internal.FetchFileFromIPFS(ctx, ipfsA, cidFile, "./")
+
+	//FetchDirectoryFromIPFS
 	/// --- Part IV: Getting a file from the IPFS Network
 
 	fmt.Println("\n-- Going to connect to a few nodes in the Network as bootstrappers --")
