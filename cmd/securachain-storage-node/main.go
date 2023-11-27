@@ -198,9 +198,49 @@ func getUnixfsNode(path string) (files.Node, error) {
 	return f, nil
 }
 
-var flagExp = flag.Bool("experimental", false, "enable experimental features")
+// // Mémoire donnée de l'utilisateur à la blockchain
+// func memoryToBlockchain() error {
+// 	var memory int
+// 	fmt.Println("Combien de mémoire souhaitez vous donner à la blockchain en Mo ?")
+// 	fmt.Scanln(&memory)
+// 	fmt.Printf("Vous souhaitez donner: %vMo", memory)
 
-//
+// 	file, err := os.Create(".storage_allocation.txt")
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer file.Close()
+
+// 	// Allouer l'espace
+// 	err = file.Truncate(int64(memory) * 1024 * 1024)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
+
+// Vérifier l'espace disponbile du disque physique
+// func CheckDiskSpace(path string, sizeInMB int64 ) (bool, error){
+// 	var stat syscall.Statfs_t
+
+// 	// Obtenir les informations de l'espace disque
+// 	err := syscall.Statfs(oath, &stat)
+// 	if err != nil {
+// 		return false, err
+// 	}
+
+// 	// Calculer l'espace disponible
+// 	availableSpace := stat.Bavail * uint64(stat.Bsize)
+
+// 	// Convertir la taille demandée en bytes
+// 	requiredSpace := sizeInMB * 1024 *1024
+
+// 	// Vérifier si l'espace disque nécessaire est disponible
+// 	return availableSpace > = uint64(requiredSpace), nil
+
+// }
+
+var flagExp = flag.Bool("experimental", false, "enable experimental features")
 
 func main() {
 	flag.Parse()
@@ -267,12 +307,15 @@ func main() {
 	fmt.Printf("Added directory to IPFS with CID %s\n", cidDirectory.String())
 
 	/// --- Part III: Getting the file and directory you added back
+	outputBasePath := "exampleDir"
 
-	outputBasePath, err := os.MkdirTemp("", "example")
+	err = os.Mkdir(outputBasePath, 0755)
 	if err != nil {
-		panic(fmt.Errorf("could not create output dir (%v)", err))
+		panic(fmt.Errorf("Error creating directory :(%v)", err))
 	}
+
 	fmt.Printf("output folder: %s\n", outputBasePath)
+	os.Chdir(outputBasePath)
 	outputPathFile := outputBasePath + strings.Split(cidFile.String(), "/")[2]
 	outputPathDirectory := outputBasePath + strings.Split(cidDirectory.String(), "/")[2]
 
@@ -303,17 +346,15 @@ func main() {
 
 	fmt.Println("\n-- Going to connect to a few nodes in the Network as bootstrappers --")
 
-	peerMa := fmt.Sprintf("/ip4/127.0.0.1/udp/4010/p2p/%s", nodeA.Identity.String())
 	bootstrapNodes := []string{
-		"/ip4/13.37.148.174/tcp/1211/p2p/12D3KooWRJeqfc9RrGevpLNto8WXiYVsPhuF1qtso6dZehEY7FmP",
 		"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWRJeqfc9RrGevpLNto8WXiYVsPhuF1qtso6dZehEY7FmP",
-		peerMa,
 	}
 	go func() {
 		err := connectToPeers(ctx, ipfsB, bootstrapNodes)
 		if err != nil {
 			log.Printf("failed connect to peers: %s", err)
 		}
+
 	}()
 
 	exampleCIDStr := peerCidFile.RootCid().String()
@@ -334,8 +375,10 @@ func main() {
 
 	fmt.Printf("Wrote the file to %s\n", outputPath)
 
-	fmt.Println("\nAll done! You just finalized your first tutorial on how to use Kubo as a library")
+	fmt.Println("\nAll done!")
 
+	// -----------------------------
 	nodeID := nodeA.Identity.String()
-	fmt.Printf("%v", nodeID)
+	fmt.Printf("%v\n", nodeID)
+
 }
