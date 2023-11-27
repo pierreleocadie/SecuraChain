@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	icore "github.com/ipfs/boxo/coreiface"
@@ -310,42 +309,10 @@ func main() {
 	/// --- Part III: Getting the file and directory you added back
 	outputBasePath := "exampleDir"
 
-	err = os.Mkdir(outputBasePath, 0755)
-	if err != nil {
-		panic(fmt.Errorf("Error creating directory :(%v)", err))
-	}
+	internal.FetchFileFromIPFS(ctx, ipfsB, cidFile)
+	internal.FetchFileFromIPFS(ctx, ipfsA, peerCidFile)
+	internal.FetchDirectoryFromIPFS(ctx, ipfsB, cidDirectory)
 
-	fmt.Printf("output folder: %s\n", outputBasePath)
-	os.Chdir(outputBasePath)
-	outputPathFile := outputBasePath + strings.Split(cidFile.String(), "/")[2]
-	outputPathDirectory := outputBasePath + strings.Split(cidDirectory.String(), "/")[2]
-
-	rootNodeFile, err := ipfsB.Unixfs().Get(ctx, cidFile)
-	if err != nil {
-		panic(fmt.Errorf("could not get file with CID: %s", err))
-	}
-
-	err = files.WriteTo(rootNodeFile, outputPathFile)
-	if err != nil {
-		panic(fmt.Errorf("could not write out the fetched CID: %s", err))
-	}
-	fmt.Printf("got file back from IPFS (IPFS path: %s) and wrote it to %s\n", cidFile.String(), outputPathFile)
-
-	rootNodeDirectory, err := ipfsB.Unixfs().Get(ctx, cidDirectory)
-	if err != nil {
-		panic(fmt.Errorf("could not get file with CID: %s", err))
-	}
-
-	err = files.WriteTo(rootNodeDirectory, outputPathDirectory)
-	if err != nil {
-		panic(fmt.Errorf("could not write out the fetched CID: %s", err))
-	}
-
-	fmt.Printf("Got directory back from IPFS (IPFS path: %s) and wrote it to %s\n", cidDirectory.String(), outputPathDirectory)
-
-	internal.FetchFileFromIPFS(ctx, ipfsA, cidFile, "./")
-
-	//FetchDirectoryFromIPFS
 	/// --- Part IV: Getting a file from the IPFS Network
 
 	fmt.Println("\n-- Going to connect to a few nodes in the Network as bootstrappers --")
