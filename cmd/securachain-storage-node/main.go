@@ -12,7 +12,6 @@ import (
 
 	icore "github.com/ipfs/boxo/coreiface"
 	"github.com/ipfs/boxo/files"
-	"github.com/ipfs/boxo/path"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pierreleocadie/SecuraChain/internal"
 
@@ -307,7 +306,7 @@ func main() {
 	fmt.Printf("Added directory to IPFS with CID %s\n", cidDirectory.String())
 
 	/// --- Part III: Getting the file and directory you added back
-	outputBasePath := "exampleDir"
+	// outputBasePath := "exampleDir"
 
 	internal.FetchFileFromIPFS(ctx, ipfsB, cidFile)
 	internal.FetchFileFromIPFS(ctx, ipfsA, peerCidFile)
@@ -328,23 +327,24 @@ func main() {
 
 	}()
 
-	exampleCIDStr := peerCidFile.RootCid().String()
+	// exampleCIDStr := peerCidFile.RootCid().String()
 
-	fmt.Printf("Fetching a file from the network with CID %s\n", exampleCIDStr)
-	outputPath := outputBasePath + exampleCIDStr
-	testCID := path.FromCid(peerCidFile.RootCid())
+	// fmt.Printf("Fetching a file from the network with CID %s\n", exampleCIDStr)
+	// outputPath := outputBasePath + exampleCIDStr
+	// testCID := path.FromCid(peerCidFile.RootCid())
 
-	rootNode, err := ipfsB.Unixfs().Get(ctx, testCID)
-	if err != nil {
-		panic(fmt.Errorf("could not get file with CID: %s", err))
-	}
+	// rootNode, err := ipfsB.Unixfs().Get(ctx, testCID)
+	// if err != nil {
+	// 	panic(fmt.Errorf("could not get file with CID: %s", err))
+	// }
 
-	err = files.WriteTo(rootNode, outputPath)
-	if err != nil {
-		panic(fmt.Errorf("could not write out the fetched CID: %s", err))
-	}
+	// err = files.WriteTo(rootNode, outputPath)
+	// if err != nil {
+	// 	panic(fmt.Errorf("could not write out the fetched CID: %s", err))
+	// }
 
-	fmt.Printf("Wrote the file to %s\n", outputPath)
+	// fmt.Printf("Wrote the file to %s\n", outputPath)
+	internal.FetchFileFromIPFSNetwork(ctx, ipfsB, peerCidFile)
 
 	fmt.Println("\nAll done!")
 

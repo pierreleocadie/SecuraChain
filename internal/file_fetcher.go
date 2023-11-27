@@ -14,7 +14,7 @@ import (
 
 // Pour récupérer des fichiers ou des dossiers IPFS en utilisant leur CID
 func FetchFileFromIPFS(ctx context.Context, ipfsApi icore.CoreAPI, cidFile path.ImmutablePath) error {
-	outputBasePath := "./Ipfs-files-downloaded/"
+	outputBasePath := "./Ipfs-files-downloaded/files"
 	// S'assurez que le dossier de sortie existe
 	if err := os.MkdirAll(outputBasePath, 0755); err != nil {
 		return fmt.Errorf("error creating output directory: %v", err)
@@ -59,6 +59,34 @@ func FetchDirectoryFromIPFS(ctx context.Context, ipfsApi icore.CoreAPI, cidDirec
 	}
 
 	fmt.Printf("Got directory back from IPFS (IPFS path: %s) and wrote it to %s\n", cidDirectory.String(), outputPathDirectory)
+
+	return nil
+}
+
+func FetchFileFromIPFSNetwork(ctx context.Context, ipfsApi icore.CoreAPI, peerCidFile path.ImmutablePath) error {
+	outputBasePathNetwork := "./Ipfs-files-downloaded/Network/"
+
+	// S'assurez que le dossier de sortie existe
+	if err := os.MkdirAll(outputBasePathNetwork, 0755); err != nil {
+		return fmt.Errorf("error creating output directory: %v", err)
+	}
+	exampleCIDStr := peerCidFile.RootCid().String()
+
+	fmt.Printf("Fetching a file from the network with CID %s\n", exampleCIDStr)
+	outputPath := outputBasePathNetwork + exampleCIDStr
+	testCID := path.FromCid(peerCidFile.RootCid())
+
+	rootNode, err := ipfsApi.Unixfs().Get(ctx, testCID)
+	if err != nil {
+		return fmt.Errorf("could not get file with CID: %s", err)
+	}
+
+	err = files.WriteTo(rootNode, outputPath)
+	if err != nil {
+		panic(fmt.Errorf("could not write out the fetched CID: %s", err))
+	}
+
+	fmt.Printf("Wrote the file to %s\n", outputPath)
 
 	return nil
 }
