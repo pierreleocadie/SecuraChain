@@ -182,63 +182,6 @@ func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) err
 	return nil
 }
 
-// Prepare the file to be added to IPFS
-func getUnixfsNode(path string) (files.Node, error) {
-	st, err := os.Stat(path) // recupère les informations sur le fichier ou le répertoire situé au chemin 'path', retourne une structure 'FileInfo' avec des détails sur la taille du fichier , les permissions etc...
-	if err != nil {
-		return nil, err
-	}
-
-	f, err := files.NewSerialFile(path, false, st) // créer un noeud de fichier UnixFS à partir du chemin donné, 1re par accès au fichier, 2em si le fichier doit être traté comme un fichier caché si oui alors 'false', 3eme structure 'FileInfo' obtenu avant
-	if err != nil {
-		return nil, err
-	}
-
-	return f, nil
-}
-
-// // Mémoire donnée de l'utilisateur à la blockchain
-// func memoryToBlockchain() error {
-// 	var memory int
-// 	fmt.Println("Combien de mémoire souhaitez vous donner à la blockchain en Mo ?")
-// 	fmt.Scanln(&memory)
-// 	fmt.Printf("Vous souhaitez donner: %vMo", memory)
-
-// 	file, err := os.Create(".storage_allocation.txt")
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer file.Close()
-
-// 	// Allouer l'espace
-// 	err = file.Truncate(int64(memory) * 1024 * 1024)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// Vérifier l'espace disponbile du disque physique
-// func CheckDiskSpace(path string, sizeInMB int64 ) (bool, error){
-// 	var stat syscall.Statfs_t
-
-// 	// Obtenir les informations de l'espace disque
-// 	err := syscall.Statfs(oath, &stat)
-// 	if err != nil {
-// 		return false, err
-// 	}
-
-// 	// Calculer l'espace disponible
-// 	availableSpace := stat.Bavail * uint64(stat.Bsize)
-
-// 	// Convertir la taille demandée en bytes
-// 	requiredSpace := sizeInMB * 1024 *1024
-
-// 	// Vérifier si l'espace disque nécessaire est disponible
-// 	return availableSpace > = uint64(requiredSpace), nil
-
-// }
-
 var flagExp = flag.Bool("experimental", false, "enable experimental features")
 
 func main() {
@@ -278,35 +221,16 @@ func main() {
 
 	fmt.Println("\n-- Adding and getting back files & directories --")
 
-	inputBasePath := "./example-folder/"
-	inputPathFile := inputBasePath + "ipfs.paper.draft3.pdf"
-	inputPathDirectory := inputBasePath + "test-dir"
-
-	someFile, err := getUnixfsNode(inputPathFile)
+	cidFile, err := internal.AddFileToIPFS(ctx, ipfsB, "./example-folder/ipfs.paper.draft3.pdf")
 	if err != nil {
-		panic(fmt.Errorf("could not get File: %s", err))
+		panic(fmt.Errorf("Could not add file to ipfs : %s", err))
 	}
-
-	cidFile, err := ipfsB.Unixfs().Add(ctx, someFile)
+	cidDirectory, err := internal.AddDirectoryToIPFS(ctx, ipfsB, "./example-folder/test-dir")
 	if err != nil {
-		panic(fmt.Errorf("could not add File: %s", err))
+		panic(fmt.Errorf("Could not add directory to ipfs : %s", err))
 	}
-
-	fmt.Printf("Added file to IPFS with CID %s\n", cidFile.String())
-	someDirectory, err := getUnixfsNode(inputPathDirectory)
-	if err != nil {
-		panic(fmt.Errorf("could not get File: %s", err))
-	}
-
-	cidDirectory, err := ipfsB.Unixfs().Add(ctx, someDirectory)
-	if err != nil {
-		panic(fmt.Errorf("could not add Directory: %s", err))
-	}
-
-	fmt.Printf("Added directory to IPFS with CID %s\n", cidDirectory.String())
 
 	/// --- Part III: Getting the file and directory you added back
-	// outputBasePath := "exampleDir"
 
 	internal.FetchFileFromIPFS(ctx, ipfsB, cidFile)
 	internal.FetchFileFromIPFS(ctx, ipfsA, peerCidFile)
@@ -327,23 +251,6 @@ func main() {
 
 	}()
 
-	// exampleCIDStr := peerCidFile.RootCid().String()
-
-	// fmt.Printf("Fetching a file from the network with CID %s\n", exampleCIDStr)
-	// outputPath := outputBasePath + exampleCIDStr
-	// testCID := path.FromCid(peerCidFile.RootCid())
-
-	// rootNode, err := ipfsB.Unixfs().Get(ctx, testCID)
-	// if err != nil {
-	// 	panic(fmt.Errorf("could not get file with CID: %s", err))
-	// }
-
-	// err = files.WriteTo(rootNode, outputPath)
-	// if err != nil {
-	// 	panic(fmt.Errorf("could not write out the fetched CID: %s", err))
-	// }
-
-	// fmt.Printf("Wrote the file to %s\n", outputPath)
 	internal.FetchFileFromIPFSNetwork(ctx, ipfsB, peerCidFile)
 
 	fmt.Println("\nAll done!")
