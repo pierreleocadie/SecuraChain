@@ -240,16 +240,7 @@ func main() {
 
 	fmt.Println("\n-- Going to connect to a few nodes in the Network as bootstrappers --")
 
-	bootstrapNodes := []string{
-		"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWRJeqfc9RrGevpLNto8WXiYVsPhuF1qtso6dZehEY7FmP",
-	}
-	go func() {
-		err := connectToPeers(ctx, ipfsB, bootstrapNodes)
-		if err != nil {
-			log.Printf("failed connect to peers: %s", err)
-		}
-
-	}()
+	internal.ConnectToBoostrapNodes(ctx, nodeA)
 
 	internal.FetchFileFromIPFSNetwork(ctx, ipfsB, peerCidFile)
 
