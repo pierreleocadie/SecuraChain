@@ -10,6 +10,13 @@ import (
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
+// FileTransferHttpRequestFactory implements the TransactionFactory interface
+type FileTransferHttpRequestFactory struct{}
+
+func (f *FileTransferHttpRequestFactory) CreateTransaction(data []byte) (Transaction, error) {
+	return DeserializeFileTransferHttpRequest(data)
+}
+
 type FileTransferHttpRequest struct {
 	FileTransferId        uuid.UUID             `json:"fileTransferId" binding:"required"`        // File transfer ID - UUID
 	AnnouncementId        uuid.UUID             `json:"announcementId" binding:"required"`        // Announcement ID - UUID
@@ -28,6 +35,22 @@ type FileTransferHttpRequest struct {
 	File                  *multipart.FileHeader `form:"file" json:"file" binding:"required"`      // File - multipart.FileHeader
 	FileTransferSignature []byte                `json:"fileTransferSignature" binding:"required"` // File transfer signature - ECDSA signature
 	FileTransferTimestamp int64                 `json:"fileTransferTimestamp" binding:"required"` // File transfer timestamp - Unix timestamp
+	TransactionVerifier                         // embed TransactionVerifier struct to inherit VerifyTransaction method
+}
+
+func (f *FileTransferHttpRequest) Serialize() ([]byte, error) {
+	return json.Marshal(f)
+}
+
+// Override SpecificData for FileTransferHttpRequest
+func (f *FileTransferHttpRequest) SpecificData() ([]byte, error) {
+	// Remove signature from file transfer before verifying
+	signature := f.FileTransferSignature
+	f.FileTransferSignature = []byte{}
+
+	defer func() { f.FileTransferSignature = signature }() // Restore after serialization
+
+	return json.Marshal(f)
 }
 
 func NewFileTransferHttpRequest(announcement *ClientAnnouncement, response *StorageNodeResponse, file *multipart.FileHeader, keyPair ecdsa.KeyPair) *FileTransferHttpRequest {
@@ -65,10 +88,6 @@ func NewFileTransferHttpRequest(announcement *ClientAnnouncement, response *Stor
 	return fileTransfer
 }
 
-func (f *FileTransferHttpRequest) Serialize() ([]byte, error) {
-	return json.Marshal(f)
-}
-
 func DeserializeFileTransferHttpRequest(data []byte) (*FileTransferHttpRequest, error) {
 	var fileTransfer FileTransferHttpRequest
 	err := json.Unmarshal(data, &fileTransfer)
@@ -76,26 +95,4 @@ func DeserializeFileTransferHttpRequest(data []byte) (*FileTransferHttpRequest, 
 		return nil, err
 	}
 	return &fileTransfer, nil
-}
-
-func VerifyFileTransferHttpRequest(fileTransfer *FileTransferHttpRequest) bool {
-	// Remove signature from file transfer before verifying
-	fileTransferSignature := fileTransfer.FileTransferSignature
-	fileTransfer.FileTransferSignature = []byte{}
-
-	fileTransferBytes, err := json.Marshal(fileTransfer)
-	if err != nil {
-		return false
-	}
-	fileTransferHash := sha256.Sum256(fileTransferBytes)
-
-	// Restore signature
-	fileTransfer.FileTransferSignature = fileTransferSignature
-
-	ownerAddr, err := ecdsa.PublicKeyFromBytes(fileTransfer.OwnerAddress)
-	if err != nil {
-		return false
-	}
-
-	return ecdsa.VerifySignature(ownerAddr, fileTransferHash[:], fileTransferSignature)
 }

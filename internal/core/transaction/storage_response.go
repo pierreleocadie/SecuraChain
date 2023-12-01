@@ -9,6 +9,13 @@ import (
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
+// StorageNodeResponseFactory implements the TransactionFactory interface
+type StorageNodeResponseFactory struct{}
+
+func (f *StorageNodeResponseFactory) CreateTransaction(data []byte) (Transaction, error) {
+	return DeserializeStorageNodeResponse(data)
+}
+
 type StorageNodeResponse struct {
 	ResponseId            uuid.UUID `json:"responseId"`            // Response ID - UUID
 	NodeAddress           []byte    `json:"nodeAddress"`           // Node address - ECDSA public key
@@ -24,6 +31,22 @@ type StorageNodeResponse struct {
 	Checksum              []byte    `json:"checksum"`              // Checksum - SHA256
 	OwnerSignature        []byte    `json:"ownerSignature"`        // Owner signature - ECDSA signature
 	AnnouncementTimestamp int64     `json:"announcementTimestamp"` // Announcement timestamp - Unix timestamp
+	TransactionVerifier             // embed TransactionVerifier struct to inherit VerifyTransaction method
+}
+
+func (r *StorageNodeResponse) Serialize() ([]byte, error) {
+	return json.Marshal(r)
+}
+
+// Override SpecificData for StorageNodeResponse
+func (r *StorageNodeResponse) SpecificData() ([]byte, error) {
+	// Remove signature from response before verifying
+	signature := r.NodeSignature
+	r.NodeSignature = []byte{}
+
+	defer func() { r.NodeSignature = signature }() // Restore after serialization
+
+	return json.Marshal(r)
 }
 
 func NewStorageNodeResponse(nodeAddress ecdsa.KeyPair, nodeCID []byte, apiEndpoint string, announcement *ClientAnnouncement) *StorageNodeResponse {
@@ -62,10 +85,6 @@ func NewStorageNodeResponse(nodeAddress ecdsa.KeyPair, nodeCID []byte, apiEndpoi
 	return response
 }
 
-func (r *StorageNodeResponse) Serialize() ([]byte, error) {
-	return json.Marshal(r)
-}
-
 func DeserializeStorageNodeResponse(data []byte) (*StorageNodeResponse, error) {
 	var response StorageNodeResponse
 	err := json.Unmarshal(data, &response)
@@ -73,26 +92,4 @@ func DeserializeStorageNodeResponse(data []byte) (*StorageNodeResponse, error) {
 		return nil, err
 	}
 	return &response, nil
-}
-
-func VerifyStorageNodeResponse(response *StorageNodeResponse) bool {
-	// Remove signature from response before verifying
-	nodeSignature := response.NodeSignature
-	response.NodeSignature = []byte{}
-
-	responseBytes, err := json.Marshal(response)
-	if err != nil {
-		return false
-	}
-	responseHash := sha256.Sum256(responseBytes)
-
-	// Restore signature
-	response.NodeSignature = nodeSignature
-
-	nodeAddress, err := ecdsa.PublicKeyFromBytes(response.NodeAddress)
-	if err != nil {
-		return false
-	}
-
-	return ecdsa.VerifySignature(nodeAddress, responseHash[:], nodeSignature)
 }

@@ -48,7 +48,7 @@ func ValidateBlock(currentBlock *block.Block, prevBlock *block.Block) bool {
 	}
 
 	// Verify the block's signature is valid
-	if !VerifyBlockSignature(currentBlock) {
+	if !block.VerifyBlock(currentBlock) {
 		log.Printf("Block validation failed: Signature is invalid")
 		return false
 	}

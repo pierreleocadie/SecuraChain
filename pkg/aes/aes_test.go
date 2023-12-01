@@ -17,6 +17,8 @@ const (
 )
 
 func TestNewAESKey(t *testing.T) {
+	t.Parallel()
+
 	key, err := NewAESKey()
 	if err != nil {
 		t.Fatalf("NewAESKey failed: %v", err)
@@ -28,6 +30,8 @@ func TestNewAESKey(t *testing.T) {
 }
 
 func TestAESKeyString(t *testing.T) {
+	t.Parallel()
+
 	key, _ := NewAESKey()
 	encoded := key.String()
 	raw, _ := base64.StdEncoding.DecodeString(encoded)
@@ -38,6 +42,8 @@ func TestAESKeyString(t *testing.T) {
 }
 
 func TestSaveAndLoadKey(t *testing.T) {
+	t.Parallel()
+
 	key, _ := NewAESKey()
 
 	// Save the key to a file.
@@ -59,6 +65,8 @@ func TestSaveAndLoadKey(t *testing.T) {
 }
 
 func TestEncryptDecryptFile(t *testing.T) {
+	t.Parallel()
+
 	key, _ := NewAESKey()
 
 	// Create a test file for encryption.
