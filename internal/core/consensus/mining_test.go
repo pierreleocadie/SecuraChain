@@ -4,7 +4,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/pierreleocadie/SecuraChain/internal/core"
+	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
@@ -13,22 +14,22 @@ func TestMineBlock(t *testing.T) {
 	t.Parallel()
 
 	// Create a sample block
-	minerKeyPair, _ := ecdsa.NewECDSAKeyPair() // Replace with actual key pair generation
-	transactions := []core.Transaction{}       // Empty transaction list for simplicity
+	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
+	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
 
 	t.Logf("Creating block")
-	block := core.NewBlock(transactions, []byte("GenesisBlock"), 1, minerKeyPair)
+	newBlock := block.NewBlock(transactions, []byte("GenesisBlock"), 1, minerKeyPair)
 
 	// Mine the block
 	t.Logf("Mining block")
-	MineBlock(block)
+	MineBlock(newBlock)
 
 	// Verify if the mined block's hash satisfies the target
 	target := big.NewInt(1)
-	target.Lsh(target, uint(256-block.Header.TargetBits))
+	target.Lsh(target, uint(256-newBlock.Header.TargetBits))
 
 	t.Logf("Verifying block hash")
-	hash := core.ComputeHash(block)
+	hash := block.ComputeHash(newBlock)
 	hashInt := new(big.Int)
 	hashInt.SetBytes(hash)
 

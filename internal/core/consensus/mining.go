@@ -4,24 +4,24 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/pierreleocadie/SecuraChain/internal/core"
+	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 )
 
 // MineBlock performs the mining operation for a new block
-func MineBlock(block *core.Block) {
+func MineBlock(currentBlock *block.Block) {
 	var maxNonce uint32 = math.MaxUint32
 
 	target := big.NewInt(1)
-	target.Lsh(target, uint(256-block.Header.TargetBits))
+	target.Lsh(target, uint(256-currentBlock.Header.TargetBits))
 
 	for nonce := uint32(0); nonce < maxNonce; nonce++ {
-		block.Header.Nonce = nonce
-		hash := core.ComputeHash(block)
+		currentBlock.Header.Nonce = nonce
+		hash := block.ComputeHash(currentBlock)
 		hashInt := new(big.Int)
 		hashInt.SetBytes(hash[:])
 
 		if hashInt.Cmp(target) == -1 {
-			block.Header.Nonce = nonce
+			currentBlock.Header.Nonce = nonce
 			break
 		}
 	}

@@ -4,19 +4,20 @@ package consensus
 import (
 	"testing"
 
-	"github.com/pierreleocadie/SecuraChain/internal/core"
+	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
 func TestValidateBlock(t *testing.T) {
 	t.Parallel()
 
-	minerKeyPair, _ := ecdsa.NewECDSAKeyPair() // Replace with actual key pair generation
-	transactions := []core.Transaction{}       // Empty transaction list for simplicity
+	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
+	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
 
 	// Create a previous block
 	t.Logf("Creating previous block")
-	prevBlock := core.NewBlock(transactions, []byte("GenesisBlock"), 1, minerKeyPair)
+	prevBlock := block.NewBlock(transactions, []byte("GenesisBlock"), 1, minerKeyPair)
 	t.Logf("Mining previous block")
 	MineBlock(prevBlock)
 	t.Logf("Signing previous block")
@@ -24,10 +25,10 @@ func TestValidateBlock(t *testing.T) {
 
 	// Create a valid block
 	t.Logf("Computing previous block hash")
-	prevBlockHash := core.ComputeHash(prevBlock)
+	prevBlockHash := block.ComputeHash(prevBlock)
 
 	t.Logf("Creating valid block")
-	validBlock := core.NewBlock(transactions, prevBlockHash, 2, minerKeyPair)
+	validBlock := block.NewBlock(transactions, prevBlockHash, 2, minerKeyPair)
 	t.Logf("Mining valid block")
 	MineBlock(validBlock)
 	t.Logf("Signing valid block")
@@ -39,7 +40,7 @@ func TestValidateBlock(t *testing.T) {
 	}
 
 	// Create an invalid block (wrong previous hash)
-	invalidBlock := core.NewBlock(transactions, []byte("wronghash"), 3, minerKeyPair)
+	invalidBlock := block.NewBlock(transactions, []byte("wronghash"), 3, minerKeyPair)
 	MineBlock(invalidBlock)
 	invalidBlock.SignBlock(minerKeyPair)
 

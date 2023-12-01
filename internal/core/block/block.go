@@ -1,10 +1,11 @@
-package core
+package block
 
 import (
 	"crypto/sha256"
 	"encoding/json"
 	"time"
 
+	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
@@ -22,11 +23,11 @@ type Header struct {
 
 type Block struct {
 	Header
-	Transactions []Transaction `json:"transactions"`
+	Transactions []transaction.Transaction `json:"transactions"`
 }
 
 // NewBlock creates a new block using the provided transactions and the previous block hash
-func NewBlock(transactions []Transaction, prevBlockHash []byte, height uint32, minerAddr ecdsa.KeyPair) *Block {
+func NewBlock(transactions []transaction.Transaction, prevBlockHash []byte, height uint32, minerAddr ecdsa.KeyPair) *Block {
 	minerAddrBytes, err := minerAddr.PublicKeyToBytes()
 	if err != nil {
 		return nil
