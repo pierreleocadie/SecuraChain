@@ -41,19 +41,3 @@ func AddFileToIPFS(ctx context.Context, ipfsApi icore.CoreAPI, inputPathFile str
 
 	return cidFile, nil
 }
-
-// Pour ajouter un répertoire à IPFS
-// inputPathDirectory --> where the folder is
-func AddDirectoryToIPFS(ctx context.Context, ipfsApi icore.CoreAPI, inputPathDirectory string) (path.ImmutablePath, error) {
-	someDirectory, err := getUnixfsNode(inputPathDirectory)
-	if err != nil {
-		panic(fmt.Errorf("could not get Directory: %s", err))
-	}
-	cidDirectory, err := ipfsApi.Unixfs().Add(ctx, someDirectory)
-	if err != nil {
-		panic(fmt.Errorf("could not add Directory: %s", err))
-	}
-	fmt.Printf("Added directory to IPFS with CID %s\n", cidDirectory.String())
-
-	return cidDirectory, nil
-}
