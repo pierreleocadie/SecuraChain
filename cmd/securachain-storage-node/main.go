@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	icore "github.com/ipfs/boxo/coreiface"
-	"github.com/ipfs/boxo/files"
+	files "github.com/ipfs/go-ipfs-files"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pierreleocadie/SecuraChain/internal"
 
@@ -60,11 +60,6 @@ func createRepo() (string, error) {
 	if err != nil && !os.IsExist(err) {
 		log.Fatal(err)
 	}
-
-	// path, err := os.Getwd()
-	// if err != nil {
-	// 	log.Println(err)
-	// }
 
 	// Create a config with default options and a 2048 bit key
 	cfg, err := config.Init(io.Discard, 2048) // Initialise une nouvelle configuration IPFS avec une clé de 2048 bits, io.Discard --> ignorer tous les outputs donc aucune sortie n'est affichée.
@@ -123,8 +118,9 @@ func createNode(ctx context.Context, repoPath string) (*core.IpfsNode, error) {
 
 var loadPluginsOnce sync.Once
 
-// Spawns a node to be used just for this run (i.e. creates a tmp repo).
-func spawnEphemeral(ctx context.Context) (icore.CoreAPI, *core.IpfsNode, error) {
+// Spawns a node
+func spawnNode(ctx context.Context) (icore.CoreAPI, *core.IpfsNode, error) {
+	// Charge les plugins une seule fois
 	var onceErr error
 	loadPluginsOnce.Do(func() {
 		onceErr = setupPlugins("")
@@ -133,17 +129,19 @@ func spawnEphemeral(ctx context.Context) (icore.CoreAPI, *core.IpfsNode, error) 
 		return nil, nil, onceErr
 	}
 
-	// Create a Repo
+	// Create a Repo IPFS
 	repoPath, err := createRepo()
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create temp repo: %s", err)
+		return nil, nil, fmt.Errorf("failed to create the repo ./ipfs-shell: %s", err)
 	}
 
+	// Configuration et Initialisation du Noeud IPFS avec les options définies
 	node, err := createNode(ctx, repoPath)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	// Créer une instance de l'API Core IPFS pour interagir avec le réseau IPFS
 	api, err := coreapi.NewCoreAPI(node)
 
 	return api, node, err
@@ -187,76 +185,65 @@ var flagExp = flag.Bool("experimental", false, "enable experimental features")
 func main() {
 	flag.Parse()
 
-	/// --- Part I: Getting a IPFS node running
+	// ---------- Part I: Getting a IPFS node running  -------------------
 
 	fmt.Println("-- Getting an IPFS node running -- ")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Spawn a local peer using a temporary path, for testing purposes
-	// Continuer sur l'erreur ici
-	ipfsA, nodeA, err := spawnEphemeral(ctx)
+	// Créer un noeud de stockage ipfs sur la machine
+	ipfsA, nodeA, err := spawnNode(ctx)
+
 	if err != nil {
-		panic(fmt.Errorf("failed to spawn peer node: %s", err))
+		panic(fmt.Errorf("failed to spawn the node %s", err))
 	}
 
 	peerCidFile, err := ipfsA.Unixfs().Add(ctx,
-		files.NewBytesFile([]byte("hello from ipfs 101 in Kubo")))
+		files.NewBytesFile([]byte("hello from ipfs node created with Kubo on the machine")))
 	if err != nil {
 		panic(fmt.Errorf("could not add File: %s", err))
 	}
 
 	fmt.Printf("Added file to peer with CID %s\n", peerCidFile.String())
-	// Spawn a node using a temporary path, creating a temporary repo for the run
-	fmt.Println("Spawning Kubo node on a temporary repo")
-	ipfsB, _, err := spawnEphemeral(ctx)
-	if err != nil {
-		panic(fmt.Errorf("failed to spawn ephemeral node: %s", err))
-	}
 
 	fmt.Println("IPFS node is running")
 
-	/// --- Part II: Adding a file and a directory to IPFS
+	// ---------- Part II: Adding a file and a directory to IPFS  -------------------
 
 	fmt.Println("\n-- Adding and getting back files & directories --")
 
-	cidFile, err := internal.AddFileToIPFS(ctx, ipfsB, "./example-folder/ipfs.paper.draft3.pdf")
+	cidFile, err := internal.AddFileToIPFS(ctx, ipfsA, "./example-folder/ipfs.paper.draft3.pdf")
 	if err != nil {
 		panic(fmt.Errorf("Could not add file to ipfs : %s", err))
 	}
-	cidDirectory, err := internal.AddDirectoryToIPFS(ctx, ipfsB, "./example-folder/test-dir")
+	cidDirectory, err := internal.AddDirectoryToIPFS(ctx, ipfsA, "./example-folder/test-dir")
 	if err != nil {
 		panic(fmt.Errorf("Could not add directory to ipfs : %s", err))
 	}
 
-	/// --- Part III: Getting the file and directory you added back
+	// ---------- Part III: Getting the file and directory you added back -------------------
 
-	internal.FetchFileFromIPFS(ctx, ipfsB, cidFile)
+	internal.FetchFileFromIPFS(ctx, ipfsA, cidFile)
 	internal.FetchFileFromIPFS(ctx, ipfsA, peerCidFile)
-	internal.FetchDirectoryFromIPFS(ctx, ipfsB, cidDirectory)
+	internal.FetchDirectoryFromIPFS(ctx, ipfsA, cidDirectory)
 
-	/// --- Part IV: Getting a file from the IPFS Network
-	internal.FetchFileFromIPFSNetwork(ctx, ipfsB, peerCidFile)
+	//  ---------- Part IV: Getting a file from the IPFS Network -------------------
+	internal.FetchFileFromIPFSNetwork(ctx, ipfsA, peerCidFile)
 
-	//fmt.Println("\n-- Going to connect to a few nodes in the Network as bootstrappers --")
-	// Connect to boostrap nodes
-	//internal.ConnectToBoostrapNodes(ctx, nodeA)
+	// ---------- Connection to Boostrap Nodes ----------------
 
-	nodeA.Identity.String()
-	// ---------- Detect Files ----------------
-	cidDetectedFile, err := internal.MonitorinRepoInit(ctx, ipfsB)
+	fmt.Println("\n-- Going to connect to a few boostrap nodesnodes in the Network --")
+	internal.ConnectToBoostrapNodes(ctx, nodeA)
+
+	// ---------- Monitoring Folder ----------------
+
+	cidDetectedFile, err := internal.MonitorinRepoInit(ctx, ipfsA)
 	if err != nil {
 		log.Printf("nulllllll %s", err)
 	}
 
-	internal.FetchFileFromIPFS(ctx, ipfsB, cidDetectedFile)
-
-	// c := make(chan os.Signal, 1)
-	// signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	// <-c
-
-	// -----------------------------
+	internal.FetchFileFromIPFS(ctx, ipfsA, cidDetectedFile)
 
 	fmt.Println("\nAll done!")
 
