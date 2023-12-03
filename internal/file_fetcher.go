@@ -14,7 +14,7 @@ import (
 
 // Pour récupérer des fichiers ou des dossiers IPFS en utilisant leur CID
 func FetchFileFromIPFS(ctx context.Context, ipfsApi icore.CoreAPI, cidFile path.ImmutablePath) error {
-	outputBasePath := "./Ipfs-files-downloaded/files"
+	outputBasePath := "./download/files"
 	// S'assurez que le dossier de sortie existe
 	if err := os.MkdirAll(outputBasePath, 0755); err != nil {
 		return fmt.Errorf("error creating output directory: %v", err)

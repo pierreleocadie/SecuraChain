@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	icore "github.com/ipfs/boxo/coreiface"
-	files "github.com/ipfs/go-ipfs-files"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pierreleocadie/SecuraChain/internal"
 
@@ -199,37 +198,20 @@ func main() {
 		panic(fmt.Errorf("failed to spawn the node %s", err))
 	}
 
-	peerCidFile, err := ipfsA.Unixfs().Add(ctx,
-		files.NewBytesFile([]byte("hello from ipfs node created with Kubo on the machine")))
-	if err != nil {
-		panic(fmt.Errorf("could not add File: %s", err))
-	}
-
-	fmt.Printf("Added file to peer with CID %s\n", peerCidFile.String())
-
 	fmt.Println("IPFS node is running")
 
 	// ---------- Part II: Adding a file and a directory to IPFS  -------------------
 
-	fmt.Println("\n-- Adding and getting back files & directories --")
+	// fmt.Println("\n-- Adding and getting back files & directories --")
 
-	cidFile, err := internal.AddFileToIPFS(ctx, ipfsA, "./example-folder/ipfs.paper.draft3.pdf")
-	if err != nil {
-		panic(fmt.Errorf("Could not add file to ipfs : %s", err))
-	}
-	cidDirectory, err := internal.AddDirectoryToIPFS(ctx, ipfsA, "./example-folder/test-dir")
-	if err != nil {
-		panic(fmt.Errorf("Could not add directory to ipfs : %s", err))
-	}
+	// cidFile, err := internal.AddFileToIPFS(ctx, ipfsA, "./example-folder/ipfs.paper.draft3.pdf")
+	// if err != nil {
+	// 	panic(fmt.Errorf("Could not add file to ipfs : %s", err))
+	// }
 
 	// ---------- Part III: Getting the file and directory you added back -------------------
 
-	internal.FetchFileFromIPFS(ctx, ipfsA, cidFile)
-	internal.FetchFileFromIPFS(ctx, ipfsA, peerCidFile)
-	internal.FetchDirectoryFromIPFS(ctx, ipfsA, cidDirectory)
-
-	//  ---------- Part IV: Getting a file from the IPFS Network -------------------
-	internal.FetchFileFromIPFSNetwork(ctx, ipfsA, peerCidFile)
+	//internal.FetchFileFromIPFS(ctx, ipfsA, cidFile)
 
 	// ---------- Connection to Boostrap Nodes ----------------
 

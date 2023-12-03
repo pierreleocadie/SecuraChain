@@ -12,7 +12,7 @@ import (
 )
 
 func InitDetectFiles() error {
-	outputBasePath := "./AddNewFiles/"
+	outputBasePath := "./Add-Files"
 	// S'assurez que le dossier de sortie existe
 	if err := os.MkdirAll(outputBasePath, 0755); err != nil {
 		return fmt.Errorf("error creating output directory: %v", err)
@@ -24,7 +24,7 @@ func InitDetectFiles() error {
 
 func MonitorinRepoInit(ctx context.Context, ipfsApi icore.CoreAPI) (path.ImmutablePath, error) {
 	InitDetectFiles()
-	watchDir := "./AddNewFiles"
+	watchDir := "./Add-Files"
 
 	// Create a new fsnotify watcher.
 	watcher, err := fsnotify.NewWatcher()
