@@ -237,17 +237,27 @@ func main() {
 	internal.FetchDirectoryFromIPFS(ctx, ipfsB, cidDirectory)
 
 	/// --- Part IV: Getting a file from the IPFS Network
-
-	fmt.Println("\n-- Going to connect to a few nodes in the Network as bootstrappers --")
-
-	internal.ConnectToBoostrapNodes(ctx, nodeA)
-
 	internal.FetchFileFromIPFSNetwork(ctx, ipfsB, peerCidFile)
 
-	fmt.Println("\nAll done!")
+	//fmt.Println("\n-- Going to connect to a few nodes in the Network as bootstrappers --")
+	// Connect to boostrap nodes
+	//internal.ConnectToBoostrapNodes(ctx, nodeA)
+
+	nodeA.Identity.String()
+	// ---------- Detect Files ----------------
+	cidDetectedFile, err := internal.MonitorinRepoInit(ctx, ipfsB)
+	if err != nil {
+		log.Printf("nulllllll %s", err)
+	}
+
+	internal.FetchFileFromIPFS(ctx, ipfsB, cidDetectedFile)
+
+	// c := make(chan os.Signal, 1)
+	// signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	// <-c
 
 	// -----------------------------
-	nodeID := nodeA.Identity.String()
-	fmt.Printf("%v\n", nodeID)
+
+	fmt.Println("\nAll done!")
 
 }
