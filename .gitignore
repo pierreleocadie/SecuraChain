@@ -1,6 +1,7 @@
 # Created by https://www.toptal.com/developers/gitignore/api/go,goland,visualstudiocode,python,macos,windows,linux,c,rust
 # Edit at https://www.toptal.com/developers/gitignore?templates=go,goland,visualstudiocode,python,macos,windows,linux,c,rust
 .DS_Store
+bin/
 
 ### C ###
 # Prerequisites
