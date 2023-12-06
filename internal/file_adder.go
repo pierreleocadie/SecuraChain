@@ -3,11 +3,14 @@ package internal
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
+	"time"
 
 	icore "github.com/ipfs/boxo/coreiface"
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
+	"github.com/ipfs/kubo/core"
 )
 
 // Prepare the file to be added to IPFS
@@ -27,7 +30,7 @@ func getUnixfsNode(path string) (files.Node, error) {
 
 // Pour ajouter des fichiers à IPFS
 // inputPathFile --> where the file is
-func AddFileToIPFS(ctx context.Context, ipfsApi icore.CoreAPI, inputPathFile string) (path.ImmutablePath, error) {
+func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI, inputPathFile string) (path.ImmutablePath, error) {
 	someFile, err := getUnixfsNode(inputPathFile)
 	if err != nil {
 		panic(fmt.Errorf("could not get File: %s", err))
@@ -38,6 +41,31 @@ func AddFileToIPFS(ctx context.Context, ipfsApi icore.CoreAPI, inputPathFile str
 		panic(fmt.Errorf("could not add File: %s", err))
 	}
 	fmt.Printf("Added file to IPFS with CID %s\n", cidFile.String())
+
+	// --------- File ----------------
+	fileName, fileSize, fileType, err := FileInfo(inputPathFile)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	data := FileMetaData{
+		Cid:           cidFile.String(),
+		Timestamp:     time.Now(),
+		FileSize:      fileSize,
+		FileType:      fileType,
+		OriginalName:  fileName,
+		UserPublicKey: node.Identity.String(),
+	}
+
+	datav1 := CIDStorage{}
+	datav1.Files = append(datav1.Files, data)
+
+	// Sauvegarder les données
+	if err := SaveToJSON("ipfs_file_storage.json", datav1); err != nil {
+		log.Fatalf("Error saving JSON data %v", err)
+
+	}
 
 	return cidFile, nil
 }

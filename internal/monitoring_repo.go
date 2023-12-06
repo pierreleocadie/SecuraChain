@@ -9,6 +9,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	icore "github.com/ipfs/boxo/coreiface"
 	"github.com/ipfs/boxo/path"
+	"github.com/ipfs/kubo/core"
 )
 
 func InitDetectFiles() error {
@@ -22,7 +23,7 @@ func InitDetectFiles() error {
 
 }
 
-func MonitorinRepoInit(ctx context.Context, ipfsApi icore.CoreAPI) (path.ImmutablePath, error) {
+func MonitorinRepoInit(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI) (path.ImmutablePath, error) {
 	InitDetectFiles()
 	watchDir := "./Add-Files"
 
@@ -48,7 +49,7 @@ func MonitorinRepoInit(ctx context.Context, ipfsApi icore.CoreAPI) (path.Immutab
 					fmt.Printf("modified file: %s\n", event.Name)
 				} else if event.Op&fsnotify.Create == fsnotify.Create {
 					fmt.Printf("created file: %s\n", event.Name)
-					cidFile, err := AddFileToIPFS(ctx, ipfsApi, event.Name)
+					cidFile, err := AddFileToIPFS(ctx, node, ipfsApi, event.Name)
 					if err != nil {
 						log.Printf("Could not add file to IPFS: %s", err)
 						continue

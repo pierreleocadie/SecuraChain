@@ -220,7 +220,7 @@ func main() {
 
 	// ---------- Monitoring Folder ----------------
 
-	cidDetectedFile, err := internal.MonitorinRepoInit(ctx, ipfsA)
+	cidDetectedFile, err := internal.MonitorinRepoInit(ctx, nodeA, ipfsA)
 	if err != nil {
 		log.Printf("nulllllll %s", err)
 	}
