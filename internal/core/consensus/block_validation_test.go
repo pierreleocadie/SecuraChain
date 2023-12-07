@@ -16,35 +16,45 @@ func TestValidateBlock(t *testing.T) {
 	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
 
 	// Create a previous block
-	t.Logf("Creating previous block")
-	prevBlock := block.NewBlock(transactions, []byte("GenesisBlock"), 1, minerKeyPair)
-	t.Logf("Mining previous block")
+	prevBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
+
 	MineBlock(prevBlock)
-	t.Logf("Signing previous block")
-	prevBlock.SignBlock(minerKeyPair)
+
+	err := prevBlock.SignBlock(minerKeyPair)
+	if err != nil {
+		t.Errorf("Failed to sign block: %s", err)
+	}
+
+	if !ValidateBlock(prevBlock, nil) {
+		t.Errorf("ValidateBlock failed for the genesis block")
+	}
 
 	// Create a valid block
-	t.Logf("Computing previous block hash")
 	prevBlockHash := block.ComputeHash(prevBlock)
 
-	t.Logf("Creating valid block")
 	validBlock := block.NewBlock(transactions, prevBlockHash, 2, minerKeyPair)
-	t.Logf("Mining valid block")
-	MineBlock(validBlock)
-	t.Logf("Signing valid block")
-	validBlock.SignBlock(minerKeyPair)
 
-	t.Logf("Validating valid block against previous block")
+	MineBlock(validBlock)
+
+	err = validBlock.SignBlock(minerKeyPair)
+	if err != nil {
+		t.Errorf("Failed to sign block: %s", err)
+	}
+
 	if !ValidateBlock(validBlock, prevBlock) {
 		t.Errorf("ValidateBlock failed for a valid block")
 	}
 
 	// Create an invalid block (wrong previous hash)
 	invalidBlock := block.NewBlock(transactions, []byte("wronghash"), 3, minerKeyPair)
-	MineBlock(invalidBlock)
-	invalidBlock.SignBlock(minerKeyPair)
 
-	t.Logf("Validating invalid block against valid block")
+	MineBlock(invalidBlock)
+
+	err = invalidBlock.SignBlock(minerKeyPair)
+	if err != nil {
+		t.Errorf("Failed to sign block: %s", err)
+	}
+
 	if ValidateBlock(invalidBlock, validBlock) {
 		t.Errorf("ValidateBlock succeeded for an invalid block with incorrect previous hash")
 	}
