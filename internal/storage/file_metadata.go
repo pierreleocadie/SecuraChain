@@ -1,4 +1,5 @@
-package internal
+// Package storage provides utilities for gathering file information.
+package storage
 
 import (
 	"log"
@@ -7,6 +8,8 @@ import (
 	"strconv"
 )
 
+// FileInfo extracts and returns metadata about a given file.
+// It provides the file's name, size, and type.
 func FileInfo(inputPathFile string) (string, string, string, error) {
 	fileInfo, err := os.Stat(inputPathFile)
 

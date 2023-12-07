@@ -1,4 +1,5 @@
-package internal
+// Package storage provides functions for adding files to IPFS.
+package storage
 
 import (
 	"context"
@@ -11,16 +12,18 @@ import (
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/kubo/core"
+	"github.com/pierreleocadie/SecuraChain/internal/util"
 )
 
-// Prepare the file to be added to IPFS
+// getUnixfsNode prepares a file to be added to IPFS by creating a UnixFS node from the given path.
+// It retrieves file information and creates a serial file node for IPFS.
 func getUnixfsNode(path string) (files.Node, error) {
-	st, err := os.Stat(path) // recupère les informations sur le fichier ou le répertoire situé au chemin 'path', retourne une structure 'FileInfo' avec des détails sur la taille du fichier , les permissions etc...
+	st, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
-	f, err := files.NewSerialFile(path, false, st) // créer un noeud de fichier UnixFS à partir du chemin donné, 1re par accès au fichier, 2em si le fichier doit être traté comme un fichier caché si oui alors 'false', 3eme structure 'FileInfo' obtenu avant
+	f, err := files.NewSerialFile(path, false, st)
 	if err != nil {
 		return nil, err
 	}
@@ -28,8 +31,8 @@ func getUnixfsNode(path string) (files.Node, error) {
 	return f, nil
 }
 
-// Pour ajouter des fichiers à IPFS
-// inputPathFile --> where the file is
+// AddFileToIPFS adds a file to IPFS and returns its CID. It also collects and saves file metadata.
+// The function handles the file addition process and records metadata such as file size, type, name, and user public key.
 func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI, inputPathFile string) (path.ImmutablePath, error) {
 	someFile, err := getUnixfsNode(inputPathFile)
 	if err != nil {
@@ -42,14 +45,15 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 	}
 	fmt.Printf("Added file to IPFS with CID %s\n", cidFile.String())
 
-	// --------- File ----------------
+	// Collect file information and metadata.
 	fileName, fileSize, fileType, err := FileInfo(inputPathFile)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	data := FileMetaData{
+	// Structure for storing file metadata.
+	data := util.FileMetaData{
 		Cid:           cidFile.String(),
 		Timestamp:     time.Now(),
 		FileSize:      fileSize,
@@ -58,11 +62,12 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 		UserPublicKey: node.Identity.String(),
 	}
 
-	datav1 := CIDStorage{}
+	// Create a storage structure for the file metadata.
+	datav1 := util.CIDStorage{}
 	datav1.Files = append(datav1.Files, data)
 
-	// Sauvegarder les données
-	if err := SaveToJSON("ipfs_file_storage.json", datav1); err != nil {
+	// Save the metadata to a JSON file.
+	if err := util.SaveToJSON("ipfs_file_storage.json", datav1); err != nil {
 		log.Fatalf("Error saving JSON data %v", err)
 
 	}

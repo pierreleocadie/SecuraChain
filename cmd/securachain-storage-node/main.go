@@ -12,7 +12,9 @@ import (
 
 	icore "github.com/ipfs/boxo/coreiface"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/pierreleocadie/SecuraChain/internal"
+	"github.com/pierreleocadie/SecuraChain/internal/discovery"
+	"github.com/pierreleocadie/SecuraChain/internal/storage"
+	"github.com/pierreleocadie/SecuraChain/internal/storage/monitoring"
 
 	"github.com/ipfs/kubo/config"
 	"github.com/ipfs/kubo/core"
@@ -204,28 +206,28 @@ func main() {
 
 	// fmt.Println("\n-- Adding and getting back files & directories --")
 
-	// cidFile, err := internal.AddFileToIPFS(ctx, ipfsA, "./example-folder/ipfs.paper.draft3.pdf")
+	// cidFile, err := storage.AddFileToIPFS(ctx, ipfsA, "./example-folder/ipfs.paper.draft3.pdf")
 	// if err != nil {
 	// 	panic(fmt.Errorf("Could not add file to ipfs : %s", err))
 	// }
 
 	// ---------- Part III: Getting the file and directory you added back -------------------
 
-	//internal.FetchFileFromIPFS(ctx, ipfsA, cidFile)
+	//storage.FetchFileFromIPFS(ctx, ipfsA, cidFile)
 
 	// ---------- Connection to Boostrap Nodes ----------------
 
 	fmt.Println("\n-- Going to connect to a few boostrap nodesnodes in the Network --")
-	internal.ConnectToBoostrapNodes(ctx, nodeA)
+	discovery.ConnectToBoostrapNodes(ctx, nodeA)
 
 	// ---------- Monitoring Folder ----------------
 
-	cidDetectedFile, err := internal.MonitorinRepoInit(ctx, nodeA, ipfsA)
+	cidDetectedFile, err := monitoring.MonitorinRepoInit(ctx, nodeA, ipfsA)
 	if err != nil {
 		log.Printf("nulllllll %s", err)
 	}
 
-	internal.FetchFileFromIPFS(ctx, ipfsA, cidDetectedFile)
+	storage.FetchFileFromIPFS(ctx, ipfsA, cidDetectedFile)
 
 	fmt.Println("\nAll done!")
 

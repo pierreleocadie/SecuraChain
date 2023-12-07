@@ -1,4 +1,5 @@
-package internal
+// Package monitoring provides functionality to watch a specific folder for file changes and interact with IPFS accordingly.
+package monitoring
 
 import (
 	"context"
@@ -10,10 +11,12 @@ import (
 	icore "github.com/ipfs/boxo/coreiface"
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/kubo/core"
+	"github.com/pierreleocadie/SecuraChain/internal/storage"
 )
 
+// InitDetectFiles creates a directory for adding files to the storage node.
 func InitDetectFiles() error {
-	outputBasePath := "./Add-Files"
+	outputBasePath := "./Storage_Queue"
 	// S'assurez que le dossier de sortie existe
 	if err := os.MkdirAll(outputBasePath, 0755); err != nil {
 		return fmt.Errorf("error creating output directory: %v", err)
@@ -23,9 +26,11 @@ func InitDetectFiles() error {
 
 }
 
+// MonitorinRepoInit watches a directory for new files and adds them to IPFS.
+// It initializes the directory for monitoring, creates a watcher, and processes file events.
 func MonitorinRepoInit(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI) (path.ImmutablePath, error) {
 	InitDetectFiles()
-	watchDir := "./Add-Files"
+	watchDir := "./Storage_Queue"
 
 	// Create a new fsnotify watcher.
 	watcher, err := fsnotify.NewWatcher()
@@ -34,7 +39,7 @@ func MonitorinRepoInit(ctx context.Context, node *core.IpfsNode, ipfsApi icore.C
 	}
 	defer watcher.Close()
 
-	cidChan := make(chan path.ImmutablePath) // Canal pour passer le CID
+	cidChan := make(chan path.ImmutablePath) // Channel for passing the CID
 
 	go func() {
 		for {
@@ -49,7 +54,7 @@ func MonitorinRepoInit(ctx context.Context, node *core.IpfsNode, ipfsApi icore.C
 					fmt.Printf("modified file: %s\n", event.Name)
 				} else if event.Op&fsnotify.Create == fsnotify.Create {
 					fmt.Printf("created file: %s\n", event.Name)
-					cidFile, err := AddFileToIPFS(ctx, node, ipfsApi, event.Name)
+					cidFile, err := storage.AddFileToIPFS(ctx, node, ipfsApi, event.Name)
 					if err != nil {
 						log.Printf("Could not add file to IPFS: %s", err)
 						continue
