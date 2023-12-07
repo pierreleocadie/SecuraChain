@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/ipfs/go-cid"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
@@ -17,27 +18,28 @@ func (f *AddFileTransactionFactory) CreateTransaction(data []byte) (Transaction,
 }
 
 type AddFileTransaction struct {
-	TransactionId         uuid.UUID `json:"transactionId"`         // Transaction ID - UUID
-	AnnouncementId        uuid.UUID `json:"announcementId"`        // Announcement ID - UUID
+	AnnouncementID        uuid.UUID `json:"announcementID"`        // Announcement ID - UUID
 	OwnerAddress          []byte    `json:"ownerAddress"`          // Owner address - ECDSA public key
 	Filename              []byte    `json:"filename"`              // Encrypted filename
 	Extension             []byte    `json:"extension"`             // Encrypted extension
+	FileSize              uint64    `json:"fileSize"`              // File size
 	Checksum              []byte    `json:"checksum"`              // Checksum - SHA256
 	OwnerSignature        []byte    `json:"ownerSignature"`        // Owner signature - ECDSA signature
 	AnnouncementTimestamp int64     `json:"announcementTimestamp"` // Announcement timestamp - Unix timestamp
-	ResponseId            uuid.UUID `json:"responseId"`            // Response ID - UUID
+	ResponseID            uuid.UUID `json:"responseID"`            // Response ID - UUID
 	NodeAddress           []byte    `json:"nodeAddress"`           // Node address - ECDSA public key
-	NodeCID               []byte    `json:"nodeCID"`               // Node CID - SHA256
+	NodeCID               cid.Cid   `json:"nodeCID"`               // Node CID
 	NodeSignature         []byte    `json:"nodeSignature"`         // Node signature - ECDSA signature
 	ResponseTimestamp     int64     `json:"responseTimestamp"`     // Response timestamp - Unix timestamp
-	FileTransferId        uuid.UUID `json:"fileTransferId"`        // File transfer ID - UUID
+	FileTransferID        uuid.UUID `json:"fileTransferID"`        // File transfer ID - UUID
 	FileTransferSignature []byte    `json:"fileTransferSignature"` // File transfer signature - ECDSA signature
 	FileTransferTimestamp int64     `json:"fileTransferTimestamp"` // File transfer timestamp - Unix timestamp
-	FileCID               []byte    `json:"fileCID"`               // File CID - SHA256
+	FileCID               cid.Cid   `json:"fileCID"`               // File CID
+	TransactionID         uuid.UUID `json:"transactionID"`         // Transaction ID - UUID
 	UserReliabilityIssue  bool      `json:"userReliabilityIssue"`  // User reliability issue - boolean
 	TransactionSignature  []byte    `json:"transactionSignature"`  // Transaction signature - ECDSA signature
 	TransactionTimestamp  int64     `json:"transactionTimestamp"`  // Transaction timestamp - Unix timestamp
-	TransactionVerifier             // embed TransactionVerifier struct to inherit VerifyTransaction method
+	Verifier                        // embed TransactionVerifier struct to inherit VerifyTransaction method
 }
 
 func (t *AddFileTransaction) Serialize() ([]byte, error) {
@@ -48,29 +50,32 @@ func (t *AddFileTransaction) Serialize() ([]byte, error) {
 func (t *AddFileTransaction) SpecificData() ([]byte, error) {
 	// Remove signature from transaction before verifying
 	signature := t.TransactionSignature
-	t.TransactionSignature = []byte{}
+	t.TransactionSignature = nil
 
 	defer func() { t.TransactionSignature = signature }() // Restore after serialization
 
 	return json.Marshal(t)
 }
 
-func NewAddFileTransaction(announcement *ClientAnnouncement, response *StorageNodeResponse, fileTransfer *FileTransferHttpRequest, fileCID []byte, userReliabilityIssue bool, keyPair ecdsa.KeyPair) *AddFileTransaction {
+func NewAddFileTransaction(announcement *ClientAnnouncement, response *StorageNodeResponse,
+	fileTransfer *FileTransferHTTPRequest, fileCID cid.Cid,
+	userReliabilityIssue bool, keyPair ecdsa.KeyPair) *AddFileTransaction {
 	transaction := &AddFileTransaction{
-		TransactionId:         uuid.New(),
-		AnnouncementId:        announcement.AnnouncementId,
+		TransactionID:         uuid.New(),
+		AnnouncementID:        announcement.AnnouncementID,
 		OwnerAddress:          announcement.OwnerAddress,
 		Filename:              announcement.Filename,
 		Extension:             announcement.Extension,
+		FileSize:              announcement.FileSize,
 		Checksum:              announcement.Checksum,
 		OwnerSignature:        announcement.OwnerSignature,
 		AnnouncementTimestamp: announcement.AnnouncementTimestamp,
-		ResponseId:            response.ResponseId,
+		ResponseID:            response.ResponseID,
 		NodeAddress:           response.NodeAddress,
 		NodeCID:               response.NodeCID,
 		NodeSignature:         response.NodeSignature,
 		ResponseTimestamp:     response.ResponseTimestamp,
-		FileTransferId:        fileTransfer.FileTransferId,
+		FileTransferID:        fileTransfer.FileTransferID,
 		FileTransferSignature: fileTransfer.FileTransferSignature,
 		FileTransferTimestamp: fileTransfer.FileTransferTimestamp,
 		FileCID:               fileCID,

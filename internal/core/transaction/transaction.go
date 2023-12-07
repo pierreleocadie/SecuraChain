@@ -7,15 +7,15 @@ import (
 )
 
 // TransactionVerifier is the base struct for verifying transactions
-type TransactionVerifier struct{}
+type Verifier struct{}
 
 // SpecificData method should be overridden by each specific transaction type
-func (t *TransactionVerifier) SpecificData() ([]byte, error) {
+func (t *Verifier) SpecificData() ([]byte, error) {
 	return nil, nil // Default implementation, should be overridden
 }
 
-func (t *TransactionVerifier) VerifyTransaction(signature []byte, publicKey []byte) bool {
-	data, err := t.SpecificData()
+func (t *Verifier) VerifyTransaction(tx Transaction, signature []byte, publicKey []byte) bool {
+	data, err := tx.SpecificData()
 	if err != nil {
 		return false
 	}
@@ -36,6 +36,10 @@ type Transaction interface {
 }
 
 // TransactionFactory is the interface for creating transactions
-type TransactionFactory interface {
+type Factory interface {
 	CreateTransaction(data []byte) (Transaction, error)
+}
+
+func DeserializeTransaction(data []byte, factory Factory) (Transaction, error) {
+	return factory.CreateTransaction(data)
 }

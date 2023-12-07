@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/ipfs/go-cid"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
@@ -17,13 +18,13 @@ func (f *StorageNodeResponseFactory) CreateTransaction(data []byte) (Transaction
 }
 
 type StorageNodeResponse struct {
-	ResponseId            uuid.UUID `json:"responseId"`            // Response ID - UUID
+	ResponseID            uuid.UUID `json:"responseID"`            // Response ID - UUID
 	NodeAddress           []byte    `json:"nodeAddress"`           // Node address - ECDSA public key
-	NodeCID               []byte    `json:"nodeCID"`               // Node CID - SHA256
+	NodeCID               cid.Cid   `json:"nodeCID"`               // Node CID - SHA256
 	APIEndpoint           string    `json:"apiEndpoint"`           // API endpoint - URL for file transfer binding:"required"
 	NodeSignature         []byte    `json:"nodeSignature"`         // Node signature - ECDSA signature
 	ResponseTimestamp     int64     `json:"responseTimestamp"`     // Response timestamp - Unix timestamp
-	AnnouncementId        uuid.UUID `json:"announcementId"`        // Announcement ID - UUID
+	AnnouncementID        uuid.UUID `json:"announcementID"`        // Announcement ID - UUID
 	OwnerAddress          []byte    `json:"ownerAddress"`          // Owner address - ECDSA public key
 	Filename              []byte    `json:"filename"`              // Encrypted filename
 	Extension             []byte    `json:"extension"`             // Encrypted extension
@@ -31,7 +32,7 @@ type StorageNodeResponse struct {
 	Checksum              []byte    `json:"checksum"`              // Checksum - SHA256
 	OwnerSignature        []byte    `json:"ownerSignature"`        // Owner signature - ECDSA signature
 	AnnouncementTimestamp int64     `json:"announcementTimestamp"` // Announcement timestamp - Unix timestamp
-	TransactionVerifier             // embed TransactionVerifier struct to inherit VerifyTransaction method
+	Verifier                        // embed TransactionVerifier struct to inherit VerifyTransaction method
 }
 
 func (r *StorageNodeResponse) Serialize() ([]byte, error) {
@@ -42,26 +43,26 @@ func (r *StorageNodeResponse) Serialize() ([]byte, error) {
 func (r *StorageNodeResponse) SpecificData() ([]byte, error) {
 	// Remove signature from response before verifying
 	signature := r.NodeSignature
-	r.NodeSignature = []byte{}
+	r.NodeSignature = nil
 
 	defer func() { r.NodeSignature = signature }() // Restore after serialization
 
 	return json.Marshal(r)
 }
 
-func NewStorageNodeResponse(nodeAddress ecdsa.KeyPair, nodeCID []byte, apiEndpoint string, announcement *ClientAnnouncement) *StorageNodeResponse {
+func NewStorageNodeResponse(nodeAddress ecdsa.KeyPair, nodeCID cid.Cid, apiEndpoint string, announcement *ClientAnnouncement) *StorageNodeResponse {
 	nodeAddressBytes, err := nodeAddress.PublicKeyToBytes()
 	if err != nil {
 		return nil
 	}
 
 	response := &StorageNodeResponse{
-		ResponseId:            uuid.New(),
+		ResponseID:            uuid.New(),
 		NodeAddress:           nodeAddressBytes,
 		NodeCID:               nodeCID,
 		APIEndpoint:           apiEndpoint,
 		ResponseTimestamp:     time.Now().Unix(),
-		AnnouncementId:        announcement.AnnouncementId,
+		AnnouncementID:        announcement.AnnouncementID,
 		OwnerAddress:          announcement.OwnerAddress,
 		Filename:              announcement.Filename,
 		Extension:             announcement.Extension,

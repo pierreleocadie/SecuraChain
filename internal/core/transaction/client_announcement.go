@@ -17,7 +17,7 @@ func (f *ClientAnnouncementFactory) CreateTransaction(data []byte) (Transaction,
 }
 
 type ClientAnnouncement struct {
-	AnnouncementId        uuid.UUID `json:"announcementId"`        // Announcement ID - UUID
+	AnnouncementID        uuid.UUID `json:"announcementID"`        // Announcement ID - UUID
 	OwnerAddress          []byte    `json:"ownerAddress"`          // Owner address - ECDSA public key
 	Filename              []byte    `json:"filename"`              // Encrypted filename
 	Extension             []byte    `json:"extension"`             // Encrypted extension
@@ -25,7 +25,7 @@ type ClientAnnouncement struct {
 	Checksum              []byte    `json:"checksum"`              // Checksum - SHA256
 	OwnerSignature        []byte    `json:"ownerSignature"`        // Owner signature - ECDSA signature
 	AnnouncementTimestamp int64     `json:"announcementTimestamp"` // Announcement timestamp - Unix timestamp
-	TransactionVerifier             // embed TransactionVerifier struct to inherit VerifyTransaction method
+	Verifier                        // embed TransactionVerifier struct to inherit VerifyTransaction method
 }
 
 func (a *ClientAnnouncement) Serialize() ([]byte, error) {
@@ -36,7 +36,7 @@ func (a *ClientAnnouncement) Serialize() ([]byte, error) {
 func (a *ClientAnnouncement) SpecificData() ([]byte, error) {
 	// Remove signature and serialize
 	signature := a.OwnerSignature
-	a.OwnerSignature = []byte{}
+	a.OwnerSignature = nil
 	defer func() { a.OwnerSignature = signature }() // Restore after serialization
 
 	return json.Marshal(a)
@@ -49,7 +49,7 @@ func NewClientAnnouncement(keyPair ecdsa.KeyPair, filename []byte, extension []b
 	}
 
 	announcement := &ClientAnnouncement{
-		AnnouncementId:        uuid.New(),
+		AnnouncementID:        uuid.New(),
 		OwnerAddress:          ownerAddressBytes,
 		Filename:              filename,
 		Extension:             extension,

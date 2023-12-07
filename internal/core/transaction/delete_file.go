@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/ipfs/go-cid"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
@@ -17,12 +18,12 @@ func (f *DeleteFileTransactionFactory) CreateTransaction(data []byte) (Transacti
 }
 
 type DeleteFileTransaction struct {
-	TransactionId        uuid.UUID `json:"transactionId"`        // Transaction ID - UUID
+	TransactionID        uuid.UUID `json:"transactionID"`        // Transaction ID - UUID
 	OwnerAddress         []byte    `json:"ownerAddress"`         // Owner address - ECDSA public key
-	FileCID              []byte    `json:"fileCID"`              // File CID - SHA256
+	FileCID              cid.Cid   `json:"fileCID"`              // File CID - SHA256
 	TransactionSignature []byte    `json:"transactionSignature"` // Transaction signature - ECDSA signature
 	TransactionTimestamp int64     `json:"transactionTimestamp"` // Transaction timestamp - Unix timestamp
-	TransactionVerifier            // embed TransactionVerifier struct to inherit VerifyTransaction method
+	Verifier                       // embed TransactionVerifier struct to inherit VerifyTransaction method
 }
 
 func (t *DeleteFileTransaction) Serialize() ([]byte, error) {
@@ -40,14 +41,14 @@ func (t *DeleteFileTransaction) SpecificData() ([]byte, error) {
 	return json.Marshal(t)
 }
 
-func NewDeleteFileTransaction(keyPair ecdsa.KeyPair, fileCID []byte) *DeleteFileTransaction {
+func NewDeleteFileTransaction(keyPair ecdsa.KeyPair, fileCID cid.Cid) *DeleteFileTransaction {
 	ownerAddressBytes, err := keyPair.PublicKeyToBytes()
 	if err != nil {
 		return nil
 	}
 
 	transaction := &DeleteFileTransaction{
-		TransactionId:        uuid.New(),
+		TransactionID:        uuid.New(),
 		OwnerAddress:         ownerAddressBytes,
 		FileCID:              fileCID,
 		TransactionTimestamp: time.Now().Unix(),
