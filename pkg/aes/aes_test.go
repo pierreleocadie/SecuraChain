@@ -17,6 +17,8 @@ const (
 )
 
 func TestNewAESKey(t *testing.T) {
+	t.Parallel()
+
 	key, err := NewAESKey()
 	if err != nil {
 		t.Fatalf("NewAESKey failed: %v", err)
@@ -28,6 +30,8 @@ func TestNewAESKey(t *testing.T) {
 }
 
 func TestAESKeyString(t *testing.T) {
+	t.Parallel()
+
 	key, _ := NewAESKey()
 	encoded := key.String()
 	raw, _ := base64.StdEncoding.DecodeString(encoded)
@@ -38,6 +42,8 @@ func TestAESKeyString(t *testing.T) {
 }
 
 func TestSaveAndLoadKey(t *testing.T) {
+	t.Parallel()
+
 	key, _ := NewAESKey()
 
 	// Save the key to a file.
@@ -59,6 +65,8 @@ func TestSaveAndLoadKey(t *testing.T) {
 }
 
 func TestEncryptDecryptFile(t *testing.T) {
+	t.Parallel()
+
 	key, _ := NewAESKey()
 
 	// Create a test file for encryption.
@@ -86,6 +94,28 @@ func TestEncryptDecryptFile(t *testing.T) {
 	decryptedContent, err := os.ReadFile(testDecryptFile)
 	if err != nil {
 		t.Fatalf("Could not read decrypted file: %v", err)
+	}
+
+	if string(decryptedContent) != testContent {
+		t.Fatalf("Decrypted content does not match original content")
+	}
+}
+
+func TestEncryptDecryptData(t *testing.T) {
+	t.Parallel()
+
+	key, _ := NewAESKey()
+
+	// Encrypt the test content.
+	encryptedContent, err := key.EncryptData([]byte(testContent))
+	if err != nil {
+		t.Fatalf("EncryptData failed: %v", err)
+	}
+
+	// Decrypt the test content.
+	decryptedContent, err := key.DecryptData(encryptedContent)
+	if err != nil {
+		t.Fatalf("DecryptData failed: %v", err)
 	}
 
 	if string(decryptedContent) != testContent {
