@@ -100,3 +100,25 @@ func TestEncryptDecryptFile(t *testing.T) {
 		t.Fatalf("Decrypted content does not match original content")
 	}
 }
+
+func TestEncryptDecryptData(t *testing.T) {
+	t.Parallel()
+
+	key, _ := NewAESKey()
+
+	// Encrypt the test content.
+	encryptedContent, err := key.EncryptData([]byte(testContent))
+	if err != nil {
+		t.Fatalf("EncryptData failed: %v", err)
+	}
+
+	// Decrypt the test content.
+	decryptedContent, err := key.DecryptData(encryptedContent)
+	if err != nil {
+		t.Fatalf("DecryptData failed: %v", err)
+	}
+
+	if string(decryptedContent) != testContent {
+		t.Fatalf("Decrypted content does not match original content")
+	}
+}
