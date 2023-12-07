@@ -9,6 +9,11 @@ import (
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
+const (
+	version    = 1
+	targetBits = 24
+)
+
 type Header struct {
 	Version    uint32 `json:"version"`     // Blockchain version
 	PrevBlock  []byte `json:"prev_block"`  // 256-bit hash of the previous block header
@@ -35,9 +40,9 @@ func NewBlock(transactions []transaction.Transaction, prevBlockHash []byte, heig
 
 	block := &Block{
 		Header: Header{
-			Version:    1,
+			Version:    version,
 			PrevBlock:  prevBlockHash,
-			TargetBits: 24,
+			TargetBits: targetBits,
 			Timestamp:  time.Now().Unix(),
 			Height:     height,
 			MinerAddr:  minerAddrBytes,
@@ -100,7 +105,7 @@ func DeserializeBlock(data []byte) (*Block, error) {
 // SignBlock signs the block with the given private key and adds the signature to the block header
 func (b *Block) SignBlock(privateKey ecdsa.KeyPair) error {
 	headerHash := ComputeHash(b)
-	signature, err := privateKey.Sign(headerHash[:])
+	signature, err := privateKey.Sign(headerHash)
 	if err != nil {
 		return err
 	}

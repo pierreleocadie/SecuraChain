@@ -21,5 +21,5 @@ func VerifyBlock(currentBlock *Block) bool {
 		return false
 	}
 
-	return ecdsa.VerifySignature(ecdsaPublicKey, headerHash[:], currentBlock.Header.Signature)
+	return ecdsa.VerifySignature(ecdsaPublicKey, headerHash, currentBlock.Header.Signature)
 }
