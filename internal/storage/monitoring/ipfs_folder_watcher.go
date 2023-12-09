@@ -14,8 +14,8 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/storage"
 )
 
-// InitDetectFiles creates a directory for adding files to the storage node.
-func InitDetectFiles() error {
+// CreateStorageQueueDirectory creates a directory for adding files to the storage node.
+func CreateStorageQueueDirectory() error {
 	outputBasePath := "./Storage_Queue"
 	// S'assurez que le dossier de sortie existe
 	if err := os.MkdirAll(outputBasePath, 0755); err != nil {
@@ -28,8 +28,8 @@ func InitDetectFiles() error {
 
 // MonitorinRepoInit watches a directory for new files and adds them to IPFS.
 // It initializes the directory for monitoring, creates a watcher, and processes file events.
-func MonitorinRepoInit(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI) (path.ImmutablePath, error) {
-	InitDetectFiles()
+func WatchStorageQueueForChanges(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI) (path.ImmutablePath, error) {
+	CreateStorageQueueDirectory()
 	watchDir := "./Storage_Queue"
 
 	// Create a new fsnotify watcher.

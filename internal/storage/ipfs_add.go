@@ -15,9 +15,9 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/util"
 )
 
-// getUnixfsNode prepares a file to be added to IPFS by creating a UnixFS node from the given path.
+// PrepareFileForIPFS prepares a file to be added to IPFS by creating a UnixFS node from the given path.
 // It retrieves file information and creates a serial file node for IPFS.
-func getUnixfsNode(path string) (files.Node, error) {
+func PrepareFileForIPFS(path string) (files.Node, error) {
 	st, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -34,14 +34,14 @@ func getUnixfsNode(path string) (files.Node, error) {
 // AddFileToIPFS adds a file to IPFS and returns its CID. It also collects and saves file metadata.
 // The function handles the file addition process and records metadata such as file size, type, name, and user public key.
 func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI, inputPathFile string) (path.ImmutablePath, error) {
-	someFile, err := getUnixfsNode(inputPathFile)
+	someFile, err := PrepareFileForIPFS(inputPathFile)
 	if err != nil {
-		panic(fmt.Errorf("could not get File: %s", err))
+		fmt.Errorf("could not get File: %s", err)
 	}
 
 	cidFile, err := ipfsApi.Unixfs().Add(ctx, someFile)
 	if err != nil {
-		panic(fmt.Errorf("could not add File: %s", err))
+		fmt.Errorf("could not add File: %s", err)
 	}
 	fmt.Printf("Added file to IPFS with CID %s\n", cidFile.String())
 

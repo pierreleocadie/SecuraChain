@@ -12,9 +12,9 @@ import (
 	"github.com/ipfs/boxo/path"
 )
 
-// FetchFileFromIPFS retrieves a file from IPFS using its CID (Content Identifier).
+// RetrieveAndSaveFileByCID retrieves a file from IPFS using its CID (Content Identifier).
 // It creates the necessary directory if it doesn't exist and writes the file to a specified path.
-func FetchFileFromIPFS(ctx context.Context, ipfsApi icore.CoreAPI, cidFile path.ImmutablePath) error {
+func RetrieveAndSaveFileByCID(ctx context.Context, ipfsApi icore.CoreAPI, cidFile path.ImmutablePath) error {
 	outputBasePath := "./IPFS_Downloads"
 	// Ensure the output directory exists or create it.
 	if err := os.MkdirAll(outputBasePath, 0755); err != nil {

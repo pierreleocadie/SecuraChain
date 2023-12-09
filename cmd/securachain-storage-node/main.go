@@ -202,19 +202,6 @@ func main() {
 
 	fmt.Println("IPFS node is running")
 
-	// ---------- Part II: Adding a file and a directory to IPFS  -------------------
-
-	// fmt.Println("\n-- Adding and getting back files & directories --")
-
-	// cidFile, err := storage.AddFileToIPFS(ctx, ipfsA, "./example-folder/ipfs.paper.draft3.pdf")
-	// if err != nil {
-	// 	panic(fmt.Errorf("Could not add file to ipfs : %s", err))
-	// }
-
-	// ---------- Part III: Getting the file and directory you added back -------------------
-
-	//storage.FetchFileFromIPFS(ctx, ipfsA, cidFile)
-
 	// ---------- Connection to Boostrap Nodes ----------------
 
 	fmt.Println("\n-- Going to connect to a few boostrap nodesnodes in the Network --")
@@ -222,12 +209,12 @@ func main() {
 
 	// ---------- Monitoring Folder ----------------
 
-	cidDetectedFile, err := monitoring.MonitorinRepoInit(ctx, nodeA, ipfsA)
+	cidDetectedFile, err := monitoring.WatchStorageQueueForChanges(ctx, nodeA, ipfsA)
 	if err != nil {
 		log.Printf("nulllllll %s", err)
 	}
 
-	storage.FetchFileFromIPFS(ctx, ipfsA, cidDetectedFile)
+	storage.RetrieveAndSaveFileByCID(ctx, ipfsA, cidDetectedFile)
 
 	fmt.Println("\nAll done!")
 
