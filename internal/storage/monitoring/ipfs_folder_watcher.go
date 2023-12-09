@@ -60,7 +60,8 @@ func WatchStorageQueueForChanges(ctx context.Context, node *core.IpfsNode, ipfsA
 						continue
 					}
 					fmt.Printf("The cid of the file is %v", cidFile.String())
-					cidChan <- cidFile // Envoyer le CID via le canal
+					cidChan <- cidFile    // Envoyer le CID via le canal
+					os.Remove(event.Name) // Supprime le fichier de la Queue
 					return
 
 				} else if event.Op&fsnotify.Remove == fsnotify.Remove {
