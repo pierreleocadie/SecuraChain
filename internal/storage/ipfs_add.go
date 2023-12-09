@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	icore "github.com/ipfs/boxo/coreiface"
@@ -45,6 +46,15 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 	}
 	fmt.Printf("Added file to IPFS with CID %s\n", cidFile.String())
 
+	// Pin a file with IPFS
+	ipfsApi.Pin().Add(ctx, cidFile)
+	_, IsPinned, err := ipfsApi.Pin().IsPinned(ctx, cidFile)
+	if err != nil {
+		return path.ImmutablePath{}, err
+	}
+
+	fmt.Println("Le fichier a bien été pin avec le cid: ", IsPinned)
+
 	// Collect file information and metadata.
 	fileName, fileSize, fileType, err := FileInfo(inputPathFile)
 
@@ -70,6 +80,24 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 	if err := util.SaveToJSON("ipfs_file_storage.json", datav1); err != nil {
 		log.Fatalf("Error saving JSON data %v", err)
 
+	}
+
+	// Adding the file on the storage node (local system)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return path.ImmutablePath{}, err
+	}
+
+	outputBasePath := filepath.Join(home, ".IPFS_Local_Storage/")
+	if err := os.MkdirAll(outputBasePath, 0700); err != nil {
+		return path.ImmutablePath{}, fmt.Errorf("error creating output directory : %v", err)
+	}
+
+	outputFilePath := filepath.Join(outputBasePath, filepath.Base(inputPathFile))
+
+	err = util.CopyFile(inputPathFile, outputFilePath)
+	if err != nil {
+		return path.ImmutablePath{}, fmt.Errorf("error copying file to output directory: %v", err)
 	}
 
 	return cidFile, nil
