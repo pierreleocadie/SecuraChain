@@ -28,7 +28,7 @@ func CreateStorageQueueDirectory() error {
 
 // MonitorinRepoInit watches a directory for new files and adds them to IPFS.
 // It initializes the directory for monitoring, creates a watcher, and processes file events.
-func WatchStorageQueueForChanges(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI) (path.ImmutablePath, error) {
+func WatchStorageQueueForChanges(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI) (path.ImmutablePath, string, error) {
 	CreateStorageQueueDirectory()
 	watchDir := "./Storage_Queue"
 
@@ -40,6 +40,7 @@ func WatchStorageQueueForChanges(ctx context.Context, node *core.IpfsNode, ipfsA
 	defer watcher.Close()
 
 	cidChan := make(chan path.ImmutablePath) // Channel for passing the CID
+	fileNameChan := make(chan string)        // Channel for passing the the filename of the file
 
 	go func() {
 		for {
@@ -54,14 +55,15 @@ func WatchStorageQueueForChanges(ctx context.Context, node *core.IpfsNode, ipfsA
 					fmt.Printf("modified file: %s\n", event.Name)
 				} else if event.Op&fsnotify.Create == fsnotify.Create {
 					fmt.Printf("created file: %s\n", event.Name)
-					cidFile, err := storage.AddFileToIPFS(ctx, node, ipfsApi, event.Name)
+					cidFile, fileName, err := storage.AddFileToIPFS(ctx, node, ipfsApi, event.Name)
 					if err != nil {
 						log.Printf("Could not add file to IPFS: %s", err)
 						continue
 					}
 					fmt.Printf("The cid of the file is %v", cidFile.String())
-					cidChan <- cidFile    // Envoyer le CID via le canal
-					os.Remove(event.Name) // Supprime le fichier de la Queue
+					cidChan <- cidFile       // Envoyer le CID via le canal
+					fileNameChan <- fileName // Envoyer le nom du fichier via le canal
+					os.Remove(event.Name)    // Supprime le fichier de la Queue
 					return
 
 				} else if event.Op&fsnotify.Remove == fsnotify.Remove {
@@ -84,5 +86,6 @@ func WatchStorageQueueForChanges(ctx context.Context, node *core.IpfsNode, ipfsA
 	}
 
 	cid := <-cidChan // Recevoir le CID
-	return cid, nil
+	fileName := <-fileNameChan
+	return cid, fileName, nil
 }

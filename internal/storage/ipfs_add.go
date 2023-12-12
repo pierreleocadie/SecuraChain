@@ -34,7 +34,7 @@ func PrepareFileForIPFS(path string) (files.Node, error) {
 
 // AddFileToIPFS adds a file to IPFS and returns its CID. It also collects and saves file metadata.
 // The function handles the file addition process and records metadata such as file size, type, name, and user public key.
-func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI, inputPathFile string) (path.ImmutablePath, error) {
+func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI, inputPathFile string) (path.ImmutablePath, string, error) {
 	someFile, err := PrepareFileForIPFS(inputPathFile)
 	if err != nil {
 		fmt.Errorf("could not get File: %s", err)
@@ -50,10 +50,26 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 	ipfsApi.Pin().Add(ctx, cidFile)
 	_, IsPinned, err := ipfsApi.Pin().IsPinned(ctx, cidFile)
 	if err != nil {
-		return path.ImmutablePath{}, err
+		return path.ImmutablePath{}, "", err
 	}
 
 	fmt.Println("Le fichier a bien été pin avec le cid: ", IsPinned)
+
+	// Create a storage structure for the file metadata.
+	datav1 := util.CIDStorage{}
+
+	// // Create a JSON FILE
+	// jsonFile, err := util.WriteAJSONFile("ipfs_file_storage.json")
+	// if err != nil {
+	// 	log.Fatalf("Error creating JSON file %v", err)
+	// }
+
+	// // Load a JSON FILE
+	// existingData, err := util.LoadFromJSON(jsonFile)
+	// if err != nil {
+	// 	return err
+	// }
+	// datav1.Files = append(datav1.Files, existingData)
 
 	// Collect file information and metadata.
 	fileName, fileSize, fileType, err := FileInfo(inputPathFile)
@@ -72,8 +88,6 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 		UserPublicKey: node.Identity.String(),
 	}
 
-	// Create a storage structure for the file metadata.
-	datav1 := util.CIDStorage{}
 	datav1.Files = append(datav1.Files, data)
 
 	// Save the metadata to a JSON file.
@@ -85,20 +99,20 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 	// Adding the file on the storage node (local system)
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return path.ImmutablePath{}, err
+		return path.ImmutablePath{}, "", err
 	}
 
 	outputBasePath := filepath.Join(home, ".IPFS_Local_Storage/")
 	if err := os.MkdirAll(outputBasePath, 0700); err != nil {
-		return path.ImmutablePath{}, fmt.Errorf("error creating output directory : %v", err)
+		return path.ImmutablePath{}, "", fmt.Errorf("error creating output directory : %v", err)
 	}
 
 	outputFilePath := filepath.Join(outputBasePath, filepath.Base(inputPathFile))
 
 	err = util.CopyFile(inputPathFile, outputFilePath)
 	if err != nil {
-		return path.ImmutablePath{}, fmt.Errorf("error copying file to output directory: %v", err)
+		return path.ImmutablePath{}, "", fmt.Errorf("error copying file to output directory: %v", err)
 	}
 
-	return cidFile, nil
+	return cidFile, fileName, nil
 }

@@ -209,12 +209,16 @@ func main() {
 
 	// ---------- Monitoring Folder ----------------
 
-	cidDetectedFile, err := monitoring.WatchStorageQueueForChanges(ctx, nodeA, ipfsA)
+	cidDetectedFile, fileName, err := monitoring.WatchStorageQueueForChanges(ctx, nodeA, ipfsA)
 	if err != nil {
 		log.Printf("nulllllll %s", err)
 	}
 
+	//Téléchargements du fichier
 	storage.RetrieveAndSaveFileByCID(ctx, ipfsA, cidDetectedFile)
+
+	// Suppression du fichier
+	storage.DeleteFromIPFS(ctx, ipfsA, cidDetectedFile, fileName)
 
 	fmt.Println("\nAll done!")
 

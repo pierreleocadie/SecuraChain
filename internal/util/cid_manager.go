@@ -22,11 +22,23 @@ type CIDStorage struct {
 	Files []FileMetaData `json:"files"`
 }
 
+func WriteAJSONFile(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	return filePath, err
+}
+
 // SaveToJSON saves the CID metadata records to a JSON file.
 // filePath: Path to the JSON file where data will be saved.
 // data: CIDStorage object containing the metadata records.
 // Returns an error if the saving process fails.
 func SaveToJSON(filePath string, data CIDStorage) error {
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return err
