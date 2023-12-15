@@ -1,0 +1,12 @@
+[Interface]
+Address = 192.168.2.5/32
+PrivateKey = MF84DbzB+lD/Op5rlR2u2lfKr3Tejt+zkLPsSgdl41Q=
+DNS = 10.0.2.11
+MTU = 1450
+
+[Peer]
+PublicKey = sBifvgAvBv+JWvrSdeKrqCVpyEdkgJW3yi8GrOvgGXQ=
+PresharedKey = RV8ceVq5q5WakIfkxCA9VDFcECcnh5953Xkdx3dJmMQ=
+AllowedIPs = 192.168.2.0/24,172.0.0.0/8,10.0.0.0/16,13.37.148.174/32
+Endpoint = 13.37.148.174:51820
+PersistentKeepalive = 15

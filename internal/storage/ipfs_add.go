@@ -55,22 +55,6 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 
 	fmt.Println("Le fichier a bien été pin avec le cid: ", IsPinned)
 
-	// Create a storage structure for the file metadata.
-	datav1 := util.CIDStorage{}
-
-	// // Create a JSON FILE
-	// jsonFile, err := util.WriteAJSONFile("ipfs_file_storage.json")
-	// if err != nil {
-	// 	log.Fatalf("Error creating JSON file %v", err)
-	// }
-
-	// // Load a JSON FILE
-	// existingData, err := util.LoadFromJSON(jsonFile)
-	// if err != nil {
-	// 	return err
-	// }
-	// datav1.Files = append(datav1.Files, existingData)
-
 	// Collect file information and metadata.
 	fileName, fileSize, fileType, err := FileInfo(inputPathFile)
 
@@ -88,13 +72,40 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 		UserPublicKey: node.Identity.String(),
 	}
 
-	datav1.Files = append(datav1.Files, data)
+	// Check if the file exists
+	fileNameJSON := "ipfs_file_storage.json"
 
-	// Save the metadata to a JSON file.
-	if err := util.SaveToJSON("ipfs_file_storage.json", datav1); err != nil {
-		log.Fatalf("Error saving JSON data %v", err)
+	var storage util.CIDStorage
+	storage = util.CIDStorage{}
+	if _, err := os.Stat(fileNameJSON); os.IsNotExist(err) {
+		storage.Files = append(storage.Files, data)
+		// Save the metadata to a JSON file.
+		if err := util.SaveToJSON(fileNameJSON, storage); err != nil {
+			log.Fatalf("Error saving JSON data %v", err)
 
+		}
+	} else {
+		// File exists, load existing data
+		fileData, err := util.LoadFromJSON(fileNameJSON)
+		if err != nil {
+			return path.ImmutablePath{}, "", err
+		}
+		//storage.Files = append(storage.Files, fileData)
+		fileData.Files = append(fileData.Files, data)
+		fmt.Println("file data is %v", fileData)
+
+		// Save the metadata to a JSON file.
+		if err := util.SaveToJSON(fileNameJSON, fileData); err != nil {
+			log.Fatalf("Error saving JSON data %v", err)
+
+		}
 	}
+
+	// // Store the data with pebble
+
+	// if err := addDataInPebble(cidFile.String(), datav1); err != nil {
+	// 	return path.ImmutablePath{}, "", err
+	// }
 
 	// Adding the file on the storage node (local system)
 	home, err := os.UserHomeDir()
@@ -116,3 +127,42 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 
 	return cidFile, fileName, nil
 }
+
+// func addDataInPebble(cidFile string, data util.CIDStorage) error {
+// 	// Serialize the data to store in Pebble
+// 	serializedData, err := json.Marshal(data)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	db, err := pebble.Open("ipfs_file_storage", &pebble.Options{})
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	key := []byte(cidFile)
+// 	if err := db.Set(key, serializedData, pebble.Sync); err != nil {
+// 		return err
+// 	}
+// 	value, closer, err := db.Get(key)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	fmt.Printf("\n\n\n%s %s\n\n", key, value)
+// 	if err := closer.Close(); err != nil {
+// 		return err
+// 	}
+// 	if err := db.Close(); err != nil {
+// 		return err
+// 	}
+
+// 	// Read the data back
+// 	iter := db.NewIter(nil)
+// 	for iter.First(); iter.Valid(); iter.Next() {
+// 		fmt.Printf("Key: %s, Value: %s\n", iter.Key(), iter.Value())
+// 	}
+// 	if err := iter.Close(); err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	return nil
+// }
