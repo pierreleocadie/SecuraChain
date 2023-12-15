@@ -9,6 +9,7 @@ import (
 
 	icore "github.com/ipfs/boxo/coreiface"
 	"github.com/ipfs/boxo/path"
+	"github.com/pierreleocadie/SecuraChain/internal/util"
 )
 
 // IPFS ne permet pas la suppression traditionnelle de fichiers
@@ -40,5 +41,26 @@ func DeleteFromIPFS(ctx context.Context, ipfsApi icore.CoreAPI, cid path.Immutab
 		return err
 	}
 
+	// Read the JSON File
+	fileNameJSON := "ipfs_file_storage.json"
+	fileData, err := util.LoadFromJSON(fileNameJSON)
+
+	if err != nil {
+		return err
+	}
+	// Trouver et supprimer la métadonnée
+	for i, file := range fileData.Files {
+		if file.OriginalName == fileName {
+			fileData.Files = append(fileData.Files[:i], fileData.Files[i+1:]...)
+			break
+		}
+	}
+
+	// Sauvegarder les données mises à jour
+	if err := util.SaveToJSON(fileNameJSON, fileData); err != nil {
+		log.Fatalf("Error saving JSON data: %v", err)
+	}
+
+	fmt.Println("Métadonnée supprimée avec succès")
 	return nil
 }
