@@ -13,7 +13,6 @@ import (
 	icore "github.com/ipfs/boxo/coreiface"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pierreleocadie/SecuraChain/internal/discovery"
-	"github.com/pierreleocadie/SecuraChain/internal/storage"
 	"github.com/pierreleocadie/SecuraChain/internal/storage/monitoring"
 
 	"github.com/ipfs/kubo/config"
@@ -202,23 +201,28 @@ func main() {
 
 	fmt.Println("IPFS node is running")
 
+	// ---------- Monitoring Folder ----------------
+
+	go func() {
+
+		_, _, err := monitoring.WatchStorageQueueForChanges(ctx, nodeA, ipfsA)
+		if err != nil {
+			log.Printf("Error watchung storage queue: %s", err)
+		}
+	}()
+
 	// ---------- Connection to Boostrap Nodes ----------------
 
 	fmt.Println("\n-- Going to connect to a few boostrap nodesnodes in the Network --")
 	discovery.ConnectToBoostrapNodes(ctx, nodeA)
 
-	// ---------- Monitoring Folder ----------------
+	// cidDetectedFile, fileName, err := monitoring.WatchStorageQueueForChanges(ctx, nodeA, ipfsA)
 
-	cidDetectedFile, fileName, err := monitoring.WatchStorageQueueForChanges(ctx, nodeA, ipfsA)
-	if err != nil {
-		log.Printf("nulllllll %s", err)
-	}
+	// // Téléchargements du fichier
+	// storage.RetrieveAndSaveFileByCID(ctx, ipfsA, cidDetectedFile)
 
-	//Téléchargements du fichier
-	storage.RetrieveAndSaveFileByCID(ctx, ipfsA, cidDetectedFile)
-
-	// Suppression du fichier
-	storage.DeleteFromIPFS(ctx, ipfsA, cidDetectedFile, fileName)
+	// // Suppression du fichier
+	// storage.DeleteFromIPFS(ctx, ipfsA, cidDetectedFile, fileName)
 
 	fmt.Println("\nAll done!")
 

@@ -47,36 +47,32 @@ func WatchStorageQueueForChanges(ctx context.Context, node *core.IpfsNode, ipfsA
 			select {
 			case event, ok := <-watcher.Events:
 				if !ok {
-					return
+					fmt.Println("Error")
 				}
 				// Check the type of event and log the details.
 				fmt.Printf("event: %v\n", event)
-				if event.Op&fsnotify.Write == fsnotify.Write {
-					fmt.Printf("modified file: %s\n", event.Name)
-				} else if event.Op&fsnotify.Create == fsnotify.Create {
+
+				if event.Op&fsnotify.Create == fsnotify.Create {
 					fmt.Printf("created file: %s\n", event.Name)
-					cidFile, fileName, err := storage.AddFileToIPFS(ctx, node, ipfsApi, event.Name)
+					cidFile, _, err := storage.AddFileToIPFS(ctx, node, ipfsApi, event.Name)
 					if err != nil {
 						log.Printf("Could not add file to IPFS: %s", err)
 						continue
 					}
 					fmt.Printf("The cid of the file is %v", cidFile.String())
-					cidChan <- cidFile       // Envoyer le CID via le canal
-					fileNameChan <- fileName // Envoyer le nom du fichier via le canal
-					os.Remove(event.Name)    // Supprime le fichier de la Queue
-					return
-
-				} else if event.Op&fsnotify.Remove == fsnotify.Remove {
-					fmt.Printf("deleted file: %s\n", event.Name)
+					// cidChan <- cidFile       // Envoyer le CID via le canal
+					// fileNameChan <- fileName // Envoyer le nom du fichier via le canal
+					os.Remove(event.Name) // Supprime le fichier de la Queue
 				}
 
 			case err, ok := <-watcher.Errors:
 				if !ok {
-					return
+					fmt.Println("error")
 				}
-				log.Println("error:", err)
+				log.Println("EError:", err)
 			}
 		}
+
 	}()
 
 	// Watch a specific folder for changes.

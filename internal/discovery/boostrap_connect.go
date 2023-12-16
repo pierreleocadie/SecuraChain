@@ -131,19 +131,50 @@ func ConnectToBoostrapNodes(ctx context.Context, ipfsNode *core.IpfsNode) {
 	}
 	defer subNet.Close()
 
+	stop := make(chan bool)
+	go func() {
+		waitForTermSignal()
+		stop <- true
+	}()
+
 	// Handle connection events in a separate goroutine
 	go func() {
-		for e := range subNet.Out() {
-			evt := e.(event.EvtPeerConnectednessChanged)
-			if evt.Connectedness == network.Connected {
-				log.Println("Peer connected:", evt.Peer)
-			} else if evt.Connectedness == network.NotConnected {
-				log.Println("Peer disconnected: ", evt.Peer)
+		for {
+			select {
+			case <-stop:
+				return // Arrête la goroutine
+			case e, ok := <-subNet.Out():
+				if !ok {
+					return // Arrêter si le canal est femré
+				}
+
+				evt, isEventType := e.(event.EvtPeerConnectednessChanged)
+				if isEventType {
+					if evt.Connectedness == network.Connected {
+						log.Println("Peer connected:", evt.Peer)
+					} else if evt.Connectedness == network.NotConnected {
+						log.Println("Peer disconnected: ", evt.Peer)
+					}
+				} else {
+					log.Println("Received unexpected event type")
+				}
+
 			}
 		}
 	}()
+	// go func() {
 
-	// Wait for a termination signal
-	waitForTermSignal()
+	// 	for e := range subNet.Out() {
+	// 		evt := e.(event.EvtPeerConnectednessChanged)
+	// 		if evt.Connectedness == network.Connected {
+	// 			log.Println("Peer connected:", evt.Peer)
+
+	// 		} else if evt.Connectedness == network.NotConnected {
+	// 			log.Println("Peer disconnected: ", evt.Peer)
+	// 		}
+	// 	}
+	// }()
+
+	<-stop // Attendre que la goroutine s'arrête
 
 }
