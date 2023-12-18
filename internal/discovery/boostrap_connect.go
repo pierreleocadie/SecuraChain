@@ -162,18 +162,6 @@ func ConnectToBoostrapNodes(ctx context.Context, ipfsNode *core.IpfsNode) {
 			}
 		}
 	}()
-	// go func() {
-
-	// 	for e := range subNet.Out() {
-	// 		evt := e.(event.EvtPeerConnectednessChanged)
-	// 		if evt.Connectedness == network.Connected {
-	// 			log.Println("Peer connected:", evt.Peer)
-
-	// 		} else if evt.Connectedness == network.NotConnected {
-	// 			log.Println("Peer disconnected: ", evt.Peer)
-	// 		}
-	// 	}
-	// }()
 
 	<-stop // Attendre que la goroutine s'arrête
 
