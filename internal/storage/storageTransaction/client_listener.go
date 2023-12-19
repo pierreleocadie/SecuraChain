@@ -10,7 +10,6 @@ import (
 	"github.com/ipfs/kubo/core"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 )
 
 const RefreshInterval = 10 * time.Second
@@ -25,7 +24,7 @@ var (
 	ip6quic                  string           = fmt.Sprintf("/ip6/::/udp/%d/quic-v1", 0)
 )
 
-func SubscribeToClientChannel(ctx context.Context, ipfsNode *core.IpfsNode) (transaction.Transaction, error) {
+func SubscribeToClientChannel(ctx context.Context, ipfsNode *core.IpfsNode) {
 
 	host := ipfsNode.PeerHost
 
@@ -38,27 +37,38 @@ func SubscribeToClientChannel(ctx context.Context, ipfsNode *core.IpfsNode) (tra
 		log.Println("Failed to create new PubSub service:", err)
 	}
 
-	// Join the topic
-	topicTrx, err := ps.Join(*transactionTopicNameFlag)
+	// Join the topic client channel
+	topicClient, err := ps.Join("ClientAnnouncement")
 	if err != nil {
 		log.Println("Failed to join topic:", err)
 	}
-	subTrx, err := topicTrx.Subscribe()
+	subClient, err := topicClient.Subscribe()
 	if err != nil {
-		log.Println("Failed to subscribe to topic:", err)
+		log.Println("Failed to subscribe to topic client:", err)
 	}
 
-	// Handle incoming transactions in a separate goroutine
+	// // Handle incoming client annoncement in a separate goroutine
+	// go func() {
+	// 	for {
+	// 		msgClient, err := subClient.Next(ctx)
+	// 		if err != nil {
+	// 			log.Println("Failed to get next transaction:", err)
+	// 		}
+	// 		log.Println(string(msgClient.Data))
+	// 	}
+	// }()
+
+	// select {}
+
 	go func() {
 		for {
-			msg, err := subTrx.Next(ctx)
+			msg, err := subClient.Next(ctx)
 			if err != nil {
-				log.Println("Failed to get next transaction:", err)
+				log.Println("Failed to read next message:", err)
+				continue
 			}
-			log.Println(string(msg.Data))
+			fmt.Printf("Received message: %s\n", string(msg.Data))
 		}
 	}()
-
-	select {}
 
 }

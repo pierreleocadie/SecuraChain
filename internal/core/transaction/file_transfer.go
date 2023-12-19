@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
@@ -30,7 +30,7 @@ type FileTransferHTTPRequest struct {
 	AnnouncementTimestamp int64                 `json:"announcementTimestamp" binding:"required"` // Announcement timestamp - Unix timestamp
 	ResponseID            uuid.UUID             `json:"responseID" binding:"required"`            // Response ID - UUID
 	NodeAddress           []byte                `json:"nodeAddress" binding:"required"`           // Node address - ECDSA public key
-	NodeCID               cid.Cid               `json:"nodeCID" binding:"required"`               // Node CID - SHA256
+	NodeID                peer.ID               `json:"nodeID" binding:"required"`                // Node CID - SHA256
 	NodeSignature         []byte                `json:"nodeSignature" binding:"required"`         // Node signature - ECDSA signature
 	ResponseTimestamp     int64                 `json:"responseTimestamp" binding:"required"`     // Response timestamp - Unix timestamp
 	File                  *multipart.FileHeader `form:"file" json:"file" binding:"required"`      // File - multipart.FileHeader
@@ -68,7 +68,7 @@ func NewFileTransferHTTPRequest(announcement *ClientAnnouncement, response *Stor
 		AnnouncementTimestamp: announcement.AnnouncementTimestamp,
 		ResponseID:            response.ResponseID,
 		NodeAddress:           response.NodeAddress,
-		NodeCID:               response.NodeCID,
+		NodeID:                response.NodeID,
 		NodeSignature:         response.NodeSignature,
 		ResponseTimestamp:     response.ResponseTimestamp,
 		File:                  file,

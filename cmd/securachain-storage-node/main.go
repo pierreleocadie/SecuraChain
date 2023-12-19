@@ -15,6 +15,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/storage/monitoring"
 
 	"github.com/libp2p/go-libp2p"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -170,6 +171,39 @@ func main() {
 		stop <- true
 	}()
 
+	//-----------------
+
+	/*
+	* SUBSCRIBE TO ClientAnnouncement
+	 */
+	// Create a new PubSub service using the GossipSub router
+	ps, err := pubsub.NewGossipSub(ctx, host)
+	if err != nil {
+		log.Println("Failed to create new PubSub service:", err)
+	}
+
+	// Join the topic client channel
+	topicClient, err := ps.Join("ClientAnnouncement")
+	if err != nil {
+		log.Println("Failed to join topic:", err)
+	}
+	subClient, err := topicClient.Subscribe()
+	if err != nil {
+		log.Println("Failed to subscribe to topic client:", err)
+	}
+
+	go func() {
+		for {
+			msg, err := subClient.Next(ctx)
+			if err != nil {
+				log.Println("Failed to read next message:", err)
+				continue
+			}
+			fmt.Printf("Received message: %s\n", string(msg.Data))
+		}
+	}()
+	//---------------
+
 	// Handle connection events in a separate goroutine
 	go func() {
 		for {
@@ -218,4 +252,5 @@ func main() {
 	// storageAnnoncement = storageTransaction.StorageAnnoncement(ctx, nodeIpfs, desaralizeAnnoncement, clientAnnoncement)
 
 	fmt.Println("\nAll done!")
+
 }

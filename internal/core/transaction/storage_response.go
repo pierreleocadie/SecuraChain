@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
@@ -20,7 +20,7 @@ func (f *StorageNodeResponseFactory) CreateTransaction(data []byte) (Transaction
 type StorageNodeResponse struct {
 	ResponseID            uuid.UUID `json:"responseID"`            // Response ID - UUID
 	NodeAddress           []byte    `json:"nodeAddress"`           // Node address - ECDSA public key
-	NodeCID               cid.Cid   `json:"nodeID"`                // Node CID - SHA256
+	NodeID                peer.ID   `json:"nodeID"`                // Node CID - SHA256
 	APIEndpoint           string    `json:"apiEndpoint"`           // API endpoint - URL for file transfer binding:"required"
 	NodeSignature         []byte    `json:"nodeSignature"`         // Node signature - ECDSA signature
 	ResponseTimestamp     int64     `json:"responseTimestamp"`     // Response timestamp - Unix timestamp
@@ -50,7 +50,7 @@ func (r *StorageNodeResponse) SpecificData() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func NewStorageNodeResponse(nodeAddress ecdsa.KeyPair, nodeCID cid.Cid, apiEndpoint string, announcement *ClientAnnouncement) *StorageNodeResponse {
+func NewStorageNodeResponse(nodeAddress ecdsa.KeyPair, nodeID peer.ID, apiEndpoint string, announcement *ClientAnnouncement) *StorageNodeResponse {
 	nodeAddressBytes, err := nodeAddress.PublicKeyToBytes()
 	if err != nil {
 		return nil
@@ -59,7 +59,7 @@ func NewStorageNodeResponse(nodeAddress ecdsa.KeyPair, nodeCID cid.Cid, apiEndpo
 	response := &StorageNodeResponse{
 		ResponseID:            uuid.New(),
 		NodeAddress:           nodeAddressBytes,
-		NodeCID:               nodeCID,
+		NodeID:                nodeID,
 		APIEndpoint:           apiEndpoint,
 		ResponseTimestamp:     time.Now().Unix(),
 		AnnouncementID:        announcement.AnnouncementID,
