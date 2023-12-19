@@ -127,3 +127,55 @@ func (aesKey *aesKey) DecryptFile(inputFilePath, outputFilePath string) error {
 
 	return nil
 }
+
+// EncryptData encrypts data using AES encryption in CFB mode.
+// It takes as input the data to encrypt.
+// Returns the encrypted data and an error if encryption fails.
+func (aesKey *aesKey) EncryptData(data []byte) ([]byte, error) {
+	// Initialize AES cipher block.
+	block, err := aes.NewCipher(aesKey.key)
+	if err != nil {
+		return nil, fmt.Errorf("could not create AES cipher block: %v", err)
+	}
+
+	// Generate a random Initialization Vector (IV).
+	initializationVector := make([]byte, aes.BlockSize)
+	if _, err := rand.Read(initializationVector); err != nil {
+		return nil, fmt.Errorf("could not generate random initialization vector: %v", err)
+	}
+
+	// Initialize AES cipher in CFB mode.
+	stream := cipher.NewCFBEncrypter(block, initializationVector)
+
+	// Encrypt the data.
+	encryptedData := make([]byte, len(data))
+	stream.XORKeyStream(encryptedData, data)
+
+	// Prepend the IV to the encrypted data.
+	encryptedData = append(initializationVector, encryptedData...)
+
+	return encryptedData, nil
+}
+
+// DecryptData decrypts data that was encrypted using AES encryption in CFB mode.
+// It takes as input the data to decrypt.
+// Returns the decrypted data and an error if decryption fails.
+func (aesKey *aesKey) DecryptData(data []byte) ([]byte, error) {
+	// Initialize AES cipher block.
+	block, err := aes.NewCipher(aesKey.key)
+	if err != nil {
+		return nil, fmt.Errorf("could not create AES cipher block: %v", err)
+	}
+
+	// Read the Initialization Vector (IV) from the encrypted data.
+	initializationVector := data[:aes.BlockSize]
+
+	// Initialize AES cipher in CFB mode for decryption.
+	stream := cipher.NewCFBDecrypter(block, initializationVector)
+
+	// Decrypt the data.
+	decryptedData := make([]byte, len(data)-aes.BlockSize)
+	stream.XORKeyStream(decryptedData, data[aes.BlockSize:])
+
+	return decryptedData, nil
+}

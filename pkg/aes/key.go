@@ -22,6 +22,8 @@ type Key interface {
 	SaveKey(filename, storagePath string) error
 	EncryptFile(inputFilePath, outputFilePath string) error
 	DecryptFile(inputFilePath, outputFilePath string) error
+	EncryptData(data []byte) ([]byte, error)
+	DecryptData(data []byte) ([]byte, error)
 }
 
 // aesKey is a concrete implementation of AESKey.

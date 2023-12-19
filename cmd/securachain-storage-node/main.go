@@ -2,189 +2,122 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
-	"path/filepath"
-	"sync"
+	"os/signal"
+	"syscall"
+	"time"
 
-	icore "github.com/ipfs/boxo/coreiface"
-	ma "github.com/multiformats/go-multiaddr"
+	"github.com/multiformats/go-multiaddr"
 	"github.com/pierreleocadie/SecuraChain/internal/discovery"
+	"github.com/pierreleocadie/SecuraChain/internal/storage/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/storage/monitoring"
 
-	"github.com/ipfs/kubo/config"
-	"github.com/ipfs/kubo/core"
-	"github.com/ipfs/kubo/core/coreapi"
-	"github.com/ipfs/kubo/core/node/libp2p"
-	"github.com/ipfs/kubo/plugin/loader" // This package is needed so that all the preloaded plugins are loaded automatically
-	"github.com/ipfs/kubo/repo/fsrepo"
+	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p/core/event"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
+	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 )
 
-// Prepare and set up the plugins
-func setupPlugins(externalPluginsPath string) error {
-	// Load any external plugins if available on externalPluginsPath
-	plugins, err := loader.NewPluginLoader(filepath.Join(externalPluginsPath, "plugins")) // Charger les plugins depuis externalPluginsPath/plugins
+const (
+	listeningPortFlag = 1211 // Port used for listening to incoming connections.
+)
+
+var (
+	rendezvousStringFlag = fmt.Sprintln("SecuraChainNetwork") // Network identifier for rendezvous string.
+	ip4tcp               = fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", listeningPortFlag)
+	ip6tcp               = fmt.Sprintf("/ip6/::/tcp/%d", listeningPortFlag)
+	ip4quic              = fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", listeningPortFlag)
+	ip6quic              = fmt.Sprintf("/ip6/::/udp/%d/quic-v1", listeningPortFlag)
+	// flagExp              = flag.Bool("experimental", false, "enable experimental features")
+)
+
+func initializeNode(host host.Host) host.Host {
+	/*
+	* NODE INITIALIZATION
+	 */
+	host, err := libp2p.New(
+		libp2p.UserAgent("SecuraChain"),
+		libp2p.ProtocolVersion("0.0.1"),
+		libp2p.ListenAddrStrings(ip4tcp, ip6tcp, ip4quic, ip6quic),
+		libp2p.Transport(tcp.NewTCPTransport),
+		libp2p.Transport(libp2pquic.NewTransport),
+		libp2p.RandomIdentity,
+		libp2p.DefaultSecurity,
+		libp2p.DefaultMuxers,
+	)
 	if err != nil {
-		return fmt.Errorf("error loading plugins: %s", err)
+		panic(err)
+	}
+	log.Printf("Our node ID: %s\n", host.ID())
+
+	// Node info
+	hostInfo := peer.AddrInfo{
+		ID:    host.ID(),
+		Addrs: host.Addrs(),
 	}
 
-	// Load preloaded and external plugins
-	if err := plugins.Initialize(); err != nil {
-		return fmt.Errorf("error initializing plugins: %s", err)
+	addrs, err := peer.AddrInfoToP2pAddrs(&hostInfo)
+	if err != nil {
+		panic(err)
 	}
 
-	// Injecte les plugins dans l'application, permettant d'activer ou d'intégrer des plugins dans le système de l'application
-	if err := plugins.Inject(); err != nil {
-		return fmt.Errorf("error initializing plugins: %s", err)
+	for _, addr := range addrs {
+		log.Println("Node address: ", addr)
 	}
 
-	return nil
+	for _, addr := range host.Addrs() {
+		log.Println("Listening on address: ", addr)
+	}
+
+	return host
+
 }
 
-// Create an IPFS repo
-// Créer un répertoire IPFS
-func createRepo() (string, error) {
-	// Récupérer le répertoire personnel de l'utilisateur
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get user home directory: %s", err)
-	}
+func setupDHTDiscovery(ctx context.Context, host host.Host) {
+	/*
+	* NETWORK PEER DISCOVERY WITH DHT
+	 */
+	// TODO : remove hard coded boostrap node
+	bootstrapPeers := []string{"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWRJeqfc9RrGevpLNto8WXiYVsPhuF1qtso6dZehEY7FmP"}
 
-	ipfsPath := filepath.Join(homeDir, ".ipfs-shell")
-
-	err = os.Mkdir(ipfsPath, 0750) // read and execute for everyone and write for the owner
-	if err != nil && !os.IsExist(err) {
-		log.Fatal(err)
-	}
-
-	// Create a config with default options and a 2048 bit key
-	cfg, err := config.Init(io.Discard, 2048) // Initialise une nouvelle configuration IPFS avec une clé de 2048 bits, io.Discard --> ignorer tous les outputs donc aucune sortie n'est affichée.
-	if err != nil {
-		return "", err
-	}
-
-	// When creating the repository, you can define custom settings on the repository, such as enabling experimental
-	// features (See experimental-features.md) or customizing the gateway endpoint.
-	// To do such things, you should modify the variable `cfg`. For example:
-	// Si le drapeau expérimental est activé, elle active des fonctionnalités d'IPFS// lire les commentaires
-	//cfg permet de modifier la configuration avant de créer le dépot
-	if *flagExp {
-		// https://github.com/ipfs/kubo/blob/master/docs/experimental-features.md#ipfs-filestore
-		cfg.Experimental.FilestoreEnabled = true
-		// https://github.com/ipfs/kubo/blob/master/docs/experimental-features.md#ipfs-urlstore
-		cfg.Experimental.UrlstoreEnabled = true
-		// https://github.com/ipfs/kubo/blob/master/docs/experimental-features.md#ipfs-p2p
-		cfg.Experimental.Libp2pStreamMounting = true
-		// https://github.com/ipfs/kubo/blob/master/docs/experimental-features.md#p2p-http-proxy
-		cfg.Experimental.P2pHttpProxy = true
-		// See also: https://github.com/ipfs/kubo/blob/master/docs/config.md
-		// And: https://github.com/ipfs/kubo/blob/master/docs/experimental-features.md
-	}
-
-	// Create the repo with the config
-	err = fsrepo.Init(ipfsPath, cfg) // Initialise le repo IPFS à l'emplacement spécifié
-	if err != nil {
-		return "", fmt.Errorf("failed to init ephemeral node: %s", err)
-	}
-
-	return ipfsPath, nil
-}
-
-// Construct the IPFS node instance itself
-func createNode(ctx context.Context, repoPath string) (*core.IpfsNode, error) {
-	// Un contexte 'Context' de Go, utilisé pour la gestion de la durée de vie et l'annulation des processus
-	// Open the repo
-	repo, err := fsrepo.Open(repoPath)
-	if err != nil {
-		return nil, err
-	}
-
-	// Construct the node
-
-	nodeOptions := &core.BuildCfg{
-		Online:  true,             // Booléen indiquant si le noeud IPFS doit fonctionner en mode en ligne, ce qui signifera qu'il se connectera à d'autres noeuds IPFS sur le réseau
-		Routing: libp2p.DHTOption, // This option sets the node to be a full DHT node (both fetching and storing DHT Records)
-		// Routing: libp2p.DHTClientOption, // This option sets the node to be a client DHT node (only fetching records)
-		Repo: repo,
-	}
-
-	return core.NewNode(ctx, nodeOptions) // Crée et initialise un nouveau noeud IPFS en utilisant le context et les options spécifiées.
-	// Le noeud IPFS renvoyé par cette fonction peut-être utilisé pour interargir avec le réseau IPFS, réaliser des opérations de stockage et de récupération de données, participer au DHT ETC
-}
-
-var loadPluginsOnce sync.Once
-
-// Spawns a node
-func spawnNode(ctx context.Context) (icore.CoreAPI, *core.IpfsNode, error) {
-	// Charge les plugins une seule fois
-	var onceErr error
-	loadPluginsOnce.Do(func() {
-		onceErr = setupPlugins("")
-	})
-	if onceErr != nil {
-		return nil, nil, onceErr
-	}
-
-	// Create a Repo IPFS
-	repoPath, err := createRepo()
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create the repo ./ipfs-shell: %s", err)
-	}
-
-	// Configuration et Initialisation du Noeud IPFS avec les options définies
-	node, err := createNode(ctx, repoPath)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Créer une instance de l'API Core IPFS pour interagir avec le réseau IPFS
-	api, err := coreapi.NewCoreAPI(node)
-
-	return api, node, err
-}
-
-func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) error {
-	var wg sync.WaitGroup
-	peerInfos := make(map[peer.ID]*peer.AddrInfo, len(peers))
-	for _, addrStr := range peers {
-		addr, err := ma.NewMultiaddr(addrStr)
+	bootstrapPeersAddrs := make([]multiaddr.Multiaddr, len(bootstrapPeers))
+	for i, peerAddr := range bootstrapPeers {
+		peerAddrMA, err := multiaddr.NewMultiaddr(peerAddr)
 		if err != nil {
-			return err
+			log.Println("Failed to parse multiaddress: ", err)
+			return
 		}
-		pii, err := peer.AddrInfoFromP2pAddr(addr)
-		if err != nil {
-			return err
-		}
-		pi, ok := peerInfos[pii.ID]
-		if !ok {
-			pi = &peer.AddrInfo{ID: pii.ID}
-			peerInfos[pi.ID] = pi
-		}
-		pi.Addrs = append(pi.Addrs, pii.Addrs...)
+		bootstrapPeersAddrs[i] = peerAddrMA
 	}
-	wg.Add(len(peerInfos))
-	for _, peerInfo := range peerInfos {
-		go func(peerInfo *peer.AddrInfo) {
-			defer wg.Done()
-			err := ipfs.Swarm().Connect(ctx, *peerInfo)
-			if err != nil {
-				log.Printf("failed to connect to %s: %s", peerInfo.ID, err)
-			}
-		}(peerInfo)
+	// Initialize DHT in client mode
+	dhtDiscovery := discovery.NewDHTDiscovery(
+		false,
+		"SecuraChainNetwork",
+		bootstrapPeersAddrs,
+		10*time.Second,
+	)
+
+	// Run DHT
+	if err := dhtDiscovery.Run(ctx, host); err != nil {
+		log.Println("Failed to run DHT: ", err)
+		return
 	}
-	wg.Wait()
-	return nil
 }
 
-var flagExp = flag.Bool("experimental", false, "enable experimental features")
+func waitForTermSignal() {
+	// wait for a SIGINT or SIGTERM signal
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	<-ch
+	fmt.Println("Received signal, shutting down...")
+}
 
 func main() {
-	flag.Parse()
-
 	// ---------- Part I: Getting a IPFS node running  -------------------
 
 	fmt.Println("-- Getting an IPFS node running -- ")
@@ -193,8 +126,7 @@ func main() {
 	defer cancel()
 
 	// Créer un noeud de stockage ipfs sur la machine
-	ipfsA, nodeA, err := spawnNode(ctx)
-
+	ipfsApi, nodeIpfs, err := ipfs.SpawnNode(ctx)
 	if err != nil {
 		panic(fmt.Errorf("failed to spawn the node %s", err))
 	}
@@ -205,7 +137,7 @@ func main() {
 
 	go func() {
 
-		_, _, err := monitoring.WatchStorageQueueForChanges(ctx, nodeA, ipfsA)
+		_, _, err := monitoring.WatchStorageQueueForChanges(ctx, nodeIpfs, ipfsApi)
 		if err != nil {
 			log.Printf("Error watchung storage queue: %s", err)
 		}
@@ -214,16 +146,76 @@ func main() {
 	// ---------- Connection to Boostrap Nodes ----------------
 
 	fmt.Println("\n-- Going to connect to a few boostrap nodesnodes in the Network --")
-	discovery.ConnectToBoostrapNodes(ctx, nodeA)
 
-	// cidDetectedFile, fileName, err := monitoring.WatchStorageQueueForChanges(ctx, nodeA, ipfsA)
+	// Initialize the node
+	host := initializeNode(nodeIpfs.PeerHost)
+	defer host.Close()
 
-	// // Téléchargements du fichier
-	// storage.RetrieveAndSaveFileByCID(ctx, ipfsA, cidDetectedFile)
+	// Setup DHT discovery
+	setupDHTDiscovery(ctx, host)
 
-	// // Suppression du fichier
-	// storage.DeleteFromIPFS(ctx, ipfsA, cidDetectedFile, fileName)
+	/*
+	* DISPLAY PEER CONNECTEDNESS CHANGES
+	 */
+	// Subscribe to EvtPeerConnectednessChanged events
+	subNet, err := host.EventBus().Subscribe(new(event.EvtPeerConnectednessChanged))
+	if err != nil {
+		log.Println("Failed to subscribe to EvtPeerConnectednessChanged: ", err)
+	}
+	defer subNet.Close()
+
+	stop := make(chan bool)
+	go func() {
+		waitForTermSignal()
+		stop <- true
+	}()
+
+	// Handle connection events in a separate goroutine
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return // Arrête la goroutine
+			case e, ok := <-subNet.Out():
+				if !ok {
+					return // Arrêter si le canal est femré
+				}
+
+				evt, isEventType := e.(event.EvtPeerConnectednessChanged)
+				if isEventType {
+					if evt.Connectedness == network.Connected {
+						log.Println("Peer connected:", evt.Peer)
+					} else if evt.Connectedness == network.NotConnected {
+						log.Println("Peer disconnected: ", evt.Peer)
+					}
+				} else {
+					log.Println("Received unexpected event type")
+				}
+
+			}
+		}
+	}()
+
+	<-stop // Attendre que la goroutine s'arrête
+
+	// ------------- Téléchargements du fichier --------------
+	// cidDetectedFile, fileName, err := monitoring.WatchStorageQueueForChanges(ctx, nodeIpfs, ipfsApi)
+	// storage.RetrieveAndSaveFileByCID(ctx, ipfsApi, cidDetectedFile)
+
+	// ----------- Suppression du fichier -------------
+	// storage.DeleteFromIPFS(ctx, ipfsApi, cidDetectedFile, fileName)
+
+	// ------------------ HandleTransaction ------------
+	// Créer un poc qui envoie une annonce dans un fichier différent
+
+	// clientAnnoncement, err := storageTransaction.SubscribeToClientChannel(ctx, nodeIpfs)
+	// if err != nil {
+	// 	log.Printf("Failed on subscribing on Client Channel %s", err)
+	// }
+	// desaralizeAnnoncement, err := transaction.DeserializeClientAnnouncement(clientAnnoncement)
+	// fmt.Println("-------------\n\n\n\n %v", desaralizeAnnoncement)
+
+	// storageAnnoncement = storageTransaction.StorageAnnoncement(ctx, nodeIpfs, desaralizeAnnoncement, clientAnnoncement)
 
 	fmt.Println("\nAll done!")
-
 }
