@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
@@ -28,7 +29,7 @@ type AddFileTransaction struct {
 	AnnouncementTimestamp int64     `json:"announcementTimestamp"` // Announcement timestamp - Unix timestamp
 	ResponseID            uuid.UUID `json:"responseID"`            // Response ID - UUID
 	NodeAddress           []byte    `json:"nodeAddress"`           // Node address - ECDSA public key
-	NodeCID               cid.Cid   `json:"nodeCID"`               // Node CID
+	NodeID                peer.ID   `json:"nodeID"`                // Node ID
 	NodeSignature         []byte    `json:"nodeSignature"`         // Node signature - ECDSA signature
 	ResponseTimestamp     int64     `json:"responseTimestamp"`     // Response timestamp - Unix timestamp
 	FileTransferID        uuid.UUID `json:"fileTransferID"`        // File transfer ID - UUID
@@ -72,7 +73,7 @@ func NewAddFileTransaction(announcement *ClientAnnouncement, response *StorageNo
 		AnnouncementTimestamp: announcement.AnnouncementTimestamp,
 		ResponseID:            response.ResponseID,
 		NodeAddress:           response.NodeAddress,
-		NodeCID:               response.NodeCID,
+		NodeID:                response.NodeID,
 		NodeSignature:         response.NodeSignature,
 		ResponseTimestamp:     response.ResponseTimestamp,
 		FileTransferID:        fileTransfer.FileTransferID,

@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
@@ -77,11 +78,13 @@ func (v *AddFileTransactionValidator) Validate(tx transaction.Transaction) bool 
 		return false
 	}
 
-	// Verify that NodeCID and FileCID are valid CIDs
-	if !isValidCID(addFileTransaction.NodeCID) {
+	// Verify that NodeID is valid peer.ID
+	if !isValidPeerID(addFileTransaction.NodeID) {
 		fmt.Printf("Transaction validation failed: NodeCID is not a valid CID")
 		return false
 	}
+
+	// Verify that FileCID is valid CID
 	if !isValidCID(addFileTransaction.FileCID) {
 		fmt.Printf("Transaction validation failed: FileCID is not a valid CID")
 		return false
@@ -123,7 +126,7 @@ func (v *AddFileTransactionValidator) Validate(tx transaction.Transaction) bool 
 	storageNodeResponse := &transaction.StorageNodeResponse{
 		ResponseID:            addFileTransaction.ResponseID,
 		NodeAddress:           addFileTransaction.NodeAddress,
-		NodeCID:               addFileTransaction.NodeCID,
+		NodeID:                addFileTransaction.NodeID,
 		APIEndpoint:           "",
 		NodeSignature:         addFileTransaction.NodeSignature,
 		ResponseTimestamp:     addFileTransaction.ResponseTimestamp,
@@ -155,7 +158,7 @@ func (v *AddFileTransactionValidator) Validate(tx transaction.Transaction) bool 
 		AnnouncementTimestamp: addFileTransaction.AnnouncementTimestamp,
 		ResponseID:            addFileTransaction.ResponseID,
 		NodeAddress:           addFileTransaction.NodeAddress,
-		NodeCID:               addFileTransaction.NodeCID,
+		NodeID:                addFileTransaction.NodeID,
 		NodeSignature:         addFileTransaction.NodeSignature,
 		ResponseTimestamp:     addFileTransaction.ResponseTimestamp,
 		FileTransferSignature: addFileTransaction.FileTransferSignature,
@@ -230,6 +233,15 @@ func isValidCID(c cid.Cid) bool {
 	}
 
 	if c.Version() != 0 && c.Version() != 1 {
+		return false
+	}
+
+	return true
+}
+
+func isValidPeerID(p peer.ID) bool {
+	// Check if the peer.ID is valid
+	if _, err := peer.Decode(p.String()); err != nil {
 		return false
 	}
 
