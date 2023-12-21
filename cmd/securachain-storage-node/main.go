@@ -13,6 +13,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 	"github.com/pierreleocadie/SecuraChain/internal/storage/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/storage/monitoring"
+	"github.com/pierreleocadie/SecuraChain/internal/storage/storageTransaction"
 
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -84,7 +85,7 @@ func setupDHTDiscovery(ctx context.Context, host host.Host) {
 	* NETWORK PEER DISCOVERY WITH DHT
 	 */
 	// TODO : remove hard coded boostrap node
-	bootstrapPeers := []string{"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWRJeqfc9RrGevpLNto8WXiYVsPhuF1qtso6dZehEY7FmP"}
+	bootstrapPeers := []string{"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWJzCBarwtPQNbztPyHYzsh3Difo5DSAWqBWdVNuC1WA4e"}
 
 	bootstrapPeersAddrs := make([]multiaddr.Multiaddr, len(bootstrapPeers))
 	for i, peerAddr := range bootstrapPeers {
@@ -109,7 +110,6 @@ func setupDHTDiscovery(ctx context.Context, host host.Host) {
 		return
 	}
 }
-
 func waitForTermSignal() {
 	// wait for a SIGINT or SIGTERM signal
 	ch := make(chan os.Signal, 1)
@@ -171,7 +171,7 @@ func main() {
 		stop <- true
 	}()
 
-	//-----------------
+	// ---------- Listennng for client's announcement ----------------
 
 	/*
 	* SUBSCRIBE TO ClientAnnouncement
@@ -182,26 +182,7 @@ func main() {
 		log.Println("Failed to create new PubSub service:", err)
 	}
 
-	// Join the topic client channel
-	topicClient, err := ps.Join("ClientAnnouncement")
-	if err != nil {
-		log.Println("Failed to join topic:", err)
-	}
-	subClient, err := topicClient.Subscribe()
-	if err != nil {
-		log.Println("Failed to subscribe to topic client:", err)
-	}
-
-	go func() {
-		for {
-			msg, err := subClient.Next(ctx)
-			if err != nil {
-				log.Println("Failed to read next message:", err)
-				continue
-			}
-			fmt.Printf("Received message: %s\n", string(msg.Data))
-		}
-	}()
+	go storageTransaction.SubscribeToClientChannel(ctx, ps)
 	//---------------
 
 	// Handle connection events in a separate goroutine

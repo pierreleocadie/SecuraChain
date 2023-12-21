@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"flag"
 	"fmt"
 	"log"
@@ -20,7 +21,9 @@ import (
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/discovery"
+	ecdsaSC "github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
 const (
@@ -85,7 +88,7 @@ func setupDHTDiscovery(ctx context.Context, host host.Host) {
 	* NETWORK PEER DISCOVERY WITH DHT
 	 */
 	// TODO : remove hard coded boostrap node
-	bootstrapPeers := []string{"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWRJeqfc9RrGevpLNto8WXiYVsPhuF1qtso6dZehEY7FmP"}
+	bootstrapPeers := []string{"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWJzCBarwtPQNbztPyHYzsh3Difo5DSAWqBWdVNuC1WA4e"}
 
 	bootstrapPeersAddrs := make([]multiaddr.Multiaddr, len(bootstrapPeers))
 	for i, peerAddr := range bootstrapPeers {
@@ -149,6 +152,30 @@ func main() {
 		waitForTermSignal()
 		stop <- true
 	}()
+	//--------------------
+
+	/*
+	* GENERATE ECDSA KEY PAIR FOR NODE IDENTITY
+	 */
+	// Generate a pair of ecdsa keys
+	keyPair, err := ecdsaSC.NewECDSAKeyPair()
+	if err != nil {
+		log.Println("Failed to generate ecdsa key pair:", err)
+	}
+
+	/*
+	* CREATE A TRNSACTION
+	 */
+
+	StringChecksum := sha256.Sum256([]byte("Y2hlY2tzdW0="))
+	checksum := StringChecksum[:]
+
+	annoncement := transaction.NewClientAnnouncement(keyPair, []byte("example_file"), []byte(".txt"), uint64(1024), checksum)
+
+	data, err := annoncement.Serialize()
+	if err != nil {
+		fmt.Errorf("Error on serialize Client Annoncement transaction %s :", err)
+	}
 
 	//----------------------
 
@@ -168,15 +195,15 @@ func main() {
 
 	go func() {
 		for {
-			// Créer le message
-			msg := "Hello, this is a test message"
-			// Publier le message
-			err := topicTrx.Publish(ctx, []byte(msg))
+			// Publish en byte les données
+			err := topicTrx.Publish(ctx, data)
 			if err != nil {
 				log.Println("Failed to publish:", err)
 			}
 			time.Sleep(5 * time.Second)
-			fmt.Println(msg)
+			fmt.Println("--------------\n")
+			fmt.Println(FormatClientAnnouncement(annoncement))
+			fmt.Println("\n--------------")
 		}
 	}()
 	//------------------------
@@ -209,45 +236,9 @@ func main() {
 
 	<-stop // Attendre que la goroutine s'arrête
 
-	/*
-	* GENERATE ECDSA KEY PAIR FOR NODE IDENTITY
-	 */
-	// Generate a pair of ecdsa keys
-	// keyPair, err := ecdsaSC.NewECDSAKeyPair()
-	// if err != nil {
-	// 	log.Println("Failed to generate ecdsa key pair:", err)
-	// }
+}
 
-	/*
-	* CREATE A TRNSACTION
-	 */
-
-	// StringChecksum := sha256.Sum256([]byte("Y2hlY2tzdW0="))
-	// checksum := StringChecksum[:]
-
-	// annoncement := transaction.NewClientAnnouncement(keyPair, []byte("example_file"), []byte(".txt"), uint64(1024), checksum)
-
-	// data, err := annoncement.Serialize()
-	// if err != nil {
-	// 	fmt.Errorf("Error on serialize Client Annoncement transaction %s :", err)
-	// }
-
-	// // Every X seconds, publish a new transaction - random interval between 1 and 10 seconds
-	// go func() {
-	// 	for {
-	// 		time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second)
-	// 		// Publish the transaction
-	// 		if err := topicTrx.Publish(ctx, data); err != nil {
-	// 			log.Println("Failed to publish transaction:", err)
-	// 		}
-	// 		deserialize_data, err := transaction.DeserializeClientAnnouncement(data)
-	// 		if err != nil {
-	// 			log.Println("Failed on printing transac ", err)
-	// 		}
-
-	// 		print(deserialize_data)
-	// 	}
-	// }()
-	// select {}
-
+func FormatClientAnnouncement(a *transaction.ClientAnnouncement) string {
+	return fmt.Sprintf("AnnouncementID: %s\nOwnerAddress: %x\nFilename: %s\nExtension: %s\nFileSize: %d\nChecksum: %x\nOwnerSignature: %x\nAnnouncementTimestamp: %d",
+		a.AnnouncementID, a.OwnerAddress, a.Filename, a.Extension, a.FileSize, a.Checksum, a.OwnerSignature, a.AnnouncementTimestamp)
 }
