@@ -32,13 +32,15 @@ const (
 )
 
 var (
-	ignoredPeers             map[peer.ID]bool = make(map[peer.ID]bool)
-	rendezvousStringFlag                      = fmt.Sprintln("SecuraChainNetwork") // Network identifier for rendezvous string.
-	transactionTopicNameFlag *string          = flag.String("transactionTopicName", "NewTransaction", "ClientAnnouncement")
-	ip4tcp                   string           = fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", 0)
-	ip6tcp                   string           = fmt.Sprintf("/ip6/::/tcp/%d", 0)
-	ip4quic                  string           = fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", 0)
-	ip6quic                  string           = fmt.Sprintf("/ip6/::/udp/%d/quic-v1", 0)
+	ignoredPeers              map[peer.ID]bool = make(map[peer.ID]bool)
+	rendezvousStringFlag                       = fmt.Sprintln("SecuraChainNetwork") // Network identifier for rendezvous string.
+	channelClientAnnoncement  string           = "ClientAnnouncement"
+	channelStorageNodeReponse string           = "StorageNodeResponse"
+	transactionTopicNameFlag  *string          = flag.String("transactionTopicName", "NewTransaction", "ClientAnnouncement")
+	ip4tcp                    string           = fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", 0)
+	ip6tcp                    string           = fmt.Sprintf("/ip6/::/tcp/%d", 0)
+	ip4quic                   string           = fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", 0)
+	ip6quic                   string           = fmt.Sprintf("/ip6/::/udp/%d/quic-v1", 0)
 )
 
 func initializeNode() host.Host {
@@ -187,12 +189,11 @@ func main() {
 	if err != nil {
 		log.Println("Failed to create new PubSub service:", err)
 	}
-	// Join the topic
-	topicTrx, err := ps.Join("ClientAnnouncement")
+	// Join the topic ClientAnnoncement
+	topicTrx, err := ps.Join(channelClientAnnoncement)
 	if err != nil {
 		log.Println("Failed to join topic:", err)
 	}
-
 	go func() {
 		for {
 			// Publish en byte les données
@@ -206,6 +207,32 @@ func main() {
 			fmt.Println("\n--------------")
 		}
 	}()
+
+	// Join the topic StorageNodeResponse
+	topicStorageNodeResponse, err := ps.Join(channelStorageNodeReponse)
+	if err != nil {
+		log.Println("Failed to join topic:", err)
+	}
+
+	// Subscribe to the topic StorageNodeResponse
+	subStorageNodeResponse, err := topicStorageNodeResponse.Subscribe()
+	if err != nil {
+		log.Println("Failed to subscribe to topic:", err)
+	}
+
+	// Handle incoming chain versions in a separate goroutine
+	go func() {
+		for {
+			msg, err := subStorageNodeResponse.Next(ctx)
+			if err != nil {
+				log.Println("Failed to get next chain version:", err)
+			}
+			fmt.Println("--------------STORAGE NODE RESPONSE-----------\n")
+			log.Println(string(msg.Data))
+			fmt.Println("\n--------------STORAGE NODE RESPONSE-----------")
+		}
+	}()
+
 	//------------------------
 
 	// Handle connection events in a separate goroutine

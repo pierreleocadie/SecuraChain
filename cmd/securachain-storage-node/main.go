@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/multiformats/go-multiaddr"
+	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 	"github.com/pierreleocadie/SecuraChain/internal/storage/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/storage/monitoring"
@@ -182,7 +183,10 @@ func main() {
 		log.Println("Failed to create new PubSub service:", err)
 	}
 
-	go storageTransaction.SubscribeToClientChannel(ctx, ps)
+	announceChan := make(chan *transaction.ClientAnnouncement)
+	go storageTransaction.SubscribeToClientChannel(ctx, ps, announceChan)
+
+	go storageTransaction.StorageAnnoncement(ctx, ps, nodeIpfs, <-announceChan)
 	//---------------
 
 	// Handle connection events in a separate goroutine

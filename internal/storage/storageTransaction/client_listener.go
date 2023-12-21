@@ -9,6 +9,7 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 )
 
 const RefreshInterval = 10 * time.Second
@@ -23,18 +24,7 @@ var (
 	ip6quic                  string           = fmt.Sprintf("/ip6/::/udp/%d/quic-v1", 0)
 )
 
-func SubscribeToClientChannel(ctx context.Context, ps *pubsub.PubSub) {
-
-	// host := ipfsNode.PeerHost
-
-	/*
-	* SUBSCRIBE TO ClientAnnouncement
-	 */
-	// // Create a new PubSub service using the GossipSub router
-	// ps, err := pubsub.NewGossipSub(ctx, host)
-	// if err != nil {
-	// 	log.Println("Failed to create new PubSub service:", err)
-	// }
+func SubscribeToClientChannel(ctx context.Context, ps *pubsub.PubSub, announceChan chan *transaction.ClientAnnouncement) {
 
 	// Join the topic client channel
 	topicClient, err := ps.Join(channelClientAnnoncement)
@@ -54,6 +44,12 @@ func SubscribeToClientChannel(ctx context.Context, ps *pubsub.PubSub) {
 				continue
 			}
 			fmt.Printf("Received message: %s\n", string(msg.Data))
+			transac, err := transaction.DeserializeClientAnnouncement(msg.Data)
+			if err != nil {
+				fmt.Errorf("Error on desarializing Client announcement %s", err)
+				continue
+			}
+			announceChan <- transac // Envoyez l'annonce sur le canal
 		}
 	}()
 

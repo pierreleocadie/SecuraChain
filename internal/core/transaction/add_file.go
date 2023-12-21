@@ -29,7 +29,7 @@ type AddFileTransaction struct {
 	AnnouncementTimestamp int64     `json:"announcementTimestamp"` // Announcement timestamp - Unix timestamp
 	ResponseID            uuid.UUID `json:"responseID"`            // Response ID - UUID
 	NodeAddress           []byte    `json:"nodeAddress"`           // Node address - ECDSA public key
-	NodeID                peer.ID   `json:"nodeID"`                // Node CID
+	NodeID                peer.ID   `json:"nodeID"`                // Node ID
 	NodeSignature         []byte    `json:"nodeSignature"`         // Node signature - ECDSA signature
 	ResponseTimestamp     int64     `json:"responseTimestamp"`     // Response timestamp - Unix timestamp
 	FileTransferID        uuid.UUID `json:"fileTransferID"`        // File transfer ID - UUID

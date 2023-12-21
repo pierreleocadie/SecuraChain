@@ -7,6 +7,8 @@ import (
 
 	merkledag "github.com/ipfs/boxo/ipld/merkledag"
 	unixfs "github.com/ipfs/boxo/ipld/unixfs"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
@@ -31,7 +33,11 @@ func TestAddFileTransactionValidator_ValidTransaction(t *testing.T) {
 		t.Errorf("Failed to create AES key: %s", err)
 	}
 
-	randomeNodeCID := merkledag.NodeWithData(unixfs.FilePBData([]byte("nodeCID"), uint64(len([]byte("nodeCID"))))).Cid() // Random CIDv0
+	randomeNodeID, err := generateRandomPeerID()
+	if err != nil {
+		t.Errorf("Failed to create peer.ID: %s", err)
+	}
+
 	randomeFileCID := merkledag.NodeWithData(unixfs.FilePBData([]byte("fileCID"), uint64(len([]byte("fileCID"))))).Cid() // Random CIDv0
 
 	checksum := sha256.Sum256([]byte("checksum"))
@@ -47,7 +53,7 @@ func TestAddFileTransactionValidator_ValidTransaction(t *testing.T) {
 
 	announcement := transaction.NewClientAnnouncement(ownerECDSAKeyPair, encryptedFilename, encryptedExtension, 1234, checksum[:])
 	time.Sleep(1 * time.Second)
-	response := transaction.NewStorageNodeResponse(nodeECDSAKeyPair, randomeNodeCID, "", announcement)
+	response := transaction.NewStorageNodeResponse(nodeECDSAKeyPair, randomeNodeID, "", announcement)
 	time.Sleep(1 * time.Second)
 	fileTransfer := transaction.NewFileTransferHTTPRequest(announcement, response, nil, ownerECDSAKeyPair)
 	time.Sleep(1 * time.Second)
@@ -75,4 +81,20 @@ func TestDeleteFileTransactionValidator_ValidTransaction(t *testing.T) {
 	if !ValidateTransaction(deleteFileTransaction) {
 		t.Errorf("ValidateTransaction failed for a valid DeleteFileTransaction")
 	}
+}
+
+func generateRandomPeerID() (peer.ID, error) {
+	// Generate a new RSA key pair for this host
+	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
+	if err != nil {
+		return "", err
+	}
+
+	// Convert the RSA key pair into a libp2p Peer ID
+	pid, err := peer.IDFromPrivateKey(priv)
+	if err != nil {
+		return "", err
+	}
+
+	return pid, nil
 }
