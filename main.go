@@ -63,6 +63,8 @@ func main() {
 	host, err := libp2p.New(
 		libp2p.UserAgent("SecuraChain"),
 		libp2p.ProtocolVersion("0.0.1"),
+		libp2p.EnableNATService(),
+		libp2p.NATPortMap(),
 		libp2p.EnableHolePunching(),
 		libp2p.ListenAddrStrings(ip4tcp, ip6tcp, ip4quic, ip6quic),
 		libp2p.Transport(tcp.NewTCPTransport),
