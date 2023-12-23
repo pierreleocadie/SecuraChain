@@ -53,7 +53,8 @@ func (d *DHT) bootstrapPeers(ctx context.Context, host host.Host) {
 			defer wg.Done()
 			if host.Network().Connectedness(peerInfo.ID) != network.Connected {
 				if err := host.Connect(ctx, *peerInfo); err != nil {
-					log.Println("Connection failed:", err)
+					log.Println("Connection failed")
+					// log.Println("Connection failed:", err)
 				} else {
 					log.Println("[bootstrapPeers] Connection success:", peerInfo.ID)
 				}
