@@ -97,6 +97,7 @@ func (d *DHT) AnnounceAndConnect(ctx context.Context, host host.Host, routingDis
 			log.Println("[announceAndConnect] Found peer:", p)
 
 			if err := host.Connect(ctx, p); err != nil {
+				log.Println("[AnnounceAndConnect] Connection failed")
 				log.Println("[AnnounceAndConnect] Connection failed : ", err)
 				ignoredPeers[p.ID] = true
 			} else {
