@@ -39,12 +39,17 @@ func initializeNode() host.Host {
 	host, err := libp2p.New(
 		libp2p.UserAgent("SecuraChain"),
 		libp2p.ProtocolVersion("0.0.1"),
+		libp2p.EnableNATService(),
+		libp2p.NATPortMap(),
+		libp2p.EnableHolePunching(),
 		libp2p.ListenAddrStrings(ip4tcp, ip6tcp, ip4quic, ip6quic),
 		libp2p.Transport(tcp.NewTCPTransport),
 		libp2p.Transport(libp2pquic.NewTransport),
 		libp2p.RandomIdentity,
 		libp2p.DefaultSecurity,
 		libp2p.DefaultMuxers,
+		libp2p.DefaultEnableRelay,
+		libp2p.EnableRelayService(),
 	)
 	if err != nil {
 		panic(err)
