@@ -23,6 +23,8 @@ import (
 
 const (
 	listeningPortFlag = 1211
+	lowWater          = 160
+	highWater         = 192
 )
 
 var (
@@ -38,7 +40,7 @@ func initializeNode() host.Host {
 	* NODE INITIALIZATION
 	 */
 	// Create a new connection manager - Exactly the same as the default connection manager but with a grace period
-	connManager, err := connmgr.NewConnManager(160, 192, connmgr.WithGracePeriod(time.Minute))
+	connManager, err := connmgr.NewConnManager(lowWater, highWater, connmgr.WithGracePeriod(time.Minute))
 	if err != nil {
 		panic(err)
 	}
