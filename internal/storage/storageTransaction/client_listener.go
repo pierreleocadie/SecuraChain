@@ -46,7 +46,7 @@ func SubscribeToClientChannel(ctx context.Context, ps *pubsub.PubSub, announceCh
 			fmt.Printf("Received message: %s\n", string(msg.Data))
 			transac, err := transaction.DeserializeClientAnnouncement(msg.Data)
 			if err != nil {
-				fmt.Errorf("Error on desarializing Client announcement %s", err)
+				log.Printf("Error on desarializing Client announcement %s", err)
 				continue
 			}
 			announceChan <- transac // Envoyez l'annonce sur le canal

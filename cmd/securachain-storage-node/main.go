@@ -12,6 +12,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/discovery"
+	api_package "github.com/pierreleocadie/SecuraChain/internal/storage/api"
 	"github.com/pierreleocadie/SecuraChain/internal/storage/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/storage/monitoring"
 	"github.com/pierreleocadie/SecuraChain/internal/storage/storageTransaction"
@@ -22,6 +23,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 )
@@ -41,17 +43,30 @@ var (
 
 func initializeNode(host host.Host) host.Host {
 	/*
-	* NODE INITIALIZATION
+	 * NODE INITIALIZATION
 	 */
-	host, err := libp2p.New(
+	// Create a new connection manager - Exactly the same as the default connection manager but with a grace period
+	connManager, err := connmgr.NewConnManager(160, 192, connmgr.WithGracePeriod(time.Minute))
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a new libp2p Host
+	host, err = libp2p.New(
 		libp2p.UserAgent("SecuraChain"),
 		libp2p.ProtocolVersion("0.0.1"),
+		libp2p.EnableNATService(),
+		libp2p.NATPortMap(),
+		libp2p.EnableHolePunching(),
 		libp2p.ListenAddrStrings(ip4tcp, ip6tcp, ip4quic, ip6quic),
+		libp2p.ConnectionManager(connManager),
 		libp2p.Transport(tcp.NewTCPTransport),
 		libp2p.Transport(libp2pquic.NewTransport),
 		libp2p.RandomIdentity,
 		libp2p.DefaultSecurity,
 		libp2p.DefaultMuxers,
+		libp2p.DefaultEnableRelay,
+		libp2p.EnableRelayService(),
 	)
 	if err != nil {
 		panic(err)
@@ -86,7 +101,7 @@ func setupDHTDiscovery(ctx context.Context, host host.Host) {
 	* NETWORK PEER DISCOVERY WITH DHT
 	 */
 	// TODO : remove hard coded boostrap node
-	bootstrapPeers := []string{"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWJzCBarwtPQNbztPyHYzsh3Difo5DSAWqBWdVNuC1WA4e"}
+	bootstrapPeers := []string{"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWBm6aEtcGiJNsnsCwaiH4SoqJHZMgvctdQsyAenwyt8Ds"}
 
 	bootstrapPeersAddrs := make([]multiaddr.Multiaddr, len(bootstrapPeers))
 	for i, peerAddr := range bootstrapPeers {
@@ -172,7 +187,10 @@ func main() {
 		stop <- true
 	}()
 
-	// ---------- Listennng for client's announcement ----------------
+	// ----------- API ENDPOINT ----------------
+	go api_package.HandleRequests()
+
+	// ---------- Listenning for client's announcement ----------------
 
 	/*
 	* SUBSCRIBE TO ClientAnnouncement
@@ -186,8 +204,9 @@ func main() {
 	announceChan := make(chan *transaction.ClientAnnouncement)
 	go storageTransaction.SubscribeToClientChannel(ctx, ps, announceChan)
 
+	// ---------- Sending StorageNodeResponse ----------------
+
 	go storageTransaction.StorageAnnoncement(ctx, ps, nodeIpfs, <-announceChan)
-	//---------------
 
 	// Handle connection events in a separate goroutine
 	go func() {
@@ -223,18 +242,6 @@ func main() {
 
 	// ----------- Suppression du fichier -------------
 	// storage.DeleteFromIPFS(ctx, ipfsApi, cidDetectedFile, fileName)
-
-	// ------------------ HandleTransaction ------------
-	// Créer un poc qui envoie une annonce dans un fichier différent
-
-	// clientAnnoncement, err := storageTransaction.SubscribeToClientChannel(ctx, nodeIpfs)
-	// if err != nil {
-	// 	log.Printf("Failed on subscribing on Client Channel %s", err)
-	// }
-	// desaralizeAnnoncement, err := transaction.DeserializeClientAnnouncement(clientAnnoncement)
-	// fmt.Println("-------------\n\n\n\n %v", desaralizeAnnoncement)
-
-	// storageAnnoncement = storageTransaction.StorageAnnoncement(ctx, nodeIpfs, desaralizeAnnoncement, clientAnnoncement)
 
 	fmt.Println("\nAll done!")
 

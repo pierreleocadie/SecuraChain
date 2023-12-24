@@ -1,8 +1,6 @@
-package main
+package api_package
 
 import (
-	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -24,27 +22,27 @@ type ApiEndpointData struct {
 
 type Data []ApiEndpointData
 
-func allRequests(w http.ResponseWriter, r *http.Request) {
+// func allRequests(w http.ResponseWriter, r *http.Request) {
 
-	StringChecksum := sha256.Sum256([]byte("Y2hlY2tzdW0="))
-	checksum := StringChecksum[:]
+// 	StringChecksum := sha256.Sum256([]byte("Y2hlY2tzdW0="))
+// 	checksum := StringChecksum[:]
 
-	data := Data{
-		ApiEndpointData{
-			AnnouncementID:        uuid.New(),
-			OwnerAddress:          []byte("MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEA0vjhgxf5S1ZVDx4Li7Q4F6WqWFNpocBK8V/sB/J7SOHyan0G83cPapq0tGmznP+68ur+C4Rtzoa+002vHOIag=="),
-			Filename:              []byte("example_file"),
-			Extension:             []byte(".txt"),
-			FileSize:              uint64(1024),
-			Checksum:              checksum,
-			OwnerSignature:        []byte("MEYCIQDP7XYADNQQYwW9qWk6L54JWzKdHAxDzpqSVEThUiOnBgIhAJsXLE+CwZMI8C8lwxnXS+ddxsJivE6CqBTURFB8rql/"),
-			AnnouncementTimestamp: 1701783508,
-		},
-	}
+// 	data := Data{
+// 		ApiEndpointData{
+// 			AnnouncementID:        uuid.New(),
+// 			OwnerAddress:          []byte("MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEA0vjhgxf5S1ZVDx4Li7Q4F6WqWFNpocBK8V/sB/J7SOHyan0G83cPapq0tGmznP+68ur+C4Rtzoa+002vHOIag=="),
+// 			Filename:              []byte("example_file"),
+// 			Extension:             []byte(".txt"),
+// 			FileSize:              uint64(1024),
+// 			Checksum:              checksum,
+// 			OwnerSignature:        []byte("MEYCIQDP7XYADNQQYwW9qWk6L54JWzKdHAxDzpqSVEThUiOnBgIhAJsXLE+CwZMI8C8lwxnXS+ddxsJivE6CqBTURFB8rql/"),
+// 			AnnouncementTimestamp: 1701783508,
+// 		},
+// 	}
 
-	fmt.Println("Endpoint Hit: All data Endpoint ")
-	json.NewEncoder(w).Encode(data)
-}
+// 	fmt.Println("Endpoint Hit: All data Endpoint ")
+// 	json.NewEncoder(w).Encode(data)
+// }
 
 func homePage(w http.ResponseWriter, r *http.Request) {
 	// Ce qui est affiché sur la page
@@ -56,16 +54,12 @@ func testPostRequest(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "test POST endpoint worked")
 }
 
-func handleRequests() {
+func HandleRequests() {
 
 	myrouter := mux.NewRouter().StrictSlash(true)
 
 	myrouter.HandleFunc("/", homePage)
-	myrouter.HandleFunc("/data", allRequests).Methods("GET")
+	// myrouter.HandleFunc("/data", allRequests).Methods("GET")
 	myrouter.HandleFunc("/data", testPostRequest).Methods("POST")
 	log.Fatal(http.ListenAndServe(":8081", myrouter))
-}
-func main() {
-	// Basic server runnning on localhost:8081
-	handleRequests()
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/multiformats/go-multiaddr"
@@ -45,17 +46,30 @@ var (
 
 func initializeNode() host.Host {
 	/*
-	* NODE INITIALIZATION
+	 * NODE INITIALIZATION
 	 */
+	// Create a new connection manager - Exactly the same as the default connection manager but with a grace period
+	connManager, err := connmgr.NewConnManager(160, 192, connmgr.WithGracePeriod(time.Minute))
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a new libp2p Host
 	host, err := libp2p.New(
 		libp2p.UserAgent("SecuraChain"),
 		libp2p.ProtocolVersion("0.0.1"),
+		libp2p.EnableNATService(),
+		libp2p.NATPortMap(),
+		libp2p.EnableHolePunching(),
 		libp2p.ListenAddrStrings(ip4tcp, ip6tcp, ip4quic, ip6quic),
+		libp2p.ConnectionManager(connManager),
 		libp2p.Transport(tcp.NewTCPTransport),
 		libp2p.Transport(libp2pquic.NewTransport),
 		libp2p.RandomIdentity,
 		libp2p.DefaultSecurity,
 		libp2p.DefaultMuxers,
+		libp2p.DefaultEnableRelay,
+		libp2p.EnableRelayService(),
 	)
 	if err != nil {
 		panic(err)
@@ -90,7 +104,7 @@ func setupDHTDiscovery(ctx context.Context, host host.Host) {
 	* NETWORK PEER DISCOVERY WITH DHT
 	 */
 	// TODO : remove hard coded boostrap node
-	bootstrapPeers := []string{"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWJzCBarwtPQNbztPyHYzsh3Difo5DSAWqBWdVNuC1WA4e"}
+	bootstrapPeers := []string{"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWBm6aEtcGiJNsnsCwaiH4SoqJHZMgvctdQsyAenwyt8Ds"}
 
 	bootstrapPeersAddrs := make([]multiaddr.Multiaddr, len(bootstrapPeers))
 	for i, peerAddr := range bootstrapPeers {
@@ -154,7 +168,6 @@ func main() {
 		waitForTermSignal()
 		stop <- true
 	}()
-	//--------------------
 
 	/*
 	* GENERATE ECDSA KEY PAIR FOR NODE IDENTITY
@@ -176,10 +189,8 @@ func main() {
 
 	data, err := annoncement.Serialize()
 	if err != nil {
-		fmt.Errorf("Error on serialize Client Annoncement transaction %s :", err)
+		log.Printf("Error on serialize Client Annoncement transaction %s :", err)
 	}
-
-	//----------------------
 
 	/*
 	* PUBLISH AND SUBSCRIBE TO TOPICS
@@ -190,21 +201,22 @@ func main() {
 		log.Println("Failed to create new PubSub service:", err)
 	}
 	// Join the topic ClientAnnoncement
-	topicTrx, err := ps.Join(channelClientAnnoncement)
+	topicClient, err := ps.Join(channelClientAnnoncement)
 	if err != nil {
 		log.Println("Failed to join topic:", err)
 	}
+
 	go func() {
 		for {
 			// Publish en byte les données
-			err := topicTrx.Publish(ctx, data)
+			err := topicClient.Publish(ctx, data)
 			if err != nil {
 				log.Println("Failed to publish:", err)
 			}
 			time.Sleep(5 * time.Second)
-			fmt.Println("--------------\n")
+			fmt.Println("-------------- CLIENT ANNOUNCEMENT -------------\n")
 			fmt.Println(FormatClientAnnouncement(annoncement))
-			fmt.Println("\n--------------")
+			fmt.Println("\n-------------- CLIENT ANNOUNCEMENT -------------\n\n")
 		}
 	}()
 
@@ -229,11 +241,9 @@ func main() {
 			}
 			fmt.Println("--------------STORAGE NODE RESPONSE-----------\n")
 			log.Println(string(msg.Data))
-			fmt.Println("\n--------------STORAGE NODE RESPONSE-----------")
+			fmt.Println("\n--------------STORAGE NODE RESPONSE-----------\n\n")
 		}
 	}()
-
-	//------------------------
 
 	// Handle connection events in a separate goroutine
 	go func() {

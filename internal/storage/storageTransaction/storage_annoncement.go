@@ -26,7 +26,7 @@ func StorageAnnoncement(ctx context.Context, ps *pubsub.PubSub, ipfsNode *core.I
 	}
 
 	// --------------- Créer la réponse --------------------
-	response := transaction.NewStorageNodeResponse(keyPair, ipfsNode.Identity, "apiendpoint", annoncement)
+	response := transaction.NewStorageNodeResponse(keyPair, ipfsNode.Identity, "http://localhost:8081/data", annoncement)
 
 	// ----------------- Serialize avant d'envoyer  ---------------
 	serializeData, err := response.Serialize()
