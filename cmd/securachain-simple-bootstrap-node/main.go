@@ -7,16 +7,17 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/multiformats/go-multiaddr"
-
 	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 )
 
@@ -36,6 +37,13 @@ func initializeNode() host.Host {
 	/*
 	* NODE INITIALIZATION
 	 */
+	// Create a new connection manager - Exactly the same as the default connection manager but with a grace period
+	connManager, err := connmgr.NewConnManager(160, 192, connmgr.WithGracePeriod(time.Minute))
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a new libp2p Host
 	host, err := libp2p.New(
 		libp2p.UserAgent("SecuraChain"),
 		libp2p.ProtocolVersion("0.0.1"),
@@ -43,6 +51,7 @@ func initializeNode() host.Host {
 		libp2p.NATPortMap(),
 		libp2p.EnableHolePunching(),
 		libp2p.ListenAddrStrings(ip4tcp, ip6tcp, ip4quic, ip6quic),
+		libp2p.ConnectionManager(connManager),
 		libp2p.Transport(tcp.NewTCPTransport),
 		libp2p.Transport(libp2pquic.NewTransport),
 		libp2p.RandomIdentity,
