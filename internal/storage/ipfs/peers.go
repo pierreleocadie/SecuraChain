@@ -10,6 +10,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
+// This function allows a node to connect to other peers given in an IPFS network
 func ConnectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) error {
 	var wg sync.WaitGroup
 	peerInfos := make(map[peer.ID]*peer.AddrInfo, len(peers))

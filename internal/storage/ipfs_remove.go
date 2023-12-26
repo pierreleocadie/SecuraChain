@@ -12,18 +12,18 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/util"
 )
 
-// IPFS ne permet pas la suppression traditionnelle de fichiers
-// Mais on peut gérer le retraut des pins ou la gestion de cache
-// On peut aussi supprimer
-func DeleteFromIPFS(ctx context.Context, ipfsApi icore.CoreAPI, cid path.ImmutablePath, fileName string) error {
+// This function allows to delete a file from IPFS, and from the storer node (precisely unpin it)
+func DeleteFromIPFS(ctx context.Context, ipfsAPI icore.CoreAPI, cid path.ImmutablePath, fileName string) error {
 	// Unpin the file on IPFS
-	ipfsApi.Pin().Rm(ctx, cid)
-	_, IsUnPinned, err := ipfsApi.Pin().IsPinned(ctx, cid)
+	if err := ipfsAPI.Pin().Rm(ctx, cid); err != nil {
+		log.Println("Failed to unpin the file from IPFS", err)
+	}
+	_, IsUnPinned, err := ipfsAPI.Pin().IsPinned(ctx, cid)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Le fichier a bien été unpin avec le cid: ", IsUnPinned)
+	fmt.Println("The file has been unpined with success: ", IsUnPinned)
 
 	// Deleting the file on the storage node (local system)
 	home, err := os.UserHomeDir()
@@ -48,7 +48,7 @@ func DeleteFromIPFS(ctx context.Context, ipfsApi icore.CoreAPI, cid path.Immutab
 	if err != nil {
 		return err
 	}
-	// Trouver et supprimer la métadonnée
+	// Find and delete the metadata
 	for i, file := range fileData.Files {
 		if file.OriginalName == fileName {
 			fileData.Files = append(fileData.Files[:i], fileData.Files[i+1:]...)
@@ -56,7 +56,7 @@ func DeleteFromIPFS(ctx context.Context, ipfsApi icore.CoreAPI, cid path.Immutab
 		}
 	}
 
-	// Sauvegarder les données mises à jour
+	// Save the new metadata
 	if err := util.SaveToJSON(fileNameJSON, fileData); err != nil {
 		log.Fatalf("Error saving JSON data: %v", err)
 	}

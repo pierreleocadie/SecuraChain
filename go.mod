@@ -4,7 +4,6 @@ go 1.21.3
 
 require (
 	github.com/google/uuid v1.4.0
-	github.com/gorilla/mux v1.8.0
 	github.com/ipfs/boxo v0.15.0
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/kubo v0.24.0

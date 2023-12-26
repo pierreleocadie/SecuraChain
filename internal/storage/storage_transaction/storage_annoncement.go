@@ -1,10 +1,9 @@
-package storageTransaction
+package storagetransaction
 
 import (
 	"context"
+	"fmt"
 	"log"
-	"math/rand"
-	"time"
 
 	"github.com/ipfs/kubo/core"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -12,10 +11,9 @@ import (
 	ecdsaSC "github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
-var channelStorageNodeReponse string = "StorageNodeResponse"
+var storageNodeResponseStringFlag = fmt.Sprintln("StorageNodeResponse")
 
 func StorageAnnoncement(ctx context.Context, ps *pubsub.PubSub, ipfsNode *core.IpfsNode, annoncement *transaction.ClientAnnouncement) {
-
 	/*
 	* GENERATE ECDSA KEY PAIR FOR NODE IDENTITY
 	 */
@@ -35,19 +33,18 @@ func StorageAnnoncement(ctx context.Context, ps *pubsub.PubSub, ipfsNode *core.I
 	}
 
 	// Join the topic
-	topicStorageNodeAnnoncement, err := ps.Join(channelStorageNodeReponse)
+	topicStorageNodeAnnoncement, err := ps.Join(storageNodeResponseStringFlag)
 	if err != nil {
 		log.Println("Failed to join topic:", err)
 	}
 
 	go func() {
 		for {
-			time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second)
 			// Publish the transaction
 			if err := topicStorageNodeAnnoncement.Publish(ctx, serializeData); err != nil {
 				log.Println("Failed to publish transaction:", err)
+				continue
 			}
 		}
 	}()
-
 }

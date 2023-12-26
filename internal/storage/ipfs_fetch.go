@@ -14,14 +14,16 @@ import (
 
 // RetrieveAndSaveFileByCID retrieves a file from IPFS using its CID (Content Identifier).
 // It creates the necessary directory if it doesn't exist and writes the file to a specified path.
-func RetrieveAndSaveFileByCID(ctx context.Context, ipfsApi icore.CoreAPI, cidFile path.ImmutablePath) error {
+func RetrieveAndSaveFileByCID(ctx context.Context, ipfsAPI icore.CoreAPI, cidFile path.ImmutablePath) error {
+	const permission = 0700
+
 	outputBasePath := "./IPFS_Downloads"
 	// Ensure the output directory exists or create it.
-	if err := os.MkdirAll(outputBasePath, 0755); err != nil {
+	if err := os.MkdirAll(outputBasePath, permission); err != nil {
 		return fmt.Errorf("error creating output directory: %v", err)
 	}
 
-	rootNodeFile, err := ipfsApi.Unixfs().Get(ctx, cidFile)
+	rootNodeFile, err := ipfsAPI.Unixfs().Get(ctx, cidFile)
 	if err != nil {
 		return fmt.Errorf("could not get file with CID: %s", err)
 	}

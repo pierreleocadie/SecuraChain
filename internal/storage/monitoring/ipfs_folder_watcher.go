@@ -14,22 +14,25 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/storage"
 )
 
+const permission = 0700
+
 // CreateStorageQueueDirectory creates a directory for adding files to the storage node.
 func CreateStorageQueueDirectory() error {
 	outputBasePath := "./Storage_Queue"
 	// S'assurez que le dossier de sortie existe
-	if err := os.MkdirAll(outputBasePath, 0755); err != nil {
+	if err := os.MkdirAll(outputBasePath, permission); err != nil {
 		return fmt.Errorf("error creating output directory: %v", err)
 	}
-	fmt.Println("Dossier pour ajouter des fichiers au noeuds de stockage crée")
+	fmt.Println("Ajoutez vos fichiers dans Storage_Queue/")
 	return nil
-
 }
 
 // MonitorinRepoInit watches a directory for new files and adds them to IPFS.
 // It initializes the directory for monitoring, creates a watcher, and processes file events.
-func WatchStorageQueueForChanges(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI) (path.ImmutablePath, string, error) {
-	CreateStorageQueueDirectory()
+func WatchStorageQueueForChanges(ctx context.Context, node *core.IpfsNode, ipfsAPI icore.CoreAPI) (path.ImmutablePath, string, error) {
+	if err := CreateStorageQueueDirectory(); err != nil {
+		log.Fatal(err)
+	}
 	watchDir := "./Storage_Queue"
 
 	// Create a new fsnotify watcher.
@@ -54,7 +57,7 @@ func WatchStorageQueueForChanges(ctx context.Context, node *core.IpfsNode, ipfsA
 
 				if event.Op&fsnotify.Create == fsnotify.Create {
 					fmt.Printf("created file: %s\n", event.Name)
-					cidFile, _, err := storage.AddFileToIPFS(ctx, node, ipfsApi, event.Name)
+					cidFile, _, err := storage.AddFileToIPFS(ctx, node, ipfsAPI, event.Name)
 					if err != nil {
 						log.Printf("Could not add file to IPFS: %s", err)
 						continue
@@ -62,9 +65,10 @@ func WatchStorageQueueForChanges(ctx context.Context, node *core.IpfsNode, ipfsA
 					fmt.Printf("The cid of the file is %v", cidFile.String())
 					// cidChan <- cidFile       // Envoyer le CID via le canal
 					// fileNameChan <- fileName // Envoyer le nom du fichier via le canal
-					os.Remove(event.Name) // Supprime le fichier de la Queue
+					if err := os.Remove(event.Name); err != nil { // Supprime le fichier de la Queue
+						log.Print("Could not remove the file from the directory Storage_Queue/")
+					}
 				}
-
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					fmt.Println("error")
@@ -72,13 +76,12 @@ func WatchStorageQueueForChanges(ctx context.Context, node *core.IpfsNode, ipfsA
 				log.Println("EError:", err)
 			}
 		}
-
 	}()
 
 	// Watch a specific folder for changes.
 	err = watcher.Add(watchDir)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	cid := <-cidChan // Recevoir le CID

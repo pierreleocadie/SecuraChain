@@ -4,7 +4,6 @@ package main
 import (
 	"context"
 	"crypto/sha256"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -28,20 +27,23 @@ import (
 )
 
 const (
-	listeningPortFlag = 1211 // Port used for listening to incoming connections.
+	listeningPortFlag = 0 // Port used for listening to incoming connections.
 	RefreshInterval   = 10 * time.Second
+	lowWater          = 160
+	highWater         = 192
 )
 
 var (
-	ignoredPeers              map[peer.ID]bool = make(map[peer.ID]bool)
-	rendezvousStringFlag                       = fmt.Sprintln("SecuraChainNetwork") // Network identifier for rendezvous string.
-	channelClientAnnoncement  string           = "ClientAnnouncement"
-	channelStorageNodeReponse string           = "StorageNodeResponse"
-	transactionTopicNameFlag  *string          = flag.String("transactionTopicName", "NewTransaction", "ClientAnnouncement")
-	ip4tcp                    string           = fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", 0)
-	ip6tcp                    string           = fmt.Sprintf("/ip6/::/tcp/%d", 0)
-	ip4quic                   string           = fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", 0)
-	ip6quic                   string           = fmt.Sprintf("/ip6/::/udp/%d/quic-v1", 0)
+	rendezvousStringFlag = fmt.Sprintln("SecuraChainNetwork")
+	ip4tcp               = fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", listeningPortFlag)
+	ip6tcp               = fmt.Sprintf("/ip6/::/tcp/%d", listeningPortFlag)
+	ip4quic              = fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", listeningPortFlag)
+	ip6quic              = fmt.Sprintf("/ip6/::/udp/%d/quic-v1", listeningPortFlag)
+	bootstrapPeers       = []string{
+		"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWBm6aEtcGiJNsnsCwaiH4SoqJHZMgvctdQsyAenwyt8Ds",
+	}
+	clientAnnouncementStringFlag  = fmt.Sprintln("ClientAnnouncement")
+	storageNodeResponseStringFlag = fmt.Sprintln("StorageNodeResponse")
 )
 
 func initializeNode() host.Host {
@@ -49,7 +51,7 @@ func initializeNode() host.Host {
 	 * NODE INITIALIZATION
 	 */
 	// Create a new connection manager - Exactly the same as the default connection manager but with a grace period
-	connManager, err := connmgr.NewConnManager(160, 192, connmgr.WithGracePeriod(time.Minute))
+	connManager, err := connmgr.NewConnManager(lowWater, highWater, connmgr.WithGracePeriod(time.Minute))
 	if err != nil {
 		panic(err)
 	}
@@ -96,30 +98,28 @@ func initializeNode() host.Host {
 	}
 
 	return host
-
 }
 
 func setupDHTDiscovery(ctx context.Context, host host.Host) {
 	/*
 	* NETWORK PEER DISCOVERY WITH DHT
 	 */
-	// TODO : remove hard coded boostrap node
-	bootstrapPeers := []string{"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWBm6aEtcGiJNsnsCwaiH4SoqJHZMgvctdQsyAenwyt8Ds"}
-
-	bootstrapPeersAddrs := make([]multiaddr.Multiaddr, len(bootstrapPeers))
-	for i, peerAddr := range bootstrapPeers {
-		peerAddrMA, err := multiaddr.NewMultiaddr(peerAddr)
+	// Convert the bootstrap peers from string to multiaddr
+	var bootstrapPeersMultiaddr []multiaddr.Multiaddr
+	for _, peer := range bootstrapPeers {
+		peerMultiaddr, err := multiaddr.NewMultiaddr(peer)
 		if err != nil {
-			log.Println("Failed to parse multiaddress: ", err)
+			log.Println("Error converting bootstrap peer to multiaddr : ", err)
 			return
 		}
-		bootstrapPeersAddrs[i] = peerAddrMA
+		bootstrapPeersMultiaddr = append(bootstrapPeersMultiaddr, peerMultiaddr)
 	}
-	// Initialize DHT in client mode
+
+	// Initialize DHT in server mode
 	dhtDiscovery := discovery.NewDHTDiscovery(
 		false,
-		"SecuraChainNetwork",
-		bootstrapPeersAddrs,
+		rendezvousStringFlag,
+		bootstrapPeersMultiaddr,
 		10*time.Second,
 	)
 
@@ -184,8 +184,8 @@ func main() {
 
 	StringChecksum := sha256.Sum256([]byte("Y2hlY2tzdW0="))
 	checksum := StringChecksum[:]
-
-	annoncement := transaction.NewClientAnnouncement(keyPair, []byte("example_file"), []byte(".txt"), uint64(1024), checksum)
+	size := 1024
+	annoncement := transaction.NewClientAnnouncement(keyPair, []byte("example_file"), []byte(".txt"), uint64(size), checksum)
 
 	data, err := annoncement.Serialize()
 	if err != nil {
@@ -201,7 +201,7 @@ func main() {
 		log.Println("Failed to create new PubSub service:", err)
 	}
 	// Join the topic ClientAnnoncement
-	topicClient, err := ps.Join(channelClientAnnoncement)
+	topicClient, err := ps.Join(clientAnnouncementStringFlag)
 	if err != nil {
 		log.Println("Failed to join topic:", err)
 	}
@@ -214,14 +214,14 @@ func main() {
 				log.Println("Failed to publish:", err)
 			}
 			time.Sleep(5 * time.Second)
-			fmt.Println("-------------- CLIENT ANNOUNCEMENT -------------\n")
+			fmt.Println("-------------- CLIENT ANNOUNCEMENT -------------")
 			fmt.Println(FormatClientAnnouncement(annoncement))
-			fmt.Println("\n-------------- CLIENT ANNOUNCEMENT -------------\n\n")
+			fmt.Println("\n-------------- CLIENT ANNOUNCEMENT -------------")
 		}
 	}()
 
 	// Join the topic StorageNodeResponse
-	topicStorageNodeResponse, err := ps.Join(channelStorageNodeReponse)
+	topicStorageNodeResponse, err := ps.Join(storageNodeResponseStringFlag)
 	if err != nil {
 		log.Println("Failed to join topic:", err)
 	}
@@ -239,9 +239,9 @@ func main() {
 			if err != nil {
 				log.Println("Failed to get next chain version:", err)
 			}
-			fmt.Println("--------------STORAGE NODE RESPONSE-----------\n")
+			fmt.Println("--------------STORAGE NODE RESPONSE-----------")
 			log.Println(string(msg.Data))
-			fmt.Println("\n--------------STORAGE NODE RESPONSE-----------\n\n")
+			fmt.Println("\n--------------STORAGE NODE RESPONSE-----------")
 		}
 	}()
 
@@ -266,16 +266,15 @@ func main() {
 				} else {
 					log.Println("Received unexpected event type")
 				}
-
 			}
 		}
 	}()
 
 	<-stop // Attendre que la goroutine s'arrête
-
 }
 
 func FormatClientAnnouncement(a *transaction.ClientAnnouncement) string {
-	return fmt.Sprintf("AnnouncementID: %s\nOwnerAddress: %x\nFilename: %s\nExtension: %s\nFileSize: %d\nChecksum: %x\nOwnerSignature: %x\nAnnouncementTimestamp: %d",
+	return fmt.Sprintf(
+		"AnnouncementID: %s\nOwnerAddress: %x\nFilename: %s\nExtension: %s\nFileSize: %d\nChecksum: %x\nOwnerSignature: %x\nAnnouncementTimestamp: %d",
 		a.AnnouncementID, a.OwnerAddress, a.Filename, a.Extension, a.FileSize, a.Checksum, a.OwnerSignature, a.AnnouncementTimestamp)
 }

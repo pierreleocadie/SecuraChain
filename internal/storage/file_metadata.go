@@ -1,4 +1,3 @@
-// Package storage provides utilities for gathering file information.
 package storage
 
 import (
@@ -18,9 +17,8 @@ func FileInfo(inputPathFile string) (string, string, string, error) {
 	}
 
 	fileSize := strconv.FormatInt(fileInfo.Size(), 10) + " octets"
-	fileType := filepath.Ext(inputPathFile)
+	fileExtension := filepath.Ext(inputPathFile)
 	fileName := fileInfo.Name()
 
-	return fileName, fileSize, fileType, err
-
+	return fileName, fileSize, fileExtension, err
 }

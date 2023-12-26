@@ -12,10 +12,9 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/discovery"
-	api_package "github.com/pierreleocadie/SecuraChain/internal/storage/api"
 	"github.com/pierreleocadie/SecuraChain/internal/storage/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/storage/monitoring"
-	"github.com/pierreleocadie/SecuraChain/internal/storage/storageTransaction"
+	storagetransaction "github.com/pierreleocadie/SecuraChain/internal/storage/storage_transaction"
 
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -29,30 +28,34 @@ import (
 )
 
 const (
-	listeningPortFlag = 1211 // Port used for listening to incoming connections.
+	listeningPortFlag = 0 // Port used for listening to incoming connections.
+	lowWater          = 160
+	highWater         = 192
 )
 
 var (
-	rendezvousStringFlag = fmt.Sprintln("SecuraChainNetwork") // Network identifier for rendezvous string.
-	ip4tcp               = fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", listeningPortFlag)
-	ip6tcp               = fmt.Sprintf("/ip6/::/tcp/%d", listeningPortFlag)
-	ip4quic              = fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", listeningPortFlag)
-	ip6quic              = fmt.Sprintf("/ip6/::/udp/%d/quic-v1", listeningPortFlag)
+	rendezvousStringFlag         = fmt.Sprintln("SecuraChainNetwork") // Network identifier for rendezvous string.
+	ip4tcp                       = fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", listeningPortFlag)
+	ip6tcp                       = fmt.Sprintf("/ip6/::/tcp/%d", listeningPortFlag)
+	ip4quic                      = fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", listeningPortFlag)
+	ip6quic                      = fmt.Sprintf("/ip6/::/udp/%d/quic-v1", listeningPortFlag)
+	clientAnnouncementStringFlag = fmt.Sprintln("ClientAnnouncement")
+	// storageNodeResponseStringFlag = fmt.Sprintln("StorageNodeResponse")
 	// flagExp              = flag.Bool("experimental", false, "enable experimental features")
 )
 
-func initializeNode(host host.Host) host.Host {
+func initializeNode() host.Host {
 	/*
-	 * NODE INITIALIZATION
+	* NODE INITIALIZATION
 	 */
 	// Create a new connection manager - Exactly the same as the default connection manager but with a grace period
-	connManager, err := connmgr.NewConnManager(160, 192, connmgr.WithGracePeriod(time.Minute))
+	connManager, err := connmgr.NewConnManager(lowWater, highWater, connmgr.WithGracePeriod(time.Minute))
 	if err != nil {
 		panic(err)
 	}
 
 	// Create a new libp2p Host
-	host, err = libp2p.New(
+	host, err := libp2p.New(
 		libp2p.UserAgent("SecuraChain"),
 		libp2p.ProtocolVersion("0.0.1"),
 		libp2p.EnableNATService(),
@@ -93,7 +96,6 @@ func initializeNode(host host.Host) host.Host {
 	}
 
 	return host
-
 }
 
 func setupDHTDiscovery(ctx context.Context, host host.Host) {
@@ -115,7 +117,7 @@ func setupDHTDiscovery(ctx context.Context, host host.Host) {
 	// Initialize DHT in client mode
 	dhtDiscovery := discovery.NewDHTDiscovery(
 		false,
-		"SecuraChainNetwork",
+		rendezvousStringFlag,
 		bootstrapPeersAddrs,
 		10*time.Second,
 	)
@@ -143,7 +145,7 @@ func main() {
 	defer cancel()
 
 	// Créer un noeud de stockage ipfs sur la machine
-	ipfsApi, nodeIpfs, err := ipfs.SpawnNode(ctx)
+	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx)
 	if err != nil {
 		panic(fmt.Errorf("failed to spawn the node %s", err))
 	}
@@ -153,8 +155,7 @@ func main() {
 	// ---------- Monitoring Folder ----------------
 
 	go func() {
-
-		_, _, err := monitoring.WatchStorageQueueForChanges(ctx, nodeIpfs, ipfsApi)
+		_, _, err := monitoring.WatchStorageQueueForChanges(ctx, nodeIpfs, ipfsAPI)
 		if err != nil {
 			log.Printf("Error watchung storage queue: %s", err)
 		}
@@ -165,30 +166,11 @@ func main() {
 	fmt.Println("\n-- Going to connect to a few boostrap nodesnodes in the Network --")
 
 	// Initialize the node
-	host := initializeNode(nodeIpfs.PeerHost)
+	host := initializeNode()
 	defer host.Close()
 
 	// Setup DHT discovery
 	setupDHTDiscovery(ctx, host)
-
-	/*
-	* DISPLAY PEER CONNECTEDNESS CHANGES
-	 */
-	// Subscribe to EvtPeerConnectednessChanged events
-	subNet, err := host.EventBus().Subscribe(new(event.EvtPeerConnectednessChanged))
-	if err != nil {
-		log.Println("Failed to subscribe to EvtPeerConnectednessChanged: ", err)
-	}
-	defer subNet.Close()
-
-	stop := make(chan bool)
-	go func() {
-		waitForTermSignal()
-		stop <- true
-	}()
-
-	// ----------- API ENDPOINT ----------------
-	go api_package.HandleRequests()
 
 	// ---------- Listenning for client's announcement ----------------
 
@@ -202,47 +184,102 @@ func main() {
 	}
 
 	announceChan := make(chan *transaction.ClientAnnouncement)
-	go storageTransaction.SubscribeToClientChannel(ctx, ps, announceChan)
+	// go storageTransaction.SubscribeToClientChannel(ctx, ps, announceChan)
+
+	// // Join the topic client channel
+	// topicClient, err := ps.Join(channelClientAnnoncement)
+	// if err != nil {
+	// 	log.Println("Failed to join topic:", err)
+	// }
+	// subClient, err := topicClient.Subscribe()
+	// if err != nil {
+	// 	log.Println("Failed to subscribe to topic client:", err)
+	// }
+
+	// go func() {
+	// 	for {
+	// 		msg, err := subClient.Next(ctx)
+	// 		if err != nil {
+	// 			log.Println("Failed to read next message:", err)
+	// 			continue
+	// 		}
+	// 		fmt.Printf("Received message: %s\n", string(msg.Data))
+	// 		// transac, err := transaction.DeserializeClientAnnouncement(msg.Data)
+	// 		// if err != nil {
+	// 		// 	log.Printf("Error on desarializing Client announcement %s", err)
+	// 		// 	continue
+	// 		// }
+	// 		// announceChan <- transac // Envoyez l'annonce sur le canal
+	// 	}
+	// }()
+
+	//---------------------------------------------------------------
+	// Join the topic clientAnnouncementStringFlag
+	clientAnnouncementTopic, err := ps.Join(clientAnnouncementStringFlag)
+	if err != nil {
+		panic(err)
+	}
+
+	// Subscribe to clientAnnouncementStringFlag topic
+	subClientAnnouncement, err := clientAnnouncementTopic.Subscribe()
+	if err != nil {
+		panic(err)
+	}
+
+	// Handle incoming ClientAnnouncement messages
+	go func() {
+		for {
+			msg, err := subClientAnnouncement.Next(ctx)
+			if err != nil {
+				panic(err)
+			}
+			log.Println("Received ClientAnnouncement message from ", msg.GetFrom().String())
+			log.Println(string(msg.Data))
+			transac, err := transaction.DeserializeClientAnnouncement(msg.Data)
+			if err != nil {
+				log.Printf("Error on desarializing Client announcement %s", err)
+				continue
+			}
+			announceChan <- transac
+		}
+	}()
 
 	// ---------- Sending StorageNodeResponse ----------------
 
-	go storageTransaction.StorageAnnoncement(ctx, ps, nodeIpfs, <-announceChan)
+	go storagetransaction.StorageAnnoncement(ctx, ps, nodeIpfs, <-announceChan)
+
+	//--------------------------------------------------------------
+
+	/*
+	* DISPLAY PEER CONNECTEDNESS CHANGES
+	 */
+	// Subscribe to EvtPeerConnectednessChanged events
+	subNet, err := host.EventBus().Subscribe(new(event.EvtPeerConnectednessChanged))
+	if err != nil {
+		log.Println("Failed to subscribe to EvtPeerConnectednessChanged: ", err)
+	}
+	defer subNet.Close()
 
 	// Handle connection events in a separate goroutine
 	go func() {
-		for {
-			select {
-			case <-stop:
-				return // Arrête la goroutine
-			case e, ok := <-subNet.Out():
-				if !ok {
-					return // Arrêter si le canal est femré
-				}
-
-				evt, isEventType := e.(event.EvtPeerConnectednessChanged)
-				if isEventType {
-					if evt.Connectedness == network.Connected {
-						log.Println("Peer connected:", evt.Peer)
-					} else if evt.Connectedness == network.NotConnected {
-						log.Println("Peer disconnected: ", evt.Peer)
-					}
-				} else {
-					log.Println("Received unexpected event type")
-				}
-
+		for e := range subNet.Out() {
+			evt := e.(event.EvtPeerConnectednessChanged)
+			if evt.Connectedness == network.Connected {
+				log.Println("Peer connected:", evt.Peer)
+			} else if evt.Connectedness == network.NotConnected {
+				log.Println("Peer disconnected: ", evt.Peer)
 			}
 		}
 	}()
 
-	<-stop // Attendre que la goroutine s'arrête
+	waitForTermSignal()
 
 	// ------------- Téléchargements du fichier --------------
-	// cidDetectedFile, fileName, err := monitoring.WatchStorageQueueForChanges(ctx, nodeIpfs, ipfsApi)
-	// storage.RetrieveAndSaveFileByCID(ctx, ipfsApi, cidDetectedFile)
+	// cidDetectedFile, fileName, err := monitoring.WatchStorageQueueForChanges(ctx, nodeIpfs, ipfsAPI)
+	// storage.RetrieveAndSaveFileByCID(ctx, ipfsAPI, cidDetectedFile)
 
 	// ----------- Suppression du fichier -------------
-	// storage.DeleteFromIPFS(ctx, ipfsApi, cidDetectedFile, fileName)
+	// storage.DeleteFromIPFS(ctx, ipfsAPI, cidDetectedFile, fileName)
 
 	fmt.Println("\nAll done!")
-
 }

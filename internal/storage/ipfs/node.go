@@ -20,6 +20,8 @@ import (
 
 var loadPluginsOnce sync.Once
 
+const permission = 0700 // Only the owner can read, write and execute
+
 // Prepare and set up the plugins
 func setupPlugins(externalPluginsPath string) error {
 	// Load any external plugins if available on externalPluginsPath
@@ -33,7 +35,7 @@ func setupPlugins(externalPluginsPath string) error {
 		return fmt.Errorf("error initializing plugins: %s", err)
 	}
 
-	// Injecte les plugins dans l'application, permettant d'activer ou d'intégrer des plugins dans le système de l'application
+	// Inject the plugins in the application, allowing to activate or to put plugin in the system application
 	if err := plugins.Inject(); err != nil {
 		return fmt.Errorf("error initializing plugins: %s", err)
 	}
@@ -41,9 +43,11 @@ func setupPlugins(externalPluginsPath string) error {
 	return nil
 }
 
-// Créer un répertoire IPFS
+// Create a repo ipfs-shell/ in the home directory
 func createRepo() (string, error) {
-	// Récupérer le répertoire personnel de l'utilisateur
+	var key = 2048
+
+	// take the home directory
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get user home directory: %s", err)
@@ -51,13 +55,13 @@ func createRepo() (string, error) {
 
 	ipfsPath := filepath.Join(homeDir, ".ipfs-shell")
 
-	err = os.Mkdir(ipfsPath, 0750) // read and execute for everyone and write for the owner
+	err = os.Mkdir(ipfsPath, permission) // read and execute for everyone and write for the owner
 	if err != nil && !os.IsExist(err) {
 		log.Fatal(err)
 	}
 
 	// Create a config with default options and a 2048 bit key
-	cfg, err := config.Init(io.Discard, 2048) // Initialise une nouvelle configuration IPFS avec une clé de 2048 bits, io.Discard --> ignorer tous les outputs donc aucune sortie n'est affichée.
+	cfg, err := config.Init(io.Discard, key) // Initialize a new IPFS configuration with a key of 2048 bits
 	if err != nil {
 		return "", err
 	}
@@ -81,7 +85,7 @@ func createRepo() (string, error) {
 	// }
 
 	// Create the repo with the config
-	err = fsrepo.Init(ipfsPath, cfg) // Initialise le repo IPFS à l'emplacement spécifié
+	err = fsrepo.Init(ipfsPath, cfg) // Initialize the directory with the config given
 	if err != nil {
 		return "", fmt.Errorf("failed to init node: %s", err)
 	}
@@ -91,7 +95,6 @@ func createRepo() (string, error) {
 
 // Construct the IPFS node instance itself
 func createNode(ctx context.Context, repoPath string) (*core.IpfsNode, error) {
-	// Un contexte 'Context' de Go, utilisé pour la gestion de la durée de vie et l'annulation des processus
 	// Open the repo
 	repo, err := fsrepo.Open(repoPath)
 	if err != nil {
@@ -100,19 +103,18 @@ func createNode(ctx context.Context, repoPath string) (*core.IpfsNode, error) {
 
 	// Construct the node
 	nodeOptions := &core.BuildCfg{
-		Online:  true,             // Booléen indiquant si le noeud IPFS doit fonctionner en mode en ligne, ce qui signifera qu'il se connectera à d'autres noeuds IPFS sur le réseau
-		Routing: libp2p.DHTOption, // This option sets the node to be a full DHT node (both fetching and storing DHT Records)
+		Online:  true,
+		Routing: libp2p.DHTOption,
 		// Routing: libp2p.DHTClientOption, // This option sets the node to be a client DHT node (only fetching records)
 		Repo: repo,
 	}
 
-	return core.NewNode(ctx, nodeOptions) // Crée et initialise un nouveau noeud IPFS en utilisant le context et les options spécifiées.
-	// Le noeud IPFS renvoyé par cette fonction peut-être utilisé pour interargir avec le réseau IPFS, réaliser des opérations de stockage et de récupération de données, participer au DHT ETC
+	return core.NewNode(ctx, nodeOptions) // Create and initialize a new node IPFS
 }
 
 // Spawns a node
 func SpawnNode(ctx context.Context) (icore.CoreAPI, *core.IpfsNode, error) {
-	// Charge les plugins une seule fois
+	// Load the plugins once
 	var onceErr error
 	loadPluginsOnce.Do(func() {
 		onceErr = setupPlugins("")
@@ -127,14 +129,14 @@ func SpawnNode(ctx context.Context) (icore.CoreAPI, *core.IpfsNode, error) {
 		return nil, nil, fmt.Errorf("failed to create the repo ./ipfs-shell: %s", err)
 	}
 
-	// Configuration et Initialisation du Noeud IPFS avec les options définies
+	// Initialization and Configuration of a node IPFS
 	node, err := createNode(ctx, repoPath)
 	if err != nil {
 		fmt.Printf("create node failed %v", err)
 		return nil, nil, err
 	}
 
-	// Créer une instance de l'API Core IPFS pour interagir avec le réseau IPFS
+	// Create an instance of the Core IPFS API to interact with the IPFS network
 	api, err := coreapi.NewCoreAPI(node)
 
 	return api, node, err

@@ -1,33 +1,22 @@
-package storageTransaction
+package storagetransaction
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 )
 
 const RefreshInterval = 10 * time.Second
 
-var (
-	ignoredPeers             map[peer.ID]bool = make(map[peer.ID]bool)
-	channelClientAnnoncement string           = "ClientAnnouncement"
-	transactionTopicNameFlag *string          = flag.String("transactionTopicName", "NewTransaction", "ClientAnnouncement")
-	ip4tcp                   string           = fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", 0)
-	ip6tcp                   string           = fmt.Sprintf("/ip6/::/tcp/%d", 0)
-	ip4quic                  string           = fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", 0)
-	ip6quic                  string           = fmt.Sprintf("/ip6/::/udp/%d/quic-v1", 0)
-)
+var clientAnnouncementStringFlag = fmt.Sprintln("ClientAnnouncement")
 
 func SubscribeToClientChannel(ctx context.Context, ps *pubsub.PubSub, announceChan chan *transaction.ClientAnnouncement) {
-
 	// Join the topic client channel
-	topicClient, err := ps.Join(channelClientAnnoncement)
+	topicClient, err := ps.Join(clientAnnouncementStringFlag)
 	if err != nil {
 		log.Println("Failed to join topic:", err)
 	}
@@ -52,5 +41,4 @@ func SubscribeToClientChannel(ctx context.Context, ps *pubsub.PubSub, announceCh
 			announceChan <- transac // Envoyez l'annonce sur le canal
 		}
 	}()
-
 }

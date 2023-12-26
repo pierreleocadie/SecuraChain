@@ -35,19 +35,23 @@ func PrepareFileForIPFS(path string) (files.Node, error) {
 // AddFileToIPFS adds a file to IPFS and returns its CID. It also collects and saves file metadata.
 // The function handles the file addition process and records metadata such as file size, type, name, and user public key.
 func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI, inputPathFile string) (path.ImmutablePath, string, error) {
+	const permission = 0700
+
 	someFile, err := PrepareFileForIPFS(inputPathFile)
 	if err != nil {
-		fmt.Errorf("could not get File: %s", err)
+		log.Println("could not get File:", err)
 	}
 
 	cidFile, err := ipfsApi.Unixfs().Add(ctx, someFile)
 	if err != nil {
-		fmt.Errorf("could not add File: %s", err)
+		log.Println("could not add File: ", err)
 	}
 	fmt.Printf("Added file to IPFS with CID %s\n", cidFile.String())
 
 	// Pin a file with IPFS
-	ipfsApi.Pin().Add(ctx, cidFile)
+	if err := ipfsApi.Pin().Add(ctx, cidFile); err != nil {
+		log.Println("Could not pin the file in IPFS network ", err)
+	}
 	_, IsPinned, err := ipfsApi.Pin().IsPinned(ctx, cidFile)
 	if err != nil {
 		return path.ImmutablePath{}, "", err
@@ -67,7 +71,7 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 		Cid:           cidFile.String(),
 		Timestamp:     time.Now(),
 		FileSize:      fileSize,
-		FileType:      fileType,
+		Extension:     fileType,
 		OriginalName:  fileName,
 		UserPublicKey: node.Identity.String(),
 	}
@@ -75,14 +79,12 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 	// Check if the file exists
 	fileNameJSON := "ipfs_file_storage.json"
 
-	var storage util.CIDStorage
-	storage = util.CIDStorage{}
+	var storage = util.CIDStorage{}
 	if _, err := os.Stat(fileNameJSON); os.IsNotExist(err) {
 		storage.Files = append(storage.Files, data)
 		// Save the metadata to a JSON file.
 		if err := util.SaveToJSON(fileNameJSON, storage); err != nil {
 			log.Fatalf("Error saving JSON data %v", err)
-
 		}
 	} else {
 		// File exists, load existing data
@@ -90,23 +92,15 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 		if err != nil {
 			return path.ImmutablePath{}, "", err
 		}
-		//storage.Files = append(storage.Files, fileData)
+		// storage.Files = append(storage.Files, fileData)
 		fileData.Files = append(fileData.Files, data)
-		fmt.Println("file data is %v", fileData)
+		fmt.Println("file data is ", fileData)
 
 		// Save the metadata to a JSON file.
 		if err := util.SaveToJSON(fileNameJSON, fileData); err != nil {
 			log.Fatalf("Error saving JSON data %v", err)
-
 		}
 	}
-
-	// // Store the data with pebble
-
-	// if err := addDataInPebble(cidFile.String(), datav1); err != nil {
-	// 	return path.ImmutablePath{}, "", err
-	// }
-
 	// Adding the file on the storage node (local system)
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -114,7 +108,7 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 	}
 
 	outputBasePath := filepath.Join(home, ".IPFS_Local_Storage/")
-	if err := os.MkdirAll(outputBasePath, 0700); err != nil {
+	if err := os.MkdirAll(outputBasePath, permission); err != nil {
 		return path.ImmutablePath{}, "", fmt.Errorf("error creating output directory : %v", err)
 	}
 
@@ -127,42 +121,3 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 
 	return cidFile, fileName, nil
 }
-
-// func addDataInPebble(cidFile string, data util.CIDStorage) error {
-// 	// Serialize the data to store in Pebble
-// 	serializedData, err := json.Marshal(data)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	db, err := pebble.Open("ipfs_file_storage", &pebble.Options{})
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	key := []byte(cidFile)
-// 	if err := db.Set(key, serializedData, pebble.Sync); err != nil {
-// 		return err
-// 	}
-// 	value, closer, err := db.Get(key)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	fmt.Printf("\n\n\n%s %s\n\n", key, value)
-// 	if err := closer.Close(); err != nil {
-// 		return err
-// 	}
-// 	if err := db.Close(); err != nil {
-// 		return err
-// 	}
-
-// 	// Read the data back
-// 	iter := db.NewIter(nil)
-// 	for iter.First(); iter.Valid(); iter.Next() {
-// 		fmt.Printf("Key: %s, Value: %s\n", iter.Key(), iter.Value())
-// 	}
-// 	if err := iter.Close(); err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	return nil
-// }
