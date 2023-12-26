@@ -426,7 +426,7 @@ func main() {
 		encodedEncryptedExtension := base64.URLEncoding.EncodeToString(encryptedExtension)
 		log.Println("Encoded encrypted extension : ", encodedEncryptedExtension)
 
-		encryptedFilePath := fmt.Sprintf("%v%v", os.TempDir(), encodedEncryptedFilename)
+		encryptedFilePath := fmt.Sprintf("%v/%v", os.TempDir(), encodedEncryptedFilename)
 		if extension != "" {
 			encryptedFilePath = fmt.Sprintf("%v.%v", encryptedFilePath, encodedEncryptedExtension)
 		}
