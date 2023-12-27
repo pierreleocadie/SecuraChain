@@ -37,7 +37,7 @@ func SetupDHTDiscovery(ctx context.Context, host host.Host, bootstrapNode bool) 
 
 	// Run DHT
 	if err := dhtDiscovery.Run(ctx, host); err != nil {
-		log.Println("Failed to run DHT: ", err)
+		log.Fatalf("Failed to run DHT: %s", err)
 		return
 	}
 }

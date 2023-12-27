@@ -20,7 +20,7 @@ func Initialize() host.Host {
 	// Create a new connection manager - Exactly the same as the default connection manager but with a grace period
 	connManager, err := connmgr.NewConnManager(config.LowWater, config.HighWater, connmgr.WithGracePeriod(time.Minute))
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to create new connection manager: %s", err)
 	}
 
 	// Create a new libp2p Host
@@ -41,7 +41,7 @@ func Initialize() host.Host {
 		libp2p.EnableRelayService(),
 	)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to create new libp2p Host: %s", err)
 	}
 	log.Printf("Our node ID: %s\n", host.ID())
 
@@ -53,7 +53,7 @@ func Initialize() host.Host {
 
 	addrs, err := peer.AddrInfoToP2pAddrs(&hostInfo)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to convert peer.AddrInfo to p2p.Addr: %s", err)
 	}
 
 	for _, addr := range addrs {

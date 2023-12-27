@@ -15,6 +15,7 @@ const (
 	ClientAnnouncementStringFlag  = "ClientAnnouncement"
 	StorageNodeResponseStringFlag = "StorageNodeResponse"
 	DHTDiscoveryRefreshInterval   = 10 * time.Second
+	FileRights                    = 0700
 )
 
 var (
@@ -24,6 +25,6 @@ var (
 	Ip6quic        = fmt.Sprintf("/ip6/::/udp/%d/quic-v1", ListeningPortFlag)
 	BootstrapPeers = []string{
 		"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWBm6aEtcGiJNsnsCwaiH4SoqJHZMgvctdQsyAenwyt8Ds",
-		"/ip4/154.56.63.167/udp/1211/quic-v1/p2p/12D3KooWBa1WvTGddVA8z8dtXDvJBiEYwZXj7HB2d9AMEFW41UJx",
+		"/ip4/154.56.63.167/udp/1211/quic-v1/p2p/12D3KooWA8jcyCRDXhk1H7kgBg1ui1pBi2ezJC4mtmkRuvPFUegc",
 	}
 )

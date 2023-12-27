@@ -2,24 +2,13 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
+	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
-
-func waitForTermSignal() {
-	// wait for a SIGINT or SIGTERM signal
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-	<-ch
-	fmt.Println("Received signal, shutting down...")
-}
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -58,5 +47,5 @@ func main() {
 	}()
 
 	// Wait for a termination signal
-	waitForTermSignal()
+	utils.WaitForTermSignal()
 }
