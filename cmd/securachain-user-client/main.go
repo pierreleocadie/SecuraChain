@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -16,143 +15,35 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
-	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
-	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
-	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
-	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
-	"github.com/multiformats/go-multiaddr"
+
+	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
-	"github.com/pierreleocadie/SecuraChain/internal/discovery"
+	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
-
-const (
-	listeningPortFlag = 0
-	lowWater          = 160
-	highWater         = 192
-)
-
-var (
-	rendezvousStringFlag = fmt.Sprintln("SecuraChainNetwork")
-	ip4tcp               = fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", listeningPortFlag)
-	ip6tcp               = fmt.Sprintf("/ip6/::/tcp/%d", listeningPortFlag)
-	ip4quic              = fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", listeningPortFlag)
-	ip6quic              = fmt.Sprintf("/ip6/::/udp/%d/quic-v1", listeningPortFlag)
-	bootstrapPeers       = []string{
-		"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWBm6aEtcGiJNsnsCwaiH4SoqJHZMgvctdQsyAenwyt8Ds",
-	}
-	clientAnnouncementStringFlag  = fmt.Sprintln("ClientAnnouncement")
-	storageNodeResponseStringFlag = fmt.Sprintln("StorageNodeResponse")
-)
-
-func initializeNode() host.Host {
-	/*
-	* NODE INITIALIZATION
-	 */
-	// Create a new connection manager - Exactly the same as the default connection manager but with a grace period
-	connManager, err := connmgr.NewConnManager(lowWater, highWater, connmgr.WithGracePeriod(time.Minute))
-	if err != nil {
-		panic(err)
-	}
-
-	// Create a new libp2p Host
-	host, err := libp2p.New(
-		libp2p.UserAgent("SecuraChain"),
-		libp2p.ProtocolVersion("0.0.1"),
-		libp2p.EnableNATService(),
-		libp2p.NATPortMap(),
-		libp2p.EnableHolePunching(),
-		libp2p.ListenAddrStrings(ip4tcp, ip6tcp, ip4quic, ip6quic),
-		libp2p.ConnectionManager(connManager),
-		libp2p.Transport(tcp.NewTCPTransport),
-		libp2p.Transport(libp2pquic.NewTransport),
-		libp2p.RandomIdentity,
-		libp2p.DefaultSecurity,
-		libp2p.DefaultMuxers,
-		libp2p.DefaultEnableRelay,
-		libp2p.EnableRelayService(),
-	)
-	if err != nil {
-		panic(err)
-	}
-	log.Printf("Our node ID: %s\n", host.ID())
-
-	// Node info
-	hostInfo := peer.AddrInfo{
-		ID:    host.ID(),
-		Addrs: host.Addrs(),
-	}
-
-	addrs, err := peer.AddrInfoToP2pAddrs(&hostInfo)
-	if err != nil {
-		panic(err)
-	}
-
-	for _, addr := range addrs {
-		log.Println("Node address: ", addr)
-	}
-
-	for _, addr := range host.Addrs() {
-		log.Println("Listening on address: ", addr)
-	}
-
-	return host
-}
-
-func setupDHTDiscovery(ctx context.Context, host host.Host) {
-	/*
-	* NETWORK PEER DISCOVERY WITH DHT
-	 */
-	// Convert the bootstrap peers from string to multiaddr
-	var bootstrapPeersMultiaddr []multiaddr.Multiaddr
-	for _, peer := range bootstrapPeers {
-		peerMultiaddr, err := multiaddr.NewMultiaddr(peer)
-		if err != nil {
-			log.Println("Error converting bootstrap peer to multiaddr : ", err)
-			return
-		}
-		bootstrapPeersMultiaddr = append(bootstrapPeersMultiaddr, peerMultiaddr)
-	}
-
-	// Initialize DHT in server mode
-	dhtDiscovery := discovery.NewDHTDiscovery(
-		false,
-		rendezvousStringFlag,
-		bootstrapPeersMultiaddr,
-		10*time.Second,
-	)
-
-	// Run DHT
-	if err := dhtDiscovery.Run(ctx, host); err != nil {
-		log.Println("Failed to run DHT: ", err)
-		return
-	}
-}
 
 func main() {
 	var ecdsaKeyPair ecdsa.KeyPair
 	var aesKey aes.Key
 	var clientAnnouncementChan = make(chan *transaction.ClientAnnouncement)
 
-	/*
-	* NODE LIBP2P
-	 */
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	/*
+	* NODE LIBP2P
+	 */
 	// Initialize the node
-	host := initializeNode()
+	host := node.Initialize()
 	defer host.Close()
 
 	// Setup DHT discovery
-	setupDHTDiscovery(ctx, host)
+	node.SetupDHTDiscovery(ctx, host, false)
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES
@@ -185,7 +76,7 @@ func main() {
 	}
 
 	// Join the topic clientAnnouncementStringFlag
-	clientAnnouncementTopic, err := ps.Join(clientAnnouncementStringFlag)
+	clientAnnouncementTopic, err := ps.Join(config.ClientAnnouncementStringFlag)
 	if err != nil {
 		panic(err)
 	}
@@ -197,7 +88,7 @@ func main() {
 	}
 
 	// Join the topic storageNodeResponseStringFlag
-	storageNodeResponseTopic, err := ps.Join(storageNodeResponseStringFlag)
+	storageNodeResponseTopic, err := ps.Join(config.StorageNodeResponseStringFlag)
 	if err != nil {
 		panic(err)
 	}
