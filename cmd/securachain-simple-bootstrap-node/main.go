@@ -33,7 +33,7 @@ func main() {
 	defer host.Close()
 
 	// Setup DHT discovery
-	node.SetupDHTDiscovery(ctx, host, false)
+	node.SetupDHTDiscovery(ctx, host, true)
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES
