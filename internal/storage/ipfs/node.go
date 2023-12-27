@@ -16,11 +16,10 @@ import (
 	"github.com/ipfs/kubo/core/node/libp2p"
 	"github.com/ipfs/kubo/plugin/loader"
 	"github.com/ipfs/kubo/repo/fsrepo"
+	cfg "github.com/pierreleocadie/SecuraChain/internal/config"
 )
 
 var loadPluginsOnce sync.Once
-
-const permission = 0700 // Only the owner can read, write and execute
 
 // Prepare and set up the plugins
 func setupPlugins(externalPluginsPath string) error {
@@ -47,7 +46,6 @@ func setupPlugins(externalPluginsPath string) error {
 func createRepo() (string, error) {
 	var key = 2048
 
-	// take the home directory
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get user home directory: %s", err)
@@ -55,7 +53,7 @@ func createRepo() (string, error) {
 
 	ipfsPath := filepath.Join(homeDir, ".ipfs-shell")
 
-	err = os.Mkdir(ipfsPath, permission) // read and execute for everyone and write for the owner
+	err = os.Mkdir(ipfsPath, cfg.FileRights)
 	if err != nil && !os.IsExist(err) {
 		log.Fatal(err)
 	}
@@ -65,24 +63,6 @@ func createRepo() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	// // When creating the repository, you can define custom settings on the repository, such as enabling experimental
-	// // features (See experimental-features.md) or customizing the gateway endpoint.
-	// // To do such things, you should modify the variable `cfg`. For example:
-	// // Si le drapeau expérimental est activé, elle active des fonctionnalités d'IPFS// lire les commentaires
-	// //cfg permet de modifier la configuration avant de créer le dépot
-	// if *flagExp {
-	// 	// https://github.com/ipfs/kubo/blob/master/docs/experimental-features.md#ipfs-filestore
-	// 	cfg.Experimental.FilestoreEnabled = true
-	// 	// https://github.com/ipfs/kubo/blob/master/docs/experimental-features.md#ipfs-urlstore
-	// 	cfg.Experimental.UrlstoreEnabled = true
-	// 	// https://github.com/ipfs/kubo/blob/master/docs/experimental-features.md#ipfs-p2p
-	// 	cfg.Experimental.Libp2pStreamMounting = true
-	// 	// https://github.com/ipfs/kubo/blob/master/docs/experimental-features.md#p2p-http-proxy
-	// 	cfg.Experimental.P2pHttpProxy = true
-	// 	// See also: https://github.com/ipfs/kubo/blob/master/docs/config.md
-	// 	// And: https://github.com/ipfs/kubo/blob/master/docs/experimental-features.md
-	// }
 
 	// Create the repo with the config
 	err = fsrepo.Init(ipfsPath, cfg) // Initialize the directory with the config given
@@ -116,9 +96,11 @@ func createNode(ctx context.Context, repoPath string) (*core.IpfsNode, error) {
 func SpawnNode(ctx context.Context) (icore.CoreAPI, *core.IpfsNode, error) {
 	// Load the plugins once
 	var onceErr error
+
 	loadPluginsOnce.Do(func() {
 		onceErr = setupPlugins("")
 	})
+
 	if onceErr != nil {
 		return nil, nil, onceErr
 	}

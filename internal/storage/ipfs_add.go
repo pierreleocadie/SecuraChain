@@ -13,31 +13,36 @@ import (
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/kubo/core"
+	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/util"
+	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
 
-// PrepareFileForIPFS prepares a file to be added to IPFS by creating a UnixFS node from the given path.
+// prepareFileForIPFS prepares a file to be added to IPFS by creating a UnixFS node from the given path.
 // It retrieves file information and creates a serial file node for IPFS.
-func PrepareFileForIPFS(path string) (files.Node, error) {
-	st, err := os.Stat(path)
+func prepareFileForIPFS(path string) (files.Node, error) {
+	sanitizedPath, err := utils.SanitizePath(path)
 	if err != nil {
 		return nil, err
 	}
 
-	f, err := files.NewSerialFile(path, false, st)
+	stat, err := os.Stat(sanitizedPath)
 	if err != nil {
 		return nil, err
 	}
 
-	return f, nil
+	fileNode, err := files.NewSerialFile(path, false, stat)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileNode, nil
 }
 
 // AddFileToIPFS adds a file to IPFS and returns its CID. It also collects and saves file metadata.
 // The function handles the file addition process and records metadata such as file size, type, name, and user public key.
 func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI, inputPathFile string) (path.ImmutablePath, string, error) {
-	const permission = 0700
-
-	someFile, err := PrepareFileForIPFS(inputPathFile)
+	someFile, err := prepareFileForIPFS(inputPathFile)
 	if err != nil {
 		log.Println("could not get File:", err)
 	}
@@ -60,7 +65,7 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 	fmt.Println("Le fichier a bien été pin avec le cid: ", IsPinned)
 
 	// Collect file information and metadata.
-	fileName, fileSize, fileType, err := FileInfo(inputPathFile)
+	fileName, fileSize, fileType, err := utils.FileInfo(inputPathFile)
 
 	if err != nil {
 		log.Fatal(err)
@@ -108,7 +113,7 @@ func AddFileToIPFS(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreA
 	}
 
 	outputBasePath := filepath.Join(home, ".IPFS_Local_Storage/")
-	if err := os.MkdirAll(outputBasePath, permission); err != nil {
+	if err := os.MkdirAll(outputBasePath, config.FileRights); err != nil {
 		return path.ImmutablePath{}, "", fmt.Errorf("error creating output directory : %v", err)
 	}
 
