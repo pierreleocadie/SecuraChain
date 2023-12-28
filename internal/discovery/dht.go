@@ -112,7 +112,8 @@ func (d *DHT) bootstrapPeers(ctx context.Context, host host.Host) {
 		go func(pi peer.AddrInfo) {
 			defer wg.Done()
 			if err := host.Connect(ctx, pi); err != nil {
-				log.Printf("Connection failed to %s: %v", pi.ID, err)
+				log.Println("[bootstrapPeers] Connection failed")
+				// log.Printf("Connection failed to %s: %v", pi.ID, err)
 			} else {
 				log.Printf("Connection successful to %s", pi.ID)
 			}
@@ -144,7 +145,8 @@ func (d *DHT) announceAndConnect(ctx context.Context, host host.Host, routingDis
 		if host.Network().Connectedness(p.ID) != network.Connected {
 			log.Printf("[announceAndConnect] Found peer: %s", p.ID)
 			if err := host.Connect(ctx, p); err != nil {
-				log.Printf("[announceAndConnect] Connection failed: %v", err)
+				log.Println("[announceAndConnect] Connection failed")
+				// log.Printf("[announceAndConnect] Connection failed: %v", err)
 				d.IgnoredPeers[p.ID] = true
 			} else {
 				log.Printf("[announceAndConnect] Connection successful: %s", p.ID)

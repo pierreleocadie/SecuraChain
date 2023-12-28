@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/ipfs/boxo/path"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
@@ -70,17 +73,60 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
+			log.Println("Received ClientAnnouncement message from ", msg.GetFrom().String())
+			log.Println("Client Announcement: ", string(msg.Data))
 			clientAnnouncement, err := transaction.DeserializeClientAnnouncement(msg.Data)
 			if err != nil {
 				log.Printf("Failed to deserialize ClientAnnouncement: %s", err)
 				continue
 			}
+
+			// Verify the ClientAnnouncement
+			if !clientAnnouncement.VerifyTransaction(clientAnnouncement, clientAnnouncement.OwnerSignature, clientAnnouncement.OwnerAddress) {
+				log.Printf("Failed to verify ClientAnnouncement: %s", err)
+				continue
+			}
+
+			// Download the file
 			fileImmutablePath := path.FromCid(clientAnnouncement.FileCid)
+			log.Printf("Downloading file %s", fileImmutablePath)
 			err = ipfs.GetFile(ctx, ipfsApi, fileImmutablePath)
 			if err != nil {
 				log.Printf("Failed to download file: %s", err)
 				continue
 			}
+
+			// Verify that the file we downloaded is the same as the one announced
+			home, err := os.UserHomeDir()
+			if err != nil {
+				log.Printf("Failed to get user home directory: %s", err)
+				continue
+			}
+
+			downloadedFilePath := filepath.Join(home, ".IPFS_Downloads", clientAnnouncement.FileCid.String())
+			checksum, err := utils.ComputeFileChecksum(downloadedFilePath)
+			if err != nil {
+				log.Printf("Failed to compute checksum of downloaded file: %s", err)
+				continue
+			}
+
+			if bytes.Equal(checksum, clientAnnouncement.Checksum) {
+				log.Printf("Downloaded file checksum does not match announced checksum")
+				continue
+			}
+
+			fileInfo, err := os.Stat(downloadedFilePath)
+			if err != nil {
+				log.Printf("Failed to get file info: %s", err)
+				continue
+			}
+
+			if uint64(fileInfo.Size()) != clientAnnouncement.FileSize {
+				log.Printf("Downloaded file size does not match announced size")
+				continue
+			}
+
+			log.Printf("File downloaded successfully")
 		}
 	}()
 
