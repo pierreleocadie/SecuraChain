@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"time"
@@ -44,21 +45,18 @@ func (v *AddFileTransactionValidator) Validate(tx transaction.Transaction) bool 
 		return false
 	}
 
-	// Verify that AnnouncementID, ResponseID, FileTransferID and TransactionID are valid UUIDs
+	// Verify that AnnouncementID and TransactionID are valid UUIDs
 	if _, err := uuid.Parse(addFileTransaction.AnnouncementID.String()); err != nil {
 		fmt.Printf("Transaction validation failed: AnnouncementID is not a valid UUID")
 		return false
 	}
-	if _, err := uuid.Parse(addFileTransaction.ResponseID.String()); err != nil {
-		fmt.Printf("Transaction validation failed: ResponseID is not a valid UUID")
-		return false
-	}
-	if _, err := uuid.Parse(addFileTransaction.FileTransferID.String()); err != nil {
-		fmt.Printf("Transaction validation failed: FileTransferID is not a valid UUID")
-		return false
-	}
 	if _, err := uuid.Parse(addFileTransaction.TransactionID.String()); err != nil {
 		fmt.Printf("Transaction validation failed: TransactionID is not a valid UUID")
+		return false
+	}
+
+	if addFileTransaction.AnnouncementID == addFileTransaction.TransactionID {
+		fmt.Printf("Transaction validation failed: AnnouncementID and TransactionID must be different")
 		return false
 	}
 
@@ -69,6 +67,11 @@ func (v *AddFileTransactionValidator) Validate(tx transaction.Transaction) bool 
 	}
 	if _, err := ecdsa.PublicKeyFromBytes(addFileTransaction.NodeAddress); err != nil {
 		fmt.Printf("Transaction validation failed: NodeAddress is not a valid ECDSA public key")
+		return false
+	}
+
+	if bytes.Equal(addFileTransaction.OwnerAddress, addFileTransaction.NodeAddress) {
+		fmt.Printf("Transaction validation failed: OwnerAddress and NodeAddress must be different")
 		return false
 	}
 
@@ -85,16 +88,13 @@ func (v *AddFileTransactionValidator) Validate(tx transaction.Transaction) bool 
 	}
 
 	// Verify that FileCID is valid CID
-	if !isValidCID(addFileTransaction.FileCID) {
-		fmt.Printf("Transaction validation failed: FileCID is not a valid CID")
+	if !isValidCID(addFileTransaction.FileCid) {
+		fmt.Printf("Transaction validation failed: FileCid is not a valid CID")
 		return false
 	}
 
-	// Verify timestamps order (AnnouncementTimestamp < ResponseTimestamp < FileTransferTimestamp < TransactionTimestamp)
-	if !isValidTimestampOrder(addFileTransaction.AnnouncementTimestamp,
-		addFileTransaction.ResponseTimestamp,
-		addFileTransaction.FileTransferTimestamp,
-		addFileTransaction.TransactionTimestamp) {
+	// Verify timestamps order (AnnouncementTimestamp < TransactionTimestamp)
+	if !isValidTimestampOrder(addFileTransaction.AnnouncementTimestamp, addFileTransaction.TransactionTimestamp) {
 		fmt.Printf("Transaction validation failed: Timestamps are not in the correct order")
 		return false
 	}
@@ -109,6 +109,7 @@ func (v *AddFileTransactionValidator) Validate(tx transaction.Transaction) bool 
 	clientAnnouncement := &transaction.ClientAnnouncement{
 		AnnouncementID:        addFileTransaction.AnnouncementID,
 		OwnerAddress:          addFileTransaction.OwnerAddress,
+		FileCid:               addFileTransaction.FileCid,
 		Filename:              addFileTransaction.Filename,
 		Extension:             addFileTransaction.Extension,
 		FileSize:              addFileTransaction.FileSize,
@@ -122,56 +123,8 @@ func (v *AddFileTransactionValidator) Validate(tx transaction.Transaction) bool 
 		return false
 	}
 
-	// Verify the storage node response step
-	storageNodeResponse := &transaction.StorageNodeResponse{
-		ResponseID:            addFileTransaction.ResponseID,
-		NodeAddress:           addFileTransaction.NodeAddress,
-		NodeID:                addFileTransaction.NodeID,
-		APIEndpoint:           "",
-		NodeSignature:         addFileTransaction.NodeSignature,
-		ResponseTimestamp:     addFileTransaction.ResponseTimestamp,
-		AnnouncementID:        addFileTransaction.AnnouncementID,
-		OwnerAddress:          addFileTransaction.OwnerAddress,
-		Filename:              addFileTransaction.Filename,
-		Extension:             addFileTransaction.Extension,
-		FileSize:              addFileTransaction.FileSize,
-		Checksum:              addFileTransaction.Checksum,
-		OwnerSignature:        addFileTransaction.OwnerSignature,
-		AnnouncementTimestamp: addFileTransaction.AnnouncementTimestamp,
-	}
-
-	if !storageNodeResponse.VerifyTransaction(storageNodeResponse, storageNodeResponse.NodeSignature, addFileTransaction.NodeAddress) {
-		fmt.Printf("Transaction validation failed: Storage node response signature is invalid")
-		return false
-	}
-
-	// Verify the file transfer step
-	fileTransfer := &transaction.FileTransferHTTPRequest{
-		FileTransferID:        addFileTransaction.FileTransferID,
-		AnnouncementID:        addFileTransaction.AnnouncementID,
-		OwnerAddress:          addFileTransaction.OwnerAddress,
-		Filename:              addFileTransaction.Filename,
-		Extension:             addFileTransaction.Extension,
-		FileSize:              addFileTransaction.FileSize,
-		Checksum:              addFileTransaction.Checksum,
-		OwnerSignature:        addFileTransaction.OwnerSignature,
-		AnnouncementTimestamp: addFileTransaction.AnnouncementTimestamp,
-		ResponseID:            addFileTransaction.ResponseID,
-		NodeAddress:           addFileTransaction.NodeAddress,
-		NodeID:                addFileTransaction.NodeID,
-		NodeSignature:         addFileTransaction.NodeSignature,
-		ResponseTimestamp:     addFileTransaction.ResponseTimestamp,
-		FileTransferSignature: addFileTransaction.FileTransferSignature,
-		FileTransferTimestamp: addFileTransaction.FileTransferTimestamp,
-	}
-
-	if !fileTransfer.VerifyTransaction(fileTransfer, fileTransfer.FileTransferSignature, addFileTransaction.OwnerAddress) {
-		fmt.Printf("Transaction validation failed: File transfer signature is invalid")
-		return false
-	}
-
 	// Verify the transaction step
-	if !addFileTransaction.VerifyTransaction(addFileTransaction, addFileTransaction.TransactionSignature, addFileTransaction.OwnerAddress) {
+	if !addFileTransaction.VerifyTransaction(addFileTransaction, addFileTransaction.TransactionSignature, addFileTransaction.NodeAddress) {
 		fmt.Printf("Transaction validation failed: Transaction signature is invalid")
 		return false
 	}
@@ -199,7 +152,7 @@ func (v *DeleteFileTransactionValidator) Validate(tx transaction.Transaction) bo
 	}
 
 	// Verify that FileCID is a valid CID
-	if !isValidCID(deleteFileTransaction.FileCID) {
+	if !isValidCID(deleteFileTransaction.FileCid) {
 		return false
 	}
 

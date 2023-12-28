@@ -4,10 +4,14 @@ import (
 	"context"
 	"log"
 
+	"github.com/ipfs/boxo/path"
+	"github.com/pierreleocadie/SecuraChain/internal/config"
+	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
 )
@@ -19,7 +23,7 @@ func main() {
 	/*
 	* IPFS NODE
 	 */
-	// Spawn an IPFS node - The storage node embeds an IPFS node
+	// Spawn an IPFS node
 	ipfsApi, nodeIpfs, err := ipfs.SpawnNode(ctx)
 	if err != nil {
 		log.Fatalf("Failed to spawn IPFS node: %s", err)
@@ -38,6 +42,47 @@ func main() {
 	node.SetupDHTDiscovery(ctx, host, false)
 
 	log.Printf("Storage node initialized with PeerID: %s", host.ID().String())
+
+	/*
+	* PUBSUB
+	 */
+	ps, err := pubsub.NewGossipSub(ctx, host)
+	if err != nil {
+		panic(err)
+	}
+
+	// Join the topic clientAnnouncementStringFlag
+	clientAnnouncementTopic, err := ps.Join(config.ClientAnnouncementStringFlag)
+	if err != nil {
+		panic(err)
+	}
+
+	// Subscribe to clientAnnouncementStringFlag topic
+	subClientAnnouncement, err := clientAnnouncementTopic.Subscribe()
+	if err != nil {
+		panic(err)
+	}
+
+	// Handle incoming ClientAnnouncement messages
+	go func() {
+		for {
+			msg, err := subClientAnnouncement.Next(ctx)
+			if err != nil {
+				panic(err)
+			}
+			clientAnnouncement, err := transaction.DeserializeClientAnnouncement(msg.Data)
+			if err != nil {
+				log.Printf("Failed to deserialize ClientAnnouncement: %s", err)
+				continue
+			}
+			fileImmutablePath := path.FromCid(clientAnnouncement.FileCid)
+			err = ipfs.GetFile(ctx, ipfsApi, fileImmutablePath)
+			if err != nil {
+				log.Printf("Failed to download file: %s", err)
+				continue
+			}
+		}
+	}()
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES

@@ -21,21 +21,15 @@ func (f *AddFileTransactionFactory) CreateTransaction(data []byte) (Transaction,
 type AddFileTransaction struct {
 	AnnouncementID        uuid.UUID `json:"announcementID"`        // Announcement ID - UUID
 	OwnerAddress          []byte    `json:"ownerAddress"`          // Owner address - ECDSA public key
+	FileCid               cid.Cid   `json:"fileCid"`               // File CID
 	Filename              []byte    `json:"filename"`              // Encrypted filename
 	Extension             []byte    `json:"extension"`             // Encrypted extension
 	FileSize              uint64    `json:"fileSize"`              // File size
 	Checksum              []byte    `json:"checksum"`              // Checksum - SHA256
 	OwnerSignature        []byte    `json:"ownerSignature"`        // Owner signature - ECDSA signature
 	AnnouncementTimestamp int64     `json:"announcementTimestamp"` // Announcement timestamp - Unix timestamp
-	ResponseID            uuid.UUID `json:"responseID"`            // Response ID - UUID
 	NodeAddress           []byte    `json:"nodeAddress"`           // Node address - ECDSA public key
 	NodeID                peer.ID   `json:"nodeID"`                // Node ID
-	NodeSignature         []byte    `json:"nodeSignature"`         // Node signature - ECDSA signature
-	ResponseTimestamp     int64     `json:"responseTimestamp"`     // Response timestamp - Unix timestamp
-	FileTransferID        uuid.UUID `json:"fileTransferID"`        // File transfer ID - UUID
-	FileTransferSignature []byte    `json:"fileTransferSignature"` // File transfer signature - ECDSA signature
-	FileTransferTimestamp int64     `json:"fileTransferTimestamp"` // File transfer timestamp - Unix timestamp
-	FileCID               cid.Cid   `json:"fileCID"`               // File CID
 	TransactionID         uuid.UUID `json:"transactionID"`         // Transaction ID - UUID
 	UserReliabilityIssue  bool      `json:"userReliabilityIssue"`  // User reliability issue - boolean
 	TransactionSignature  []byte    `json:"transactionSignature"`  // Transaction signature - ECDSA signature
@@ -58,28 +52,26 @@ func (t *AddFileTransaction) SpecificData() ([]byte, error) {
 	return json.Marshal(t)
 }
 
-func NewAddFileTransaction(announcement *ClientAnnouncement, response *StorageNodeResponse,
-	fileTransfer *FileTransferHTTPRequest, fileCID cid.Cid,
-	userReliabilityIssue bool, keyPair ecdsa.KeyPair) *AddFileTransaction {
+func NewAddFileTransaction(announcement *ClientAnnouncement, fileCid cid.Cid,
+	userReliabilityIssue bool, keyPair ecdsa.KeyPair, nodeID peer.ID) *AddFileTransaction {
+	nodeAddressBytes, err := keyPair.PublicKeyToBytes()
+	if err != nil {
+		return nil
+	}
+
 	transaction := &AddFileTransaction{
 		TransactionID:         uuid.New(),
 		AnnouncementID:        announcement.AnnouncementID,
 		OwnerAddress:          announcement.OwnerAddress,
+		FileCid:               fileCid,
 		Filename:              announcement.Filename,
 		Extension:             announcement.Extension,
 		FileSize:              announcement.FileSize,
 		Checksum:              announcement.Checksum,
 		OwnerSignature:        announcement.OwnerSignature,
 		AnnouncementTimestamp: announcement.AnnouncementTimestamp,
-		ResponseID:            response.ResponseID,
-		NodeAddress:           response.NodeAddress,
-		NodeID:                response.NodeID,
-		NodeSignature:         response.NodeSignature,
-		ResponseTimestamp:     response.ResponseTimestamp,
-		FileTransferID:        fileTransfer.FileTransferID,
-		FileTransferSignature: fileTransfer.FileTransferSignature,
-		FileTransferTimestamp: fileTransfer.FileTransferTimestamp,
-		FileCID:               fileCID,
+		NodeAddress:           nodeAddressBytes,
+		NodeID:                nodeID,
 		UserReliabilityIssue:  userReliabilityIssue,
 		TransactionTimestamp:  time.Now().Unix(),
 	}

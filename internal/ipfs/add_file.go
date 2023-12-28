@@ -59,12 +59,12 @@ func AddFile(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI, fi
 		return path.ImmutablePath{}, err
 	}
 
-	outputBasePath := filepath.Join(home, ".IPFS_Local_Storage/")
-	if err := os.MkdirAll(outputBasePath, config.FileRights); err != nil {
+	localStoragePath := filepath.Join(home, ".IPFS_Local_Storage/")
+	if err := os.MkdirAll(localStoragePath, config.FileRights); err != nil {
 		return path.ImmutablePath{}, fmt.Errorf("error creating output directory : %v", err)
 	}
 
-	outputFilePath := filepath.Join(outputBasePath, filepath.Base(filePath))
+	outputFilePath := filepath.Join(localStoragePath, filepath.Base(filePath))
 
 	err = util.CopyFile(filePath, outputFilePath)
 	if err != nil {

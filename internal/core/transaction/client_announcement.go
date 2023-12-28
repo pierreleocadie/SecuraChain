@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/ipfs/go-cid"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
@@ -19,6 +20,7 @@ func (f *ClientAnnouncementFactory) CreateTransaction(data []byte) (Transaction,
 type ClientAnnouncement struct {
 	AnnouncementID        uuid.UUID `json:"announcementID"`        // Announcement ID - UUID
 	OwnerAddress          []byte    `json:"ownerAddress"`          // Owner address - ECDSA public key
+	FileCid               cid.Cid   `json:"fileCid"`               // File CID
 	Filename              []byte    `json:"filename"`              // Encrypted filename
 	Extension             []byte    `json:"extension"`             // Encrypted extension
 	FileSize              uint64    `json:"fileSize"`              // File size
@@ -42,7 +44,7 @@ func (a *ClientAnnouncement) SpecificData() ([]byte, error) {
 	return json.Marshal(a)
 }
 
-func NewClientAnnouncement(keyPair ecdsa.KeyPair, filename []byte, extension []byte, fileSize uint64, checksum []byte) *ClientAnnouncement {
+func NewClientAnnouncement(keyPair ecdsa.KeyPair, fileCid cid.Cid, filename []byte, extension []byte, fileSize uint64, checksum []byte) *ClientAnnouncement {
 	ownerAddressBytes, err := keyPair.PublicKeyToBytes()
 	if err != nil {
 		return nil
@@ -51,6 +53,7 @@ func NewClientAnnouncement(keyPair ecdsa.KeyPair, filename []byte, extension []b
 	announcement := &ClientAnnouncement{
 		AnnouncementID:        uuid.New(),
 		OwnerAddress:          ownerAddressBytes,
+		FileCid:               fileCid,
 		Filename:              filename,
 		Extension:             extension,
 		FileSize:              fileSize,

@@ -21,6 +21,7 @@ import (
 
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
+	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
@@ -34,6 +35,17 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	/*
+	* IPFS NODE
+	 */
+	// Spawn an IPFS node
+	ipfsApi, nodeIpfs, err := ipfs.SpawnNode(ctx)
+	if err != nil {
+		log.Fatalf("Failed to spawn IPFS node: %s", err)
+	}
+
+	log.Printf("IPFS node spawned with PeerID: %s", nodeIpfs.Identity.String())
 
 	/*
 	* NODE LIBP2P
@@ -86,38 +98,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	// Join the topic storageNodeResponseStringFlag
-	storageNodeResponseTopic, err := ps.Join(config.StorageNodeResponseStringFlag)
-	if err != nil {
-		panic(err)
-	}
-
-	// Subscribe to storageNodeResponseStringFlag topic
-	subStorageNodeResponse, err := storageNodeResponseTopic.Subscribe()
-	if err != nil {
-		panic(err)
-	}
-
-	// handle incoming StorageNodeResponse messages
-	responseChan := make(chan *transaction.StorageNodeResponse, 10)
-	go func() {
-		for {
-			msg, err := subStorageNodeResponse.Next(ctx)
-			if err != nil {
-				panic(err)
-			}
-
-			log.Println("Received StorageNodeResponse message : ", string(msg.Data))
-			storageNodeResponse, err := transaction.DeserializeStorageNodeResponse(msg.Data)
-			if err != nil {
-				log.Println("Error deserializing StorageNodeResponse : ", err)
-				continue
-			}
-			responseChan <- storageNodeResponse
-			log.Println("StorageNodeResponse sent to responseChan")
-		}
-	}()
 
 	// Handle publishing ClientAnnouncement messages
 	go func() {
@@ -283,13 +263,13 @@ func main() {
 			return
 		}
 
-		filename := strings.Split(selectedFileLabel.Text, "/")[len(strings.Split(selectedFileLabel.Text, "/"))-1]
-		extensionSplit := strings.Split(filename, ".")
-		extension := extensionSplit[len(strings.Split(filename, "."))-1]
-		if len(extensionSplit) == 1 {
-			filename = extension
-			extension = ""
+		filename, _, extension, err := utils.FileInfo(selectedFileLabel.Text)
+		if err != nil {
+			log.Println("Error getting file info : ", err)
+			return
 		}
+
+		filename = strings.Split(filename, ".")[0]
 		log.Println("filename : ", filename)
 		log.Println("extension : ", extension)
 
@@ -304,10 +284,6 @@ func main() {
 		if err != nil {
 			log.Println("Error encrypting extension : ", err)
 			return
-		}
-
-		if extension == "" {
-			encryptedExtension = []byte("")
 		}
 
 		// 2. Encrypt the file with AES
@@ -346,21 +322,32 @@ func main() {
 		fileSize := fileStat.Size()
 		log.Println("Encrypted file size : ", fileSize)
 
+		// 5. Add the encrypted file to IPFS
+		encryptedFileCid, err := ipfs.AddFile(ctx, nodeIpfs, ipfsApi, encryptedFilePath)
+		if err != nil {
+			log.Println("Error adding encrypted file to IPFS : ", err)
+			return
+		}
+
+		log.Println("Encrypted file immutable path : ", encryptedFileCid)
+		log.Println("Encrypted file CID : ")
+
 		// 7. Create a new ClientAnnouncement
 		clientAnnouncement := transaction.NewClientAnnouncement(
 			ecdsaKeyPair,
+			encryptedFileCid.RootCid(),
 			encryptedFilename,
 			encryptedExtension,
 			uint64(fileSize),
 			encryptedFileChecksum,
 		)
 		clientAnnouncementChan <- clientAnnouncement
-		// clientAnnouncementJson, err := clientAnnouncement.Serialize()
-		// if err != nil {
-		// 	log.Println("Error serializing ClientAnnouncement : ", err)
-		// 	return
-		// }
-		// log.Println("ClientAnnouncement : ", string(clientAnnouncementJson))
+		clientAnnouncementJson, err := clientAnnouncement.Serialize()
+		if err != nil {
+			log.Println("Error serializing ClientAnnouncement : ", err)
+			return
+		}
+		log.Println("ClientAnnouncement : ", string(clientAnnouncementJson))
 	})
 
 	hBoxECDSA := container.New(
