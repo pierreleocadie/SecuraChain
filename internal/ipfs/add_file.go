@@ -53,7 +53,6 @@ func AddFile(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI, fi
 	}
 	log.Printf("File added with CID: %s", fileCid.String())
 
-	// TODO : Maybe move this to a separate function
 	// Adding the file on the storage node (local system)
 	home, err := os.UserHomeDir()
 	if err != nil {
