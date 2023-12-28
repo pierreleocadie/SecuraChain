@@ -4,9 +4,8 @@ import (
 	"context"
 	"log"
 
+	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
-	"github.com/pierreleocadie/SecuraChain/internal/storage/ipfs"
-	"github.com/pierreleocadie/SecuraChain/internal/storage/monitoring"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
 	"github.com/libp2p/go-libp2p/core/event"
@@ -21,24 +20,16 @@ func main() {
 	* IPFS NODE
 	 */
 	// Spawn an IPFS node - The storage node embeds an IPFS node
-	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx)
+	ipfsApi, nodeIpfs, err := ipfs.SpawnNode(ctx)
 	if err != nil {
 		log.Fatalf("Failed to spawn IPFS node: %s", err)
 	}
-
-	go func() {
-		_, _, err := monitoring.WatchStorageQueueForChanges(ctx, nodeIpfs, ipfsAPI)
-		if err != nil {
-			log.Fatal("Error watching storage queue for changes: ", err)
-		}
-	}()
 
 	log.Printf("IPFS node spawned with PeerID: %s", nodeIpfs.Identity.String())
 
 	/*
 	* NODE LIBP2P
 	 */
-
 	// Initialize the storage node
 	host := node.Initialize()
 	defer host.Close()
