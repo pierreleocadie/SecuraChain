@@ -20,10 +20,9 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/p2p/host/autonat"
 
-	ipfsLog "github.com/ipfs/go-log"
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
-	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
@@ -44,12 +43,12 @@ func main() {
 	* IPFS NODE
 	 */
 	// Spawn an IPFS node
-	ipfsApi, nodeIpfs, err := ipfs.SpawnNode(ctx)
-	if err != nil {
-		log.Fatalf("Failed to spawn IPFS node: %s", err)
-	}
+	// ipfsApi, nodeIpfs, err := ipfs.SpawnNode(ctx)
+	// if err != nil {
+	// 	log.Fatalf("Failed to spawn IPFS node: %s", err)
+	// }
 
-	log.Printf("IPFS node spawned with PeerID: %s", nodeIpfs.Identity.String())
+	// log.Printf("IPFS node spawned with PeerID: %s", nodeIpfs.Identity.String())
 
 	/*
 	* NODE LIBP2P
@@ -64,7 +63,7 @@ func main() {
 	/*
 	* AUTONAT SERVICE
 	 */
-	_, err = autonat.New(host)
+	_, err := autonat.New(host)
 	if err != nil {
 		log.Fatalf("Failed to create new autonat service: %s", err)
 	}
@@ -335,39 +334,38 @@ func main() {
 		log.Println("Encrypted file size : ", fileSize)
 
 		// 5. Add the encrypted file to IPFS
-		encryptedFileCid, err := ipfs.AddFile(ctx, nodeIpfs, ipfsApi, encryptedFilePath)
-		if err != nil {
-			log.Println("Error adding encrypted file to IPFS : ", err)
-			return
-		}
+		// encryptedFileCid, err := ipfs.AddFile(ctx, nodeIpfs, ipfsApi, encryptedFilePath)
+		// if err != nil {
+		// 	log.Println("Error adding encrypted file to IPFS : ", err)
+		// 	return
+		// }
 
 		// 6. Pin the encrypted file
-		isPinned, err := ipfs.PinFile(ctx, ipfsApi, encryptedFileCid)
-		if err != nil {
-			log.Println("Error pinning encrypted file : ", err)
-			return
-		}
-		log.Println("Encrypted file pinned : ", isPinned)
+		// isPinned, err := ipfs.PinFile(ctx, ipfsApi, encryptedFileCid)
+		// if err != nil {
+		// 	log.Println("Error pinning encrypted file : ", err)
+		// 	return
+		// }
+		// log.Println("Encrypted file pinned : ", isPinned)
 
-		log.Println("Encrypted file immutable path : ", encryptedFileCid)
-		log.Println("Encrypted file CID : ")
+		// log.Println("Encrypted file immutable path : ", encryptedFileCid)
 
 		// 7. Create a new ClientAnnouncement
-		clientAnnouncement := transaction.NewClientAnnouncement(
-			ecdsaKeyPair,
-			encryptedFileCid.RootCid(),
-			encryptedFilename,
-			encryptedExtension,
-			uint64(fileSize),
-			encryptedFileChecksum,
-		)
-		clientAnnouncementChan <- clientAnnouncement
-		clientAnnouncementJson, err := clientAnnouncement.Serialize()
-		if err != nil {
-			log.Println("Error serializing ClientAnnouncement : ", err)
-			return
-		}
-		log.Println("ClientAnnouncement : ", string(clientAnnouncementJson))
+		// clientAnnouncement := transaction.NewClientAnnouncement(
+		// 	ecdsaKeyPair,
+		// 	encryptedFileCid.RootCid(),
+		// 	encryptedFilename,
+		// 	encryptedExtension,
+		// 	uint64(fileSize),
+		// 	encryptedFileChecksum,
+		// )
+		// clientAnnouncementChan <- clientAnnouncement
+		// clientAnnouncementJson, err := clientAnnouncement.Serialize()
+		// if err != nil {
+		// 	log.Println("Error serializing ClientAnnouncement : ", err)
+		// 	return
+		// }
+		// log.Println("ClientAnnouncement : ", string(clientAnnouncementJson))
 	})
 
 	hBoxECDSA := container.New(

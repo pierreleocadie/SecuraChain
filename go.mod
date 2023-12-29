@@ -7,7 +7,7 @@ require (
 	github.com/google/uuid v1.4.0
 	github.com/ipfs/boxo v0.15.0
 	github.com/ipfs/go-cid v0.4.1
-	github.com/ipfs/go-log v1.0.5
+	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/ipfs/kubo v0.24.0
 	github.com/libp2p/go-libp2p v0.32.1
 	github.com/libp2p/go-libp2p-kad-dht v0.25.2
@@ -185,7 +185,7 @@ require (
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
 	github.com/ipfs/go-datastore v0.6.0 // indirect
-	github.com/ipfs/go-log/v2 v2.5.1 // indirect
+	github.com/ipfs/go-log v1.0.5 // indirect
 	github.com/ipld/go-ipld-prime v0.21.0 // indirect
 	github.com/jbenet/goprocess v0.1.4 // indirect
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect

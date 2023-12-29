@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	ipfsLog "github.com/ipfs/go-log"
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
