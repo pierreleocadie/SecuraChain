@@ -27,6 +27,7 @@ func Initialize() host.Host {
 	host, err := libp2p.New(
 		libp2p.UserAgent(config.UserAgent),
 		libp2p.ProtocolVersion(config.ProtocolVersion),
+		libp2p.AddrsFactory(filterOutPrivateAddrs),
 		libp2p.EnableNATService(),
 		libp2p.NATPortMap(),
 		libp2p.EnableHolePunching(),
