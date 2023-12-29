@@ -34,6 +34,7 @@ func GetFile(ctx context.Context, ipfsAPI icore.CoreAPI, cidFile path.ImmutableP
 	if err != nil {
 		return fmt.Errorf("could not get file with CID: %s", err)
 	}
+	defer rootNodeFile.Close()
 	log.Printf("Got the file")
 
 	downloadedFilePath := filepath.Join(downloadsStoragePath, filepath.Base(cidFile.String()))

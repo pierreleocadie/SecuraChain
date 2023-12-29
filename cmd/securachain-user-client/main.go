@@ -329,6 +329,14 @@ func main() {
 			return
 		}
 
+		// 6. Pin the encrypted file
+		isPinned, err := ipfs.PinFile(ctx, ipfsApi, encryptedFileCid)
+		if err != nil {
+			log.Println("Error pinning encrypted file : ", err)
+			return
+		}
+		log.Println("Encrypted file pinned : ", isPinned)
+
 		log.Println("Encrypted file immutable path : ", encryptedFileCid)
 		log.Println("Encrypted file CID : ")
 
