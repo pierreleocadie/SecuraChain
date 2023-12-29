@@ -17,6 +17,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/p2p/host/autonat"
 )
 
 func main() {
@@ -45,6 +46,14 @@ func main() {
 	node.SetupDHTDiscovery(ctx, host, false)
 
 	log.Printf("Storage node initialized with PeerID: %s", host.ID().String())
+
+	/*
+	* AUTONAT SERVICE
+	 */
+	_, err = autonat.New(host)
+	if err != nil {
+		log.Fatalf("Failed to create new autonat service: %s", err)
+	}
 
 	/*
 	* PUBSUB

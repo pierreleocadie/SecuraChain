@@ -18,6 +18,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/p2p/host/autonat"
 
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
@@ -56,6 +57,14 @@ func main() {
 
 	// Setup DHT discovery
 	node.SetupDHTDiscovery(ctx, host, false)
+
+	/*
+	* AUTONAT SERVICE
+	 */
+	_, err = autonat.New(host)
+	if err != nil {
+		log.Fatalf("Failed to create new autonat service: %s", err)
+	}
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES
