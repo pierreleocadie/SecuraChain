@@ -20,6 +20,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/p2p/host/autonat"
 
+	ipfsLog "github.com/ipfs/go-log"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
@@ -30,6 +31,8 @@ import (
 )
 
 func main() {
+	ipfsLog.SetLogLevel("*", "DEBUG")
+
 	var ecdsaKeyPair ecdsa.KeyPair
 	var aesKey aes.Key
 	var clientAnnouncementChan = make(chan *transaction.ClientAnnouncement)

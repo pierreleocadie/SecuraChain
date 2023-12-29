@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	ipfsLog "github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
@@ -11,6 +12,8 @@ import (
 )
 
 func main() {
+	ipfsLog.SetLogLevel("*", "DEBUG")
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

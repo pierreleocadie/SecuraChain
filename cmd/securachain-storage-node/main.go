@@ -14,6 +14,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
+	ipfsLog "github.com/ipfs/go-log"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -21,6 +22,8 @@ import (
 )
 
 func main() {
+	ipfsLog.SetLogLevel("*", "DEBUG")
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
