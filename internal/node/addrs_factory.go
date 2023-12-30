@@ -11,8 +11,12 @@ func isPrivateAddr(maddr ma.Multiaddr) bool {
 	// Extract the IP address from the multiaddress
 	ip, err := maddr.ValueForProtocol(ma.P_IP4)
 	if err != nil {
-		// Handle the error or ignore the address
-		return false
+		// Attempt to get the IPv6 address if IPv4 was not found
+		ip, err = maddr.ValueForProtocol(ma.P_IP6)
+		if err != nil {
+			// Handle the error or ignore the address
+			return false
+		}
 	}
 
 	// Parse the IP address
@@ -21,8 +25,8 @@ func isPrivateAddr(maddr ma.Multiaddr) bool {
 		return false
 	}
 
-	// Check if the IP is in a private range
-	return netIP.IsPrivate()
+	// Check if the IP is in a private range or is a loopback address
+	return netIP.IsPrivate() || netIP.IsLoopback()
 }
 
 // filterOutPrivateAddrs filters out private network addresses
