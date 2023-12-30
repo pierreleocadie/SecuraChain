@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
@@ -15,6 +14,7 @@ import (
 
 func main() {
 	ipfsLog.SetLogLevel("*", "DEBUG")
+	log := ipfsLog.Logger("storage-node")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -40,7 +40,7 @@ func main() {
 	// Setup DHT discovery
 	node.SetupDHTDiscovery(ctx, host, false)
 
-	log.Printf("Storage node initialized with PeerID: %s", host.ID().String())
+	log.Debugf("Storage node initialized with PeerID: %s", host.ID().String())
 
 	/*
 	* AUTONAT SERVICE
@@ -140,7 +140,7 @@ func main() {
 	// Subscribe to EvtPeerConnectednessChanged events
 	subNet, err := host.EventBus().Subscribe(new(event.EvtPeerConnectednessChanged))
 	if err != nil {
-		log.Println("Failed to subscribe to EvtPeerConnectednessChanged: ", err)
+		log.Errorln("Failed to subscribe to EvtPeerConnectednessChanged:", err)
 	}
 	defer subNet.Close()
 
@@ -149,9 +149,9 @@ func main() {
 		for e := range subNet.Out() {
 			evt := e.(event.EvtPeerConnectednessChanged)
 			if evt.Connectedness == network.Connected {
-				log.Println("Peer connected:", evt.Peer)
+				log.Debugln("Peer connected:", evt.Peer)
 			} else if evt.Connectedness == network.NotConnected {
-				log.Println("Peer disconnected: ", evt.Peer)
+				log.Debugln("Peer disconnected:", evt.Peer)
 			}
 		}
 	}()

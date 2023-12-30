@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"net/url"
 	"os"
 	"strings"
@@ -31,6 +30,7 @@ import (
 
 func main() {
 	ipfsLog.SetLogLevel("*", "DEBUG")
+	log := ipfsLog.Logger("user-client")
 
 	var ecdsaKeyPair ecdsa.KeyPair
 	var aesKey aes.Key
@@ -74,7 +74,7 @@ func main() {
 	// Subscribe to EvtPeerConnectednessChanged events
 	subNet, err := host.EventBus().Subscribe(new(event.EvtPeerConnectednessChanged))
 	if err != nil {
-		log.Println("Failed to subscribe to EvtPeerConnectednessChanged: ", err)
+		log.Errorln("Failed to subscribe to EvtPeerConnectednessChanged: ", err)
 	}
 	defer subNet.Close()
 
@@ -83,9 +83,9 @@ func main() {
 		for e := range subNet.Out() {
 			evt := e.(event.EvtPeerConnectednessChanged)
 			if evt.Connectedness == network.Connected {
-				log.Println("Peer connected:", evt.Peer)
+				log.Debugln("Peer connected:", evt.Peer)
 			} else if evt.Connectedness == network.NotConnected {
-				log.Println("Peer disconnected: ", evt.Peer)
+				log.Debugln("Peer disconnected: ", evt.Peer)
 			}
 		}
 	}()
@@ -116,15 +116,15 @@ func main() {
 			clientAnnouncement := <-clientAnnouncementChan
 			clientAnnouncementJson, err := clientAnnouncement.Serialize()
 			if err != nil {
-				log.Println("Error serializing ClientAnnouncement : ", err)
+				log.Errorln("Error serializing ClientAnnouncement : ", err)
 				continue
 			}
 
-			log.Println("Publishing ClientAnnouncement : ", string(clientAnnouncementJson))
+			log.Debugln("Publishing ClientAnnouncement : ", string(clientAnnouncementJson))
 
 			err = clientAnnouncementTopic.Publish(ctx, clientAnnouncementJson)
 			if err != nil {
-				log.Println("Error publishing ClientAnnouncement : ", err)
+				log.Errorln("Error publishing ClientAnnouncement : ", err)
 				continue
 			}
 		}
@@ -137,7 +137,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			log.Println("Received ClientAnnouncement message from ", msg.GetFrom().String())
+			log.Debugln("Received ClientAnnouncement message from ", msg.GetFrom().String())
 		}
 	}()
 
@@ -156,7 +156,7 @@ func main() {
 				u, er := url.Parse(dir.String())
 				if er == nil {
 					ecdsaInput.SetText(u.Path)
-					log.Printf("ECDSA key pair will be saved in : %v", u.Path)
+					log.Debugf("ECDSA key pair will be saved in : %v", u.Path)
 				}
 			}
 		}, w)
@@ -171,7 +171,7 @@ func main() {
 				u, er := url.Parse(dir.String())
 				if er == nil {
 					aesInput.SetText(u.Path)
-					log.Printf("AES key will be saved in : %v", u.Path)
+					log.Debugf("AES key will be saved in : %v", u.Path)
 				}
 			}
 		}, w)
@@ -182,17 +182,17 @@ func main() {
 	ecdsaButtonLoad := widget.NewButton("Load ECDSA Key Pair", func() {
 		ecdsaKeyPairL, err := ecdsa.LoadKeys("ecdsaPrivateKey", "ecdsaPublicKey", ecdsaInput.Text)
 		if err != nil {
-			log.Println("Error loading ECDSA key pair : ", err)
+			log.Errorln("Error loading ECDSA key pair : ", err)
 			return
 		}
 		ecdsaKeyPair = ecdsaKeyPairL
-		log.Println(ecdsaKeyPair)
+		log.Debug("ECDSA key pair loaded")
 	})
 
 	// Create a button to generate a new ECDSA key pair
 	ecdsaButton := widget.NewButton("Generate ECDSA Key Pair", func() {
 		if ecdsaInput.Text == "" {
-			log.Println("Please select a directory to save the ECDSA key pair")
+			log.Debug("Please select a directory to save the ECDSA key pair")
 			return
 		}
 
@@ -203,7 +203,7 @@ func main() {
 
 		err = ecdsaKeyPair.SaveKeys("ecdsaPrivateKey", "ecdsaPublicKey", ecdsaInput.Text)
 		if err != nil {
-			log.Println("Error saving ECDSA key pair : ", err)
+			log.Errorln("Error saving ECDSA key pair : ", err)
 			return
 		}
 	})
@@ -211,35 +211,35 @@ func main() {
 	// Create a button to load an AES key
 	aesButtonLoad := widget.NewButton("Load AES Key", func() {
 		if aesInput.Text == "" {
-			log.Println("Please select a directory to save the AES key")
+			log.Debug("Please select a directory to save the AES key")
 			return
 		}
 
 		aesKeyL, err := aes.LoadKey("aesKey", aesInput.Text)
 		if err != nil {
-			log.Println("Error loading AES key : ", err)
+			log.Errorln("Error loading AES key : ", err)
 			return
 		}
 		aesKey = aesKeyL
-		log.Println(aesKey)
+		log.Debug("AES key loaded")
 	})
 
 	// Create a button to generate a new AES key
 	aesButton := widget.NewButton("Generate AES Key", func() {
 		if aesInput.Text == "" {
-			log.Println("Please select a directory to save the AES key")
+			log.Debug("Please select a directory to save the AES key")
 			return
 		}
 
 		aesKey, err := aes.NewAESKey()
 		if err != nil {
-			log.Println("Error generating AES key : ", err)
+			log.Errorln("Error generating AES key : ", err)
 			return
 		}
 
 		err = aesKey.SaveKey("aesKey", aesInput.Text)
 		if err != nil {
-			log.Println("Error saving AES key : ", err)
+			log.Errorln("Error saving AES key : ", err)
 			return
 		}
 	})
@@ -259,79 +259,79 @@ func main() {
 	sendFileButton := widget.NewButton("Send File", func() {
 		// -1. Check if the ECDSA key pair and the AES key are loaded
 		if aesKey == nil {
-			log.Println("AES key not loaded")
+			log.Debug("AES key not loaded")
 			return
 		}
 
 		if ecdsaKeyPair == nil {
-			log.Println("ECDSA key pair not loaded")
+			log.Debug("ECDSA key pair not loaded")
 			return
 		}
 
 		// O. Get the original file name and extension
 		if selectedFileLabel.Text == "" {
-			log.Println("Please select a file")
+			log.Debug("Please select a file")
 			return
 		}
 
 		filename, _, extension, err := utils.FileInfo(selectedFileLabel.Text)
 		if err != nil {
-			log.Println("Error getting file info : ", err)
+			log.Errorln("Error getting file info : ", err)
 			return
 		}
 
 		filename = strings.Split(filename, ".")[0]
-		log.Println("filename : ", filename)
-		log.Println("extension : ", extension)
+		log.Debugln("filename : ", filename)
+		log.Debugln("extension : ", extension)
 
 		// 1. Encrypt the filename and file extension with AES
 		encryptedFilename, err := aesKey.EncryptData([]byte(filename))
 		if err != nil {
-			log.Println("Error encrypting filename : ", err)
+			log.Errorln("Error encrypting filename : ", err)
 			return
 		}
 
 		encryptedExtension, err := aesKey.EncryptData([]byte(extension))
 		if err != nil {
-			log.Println("Error encrypting extension : ", err)
+			log.Errorln("Error encrypting extension : ", err)
 			return
 		}
 
 		// 2. Encrypt the file with AES
 		encodedEncryptedFilename := base64.URLEncoding.EncodeToString(encryptedFilename)
-		log.Println("Encoded encrypted filename : ", encodedEncryptedFilename)
+		log.Debugln("Encoded encrypted filename : ", encodedEncryptedFilename)
 
 		encodedEncryptedExtension := base64.URLEncoding.EncodeToString(encryptedExtension)
-		log.Println("Encoded encrypted extension : ", encodedEncryptedExtension)
+		log.Debugln("Encoded encrypted extension : ", encodedEncryptedExtension)
 
 		encryptedFilePath := fmt.Sprintf("%v/%v", os.TempDir(), encodedEncryptedFilename)
 		if extension != "" {
 			encryptedFilePath = fmt.Sprintf("%v.%v", encryptedFilePath, encodedEncryptedExtension)
 		}
-		log.Println("Path for the encrypted file : ", encryptedFilePath)
+		log.Debugln("Path for the encrypted file : ", encryptedFilePath)
 
 		err = aesKey.EncryptFile(selectedFileLabel.Text, encryptedFilePath)
 		if err != nil {
-			log.Println("Error encrypting file : ", err)
+			log.Errorln("Error encrypting file : ", err)
 			return
 		}
 
 		// 3. Compute the checksum of the encrypted file
 		encryptedFileChecksum, err := utils.ComputeFileChecksum(encryptedFilePath)
 		if err != nil {
-			log.Println("Error computing checksum of encrypted file : ", err)
+			log.Errorln("Error computing checksum of encrypted file : ", err)
 			return
 		}
-		log.Println("Encrypted file checksum : ", string(encryptedFileChecksum))
+		log.Debugln("Encrypted file checksum : ", string(encryptedFileChecksum))
 
 		// 4. Get the size of the encrypted file
 		fileStat, err := os.Stat(encryptedFilePath)
 		if err != nil {
-			log.Println("Error getting size of encrypted file : ", err)
+			log.Debugln("Error getting size of encrypted file : ", err)
 			return
 		}
 		fileSize := fileStat.Size()
-		log.Println("Encrypted file size : ", fileSize)
+		log.Debugln("Encrypted file size : ", fileSize)
 
 		// 5. Add the encrypted file to IPFS
 		// encryptedFileCid, err := ipfs.AddFile(ctx, nodeIpfs, ipfsApi, encryptedFilePath)
