@@ -17,6 +17,7 @@ const (
 	DHTDiscoveryRefreshInterval   = 10 * time.Second
 	FileRights                    = 0700
 	FileMetadataRegistryJson      = "fileMetadataRegistry.json"
+	PeerstoreCleanupInterval      = 1 * time.Minute
 )
 
 var (

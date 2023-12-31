@@ -1,4 +1,4 @@
-package node
+package discovery
 
 import (
 	"net"
@@ -30,7 +30,7 @@ func isPrivateAddr(maddr ma.Multiaddr) bool {
 }
 
 // filterOutPrivateAddrs filters out private network addresses
-func filterOutPrivateAddrs(addrs []ma.Multiaddr) []ma.Multiaddr {
+func FilterOutPrivateAddrs(addrs []ma.Multiaddr) []ma.Multiaddr {
 	var publicAddrs []ma.Multiaddr
 	for _, addr := range addrs {
 		if !isPrivateAddr(addr) {

@@ -11,6 +11,7 @@ import (
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
+	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 )
 
 func Initialize() host.Host {
@@ -27,7 +28,7 @@ func Initialize() host.Host {
 	host, err := libp2p.New(
 		libp2p.UserAgent(config.UserAgent),
 		libp2p.ProtocolVersion(config.ProtocolVersion),
-		libp2p.AddrsFactory(filterOutPrivateAddrs),
+		libp2p.AddrsFactory(discovery.FilterOutPrivateAddrs),
 		libp2p.EnableNATService(),
 		libp2p.NATPortMap(),
 		libp2p.EnableHolePunching(),
