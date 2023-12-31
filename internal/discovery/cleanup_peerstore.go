@@ -22,6 +22,11 @@ func CleanUpPeers(host host.Host, ctx context.Context) {
 					return
 				}
 
+				// Ignore our own peer ID
+				if p == host.ID() {
+					continue
+				}
+
 				// Ping the peer
 				s, err := host.NewStream(ctx, p, ping.ID)
 				if err != nil {
