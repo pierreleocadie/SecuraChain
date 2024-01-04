@@ -34,8 +34,9 @@ func Ping(host host.Host, ctx context.Context) {
 					s, err := host.NewStream(ctx, p, ping.ID)
 					if err != nil {
 						log.Printf("Peer %s is unreachable: %v", p, err)
+						return
 					}
-					s.Close()
+					defer s.Close()
 				}(p)
 			}
 		case <-ctx.Done():
