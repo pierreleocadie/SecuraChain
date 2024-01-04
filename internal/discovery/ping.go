@@ -12,7 +12,7 @@ import (
 )
 
 func Ping(host host.Host, ctx context.Context) {
-	ticker := time.NewTicker(config.PeerstoreCleanupInterval) // adjust interval to your needs
+	ticker := time.NewTicker(config.DHTDiscoveryRefreshInterval) // adjust interval to your needs
 	defer ticker.Stop()
 
 	for {
