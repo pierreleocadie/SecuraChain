@@ -18,7 +18,7 @@ func Ping(host host.Host, ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			for _, p := range host.Network().Peers() {
+			for _, p := range host.Peerstore().Peers() {
 				if ctx.Err() != nil { // context was canceled
 					return
 				}
@@ -28,6 +28,7 @@ func Ping(host host.Host, ctx context.Context) {
 					continue
 				}
 
+				log.Printf("[PING] Pinging peer %s", p)
 				go func(p peer.ID) {
 					// Ping the peer
 					s, err := host.NewStream(ctx, p, ping.ID)
