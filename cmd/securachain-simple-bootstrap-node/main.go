@@ -7,7 +7,6 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
@@ -29,7 +28,7 @@ func main() {
 	node.SetupDHTDiscovery(ctx, host, true)
 
 	// Setup peerstore cleanup
-	discovery.CleanUpPeers(host, ctx)
+	// discovery.CleanUpPeers(host, ctx)
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES

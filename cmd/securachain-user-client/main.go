@@ -22,6 +22,7 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
+	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
@@ -59,6 +60,9 @@ func main() {
 
 	// Setup DHT discovery
 	node.SetupDHTDiscovery(ctx, host, false)
+
+	// Ping peers to keep the connection alive through NATs
+	go discovery.Ping(host, ctx)
 
 	/*
 	* AUTONAT SERVICE

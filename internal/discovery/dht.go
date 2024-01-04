@@ -82,9 +82,9 @@ func (d *DHT) startDHT(ctx context.Context, host host.Host) error {
 
 	var err error
 	if d.BootstrapNode {
-		d.IpfsDHT, err = dht.New(ctx, host, dht.Mode(dht.ModeServer) /*dht.AddressFilter(FilterOutPrivateAddrs)*/)
+		d.IpfsDHT, err = dht.New(ctx, host, dht.Mode(dht.ModeServer), dht.AddressFilter(FilterOutPrivateAddrs))
 	} else {
-		d.IpfsDHT, err = dht.New(ctx, host /*dht.AddressFilter(FilterOutPrivateAddrs)*/)
+		d.IpfsDHT, err = dht.New(ctx, host, dht.AddressFilter(FilterOutPrivateAddrs))
 	}
 	if err != nil {
 		log.Println("[startDHT] Error creating new DHT : ", err)

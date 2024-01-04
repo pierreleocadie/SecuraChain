@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
@@ -41,6 +42,9 @@ func main() {
 	node.SetupDHTDiscovery(ctx, host, false)
 
 	log.Debugf("Storage node initialized with PeerID: %s", host.ID().String())
+
+	// Ping peers to keep the connection alive through NATs
+	go discovery.Ping(host, ctx)
 
 	/*
 	* AUTONAT SERVICE
