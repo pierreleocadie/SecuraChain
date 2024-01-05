@@ -8,11 +8,10 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
-	"github.com/pierreleocadie/SecuraChain/internal/config"
 )
 
 func Ping(host host.Host, ctx context.Context) {
-	ticker := time.NewTicker(config.DHTDiscoveryRefreshInterval) // adjust interval to your needs
+	ticker := time.NewTicker(time.Second) // adjust interval to your needs
 	defer ticker.Stop()
 
 	for {
