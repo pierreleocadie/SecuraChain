@@ -14,8 +14,8 @@ import (
 )
 
 func main() {
-	ipfsLog.SetLogLevel("*", "DEBUG")
 	log := ipfsLog.Logger("storage-node")
+	ipfsLog.SetLogLevel("*", "DEBUG")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

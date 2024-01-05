@@ -32,8 +32,8 @@ import (
 )
 
 func main() {
-	ipfsLog.SetLogLevel("*", "DEBUG")
 	log := ipfsLog.Logger("user-client")
+	ipfsLog.SetLogLevel("*", "DEBUG")
 
 	var ecdsaKeyPair ecdsa.KeyPair
 	var aesKey aes.Key
@@ -73,28 +73,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create new autonat service: %s", err)
 	}
-
-	/*
-	* DISPLAY PEER CONNECTEDNESS CHANGES
-	 */
-	// Subscribe to EvtPeerConnectednessChanged events
-	subNet, err := host.EventBus().Subscribe(new(event.EvtPeerConnectednessChanged))
-	if err != nil {
-		log.Errorln("Failed to subscribe to EvtPeerConnectednessChanged: ", err)
-	}
-	defer subNet.Close()
-
-	// Handle connection events in a separate goroutine
-	go func() {
-		for e := range subNet.Out() {
-			evt := e.(event.EvtPeerConnectednessChanged)
-			if evt.Connectedness == network.Connected {
-				log.Debugln("Peer connected:", evt.Peer)
-			} else if evt.Connectedness == network.NotConnected {
-				log.Debugln("Peer disconnected: ", evt.Peer)
-			}
-		}
-	}()
 
 	/*
 	* PUBSUB
@@ -439,6 +417,28 @@ func main() {
 		hBoxSelectFile,
 		sendFileButton,
 	)
+
+	/*
+	* DISPLAY PEER CONNECTEDNESS CHANGES
+	 */
+	// Subscribe to EvtPeerConnectednessChanged events
+	subNet, err := host.EventBus().Subscribe(new(event.EvtPeerConnectednessChanged))
+	if err != nil {
+		log.Errorln("Failed to subscribe to EvtPeerConnectednessChanged: ", err)
+	}
+	defer subNet.Close()
+
+	// Handle connection events in a separate goroutine
+	go func() {
+		for e := range subNet.Out() {
+			evt := e.(event.EvtPeerConnectednessChanged)
+			if evt.Connectedness == network.Connected {
+				log.Debugln("Peer connected:", evt.Peer)
+			} else if evt.Connectedness == network.NotConnected {
+				log.Debugln("Peer disconnected: ", evt.Peer)
+			}
+		}
+	}()
 
 	w.SetContent(vBox)
 	w.ShowAndRun()
