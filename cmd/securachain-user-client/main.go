@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"math/rand"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -101,6 +103,40 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	stayAliveTopic, err := ps.Join("stay-alive")
+	if err != nil {
+		panic(err)
+	}
+
+	subStayAlive, err := stayAliveTopic.Subscribe()
+	if err != nil {
+		panic(err)
+	}
+
+	// Handle incoming stay alive messages
+	go func() {
+		for {
+			msg, err := subStayAlive.Next(ctx)
+			if err != nil {
+				log.Errorln("Error getting stay alive message : ", err)
+			}
+			log.Debugln("Received stay alive message from ", msg.GetFrom().String())
+		}
+	}()
+
+	// Publish stay alive messages
+	go func() {
+		for {
+			err := stayAliveTopic.Publish(ctx, []byte("stay alive bro"))
+			if err != nil {
+				log.Errorln("Error publishing stay alive message : ", err)
+			}
+			log.Debugln("Published stay alive message")
+			// Sleep for a random duration between 1 and 5 seconds
+			time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second)
+		}
+	}()
 
 	// Join the topic clientAnnouncementStringFlag
 	clientAnnouncementTopic, err := ps.Join(config.ClientAnnouncementStringFlag)

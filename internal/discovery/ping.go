@@ -3,6 +3,7 @@ package discovery
 import (
 	"context"
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/host"
@@ -11,7 +12,7 @@ import (
 )
 
 func Ping(host host.Host, ctx context.Context) {
-	ticker := time.NewTicker(time.Second) // adjust interval to your needs
+	ticker := time.NewTicker(time.Duration(rand.Intn(10)+1) * time.Second) // adjust interval to your needs
 	defer ticker.Stop()
 
 	for {
