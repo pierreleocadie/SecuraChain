@@ -32,7 +32,7 @@ func Initialize() host.Host {
 		libp2p.EnableNATService(),
 		libp2p.NATPortMap(),
 		libp2p.EnableHolePunching(),
-		libp2p.ListenAddrStrings(config.Ip4tcp, config.Ip6tcp, config.Ip4quic, config.Ip6quic),
+		libp2p.ListenAddrStrings(config.Ip4tcp, config.Ip6tcp /*, config.Ip4quic, config.Ip6quic*/),
 		libp2p.ConnectionManager(connManager),
 		libp2p.Transport(tcp.NewTCPTransport),
 		libp2p.Transport(libp2pquic.NewTransport),
