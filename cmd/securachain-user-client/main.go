@@ -20,7 +20,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/libp2p/go-libp2p/p2p/host/autonat"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
@@ -68,14 +67,6 @@ func main() {
 	go discovery.Ping(host, ctx)
 
 	/*
-	* AUTONAT SERVICE
-	 */
-	_, err := autonat.New(host)
-	if err != nil {
-		log.Fatalf("Failed to create new autonat service: %s", err)
-	}
-
-	/*
 	* PUBSUB
 	 */
 	ps, err := pubsub.NewGossipSub(ctx, host)
@@ -83,7 +74,7 @@ func main() {
 		panic(err)
 	}
 
-	stayAliveTopic, err := ps.Join("stay-alive")
+	stayAliveTopic, err := ps.Join("stayAlive")
 	if err != nil {
 		panic(err)
 	}
