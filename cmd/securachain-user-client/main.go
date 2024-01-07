@@ -16,6 +16,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
+	"github.com/google/uuid"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -106,7 +107,12 @@ func main() {
 	// Publish stay alive messages
 	go func() {
 		for {
-			err := stayAliveTopic.Publish(ctx, []byte("stay alive bro"))
+			uuidByte, err := uuid.New().MarshalBinary()
+			if err != nil {
+				log.Errorln("Error marshaling uuid : ", err)
+				continue
+			}
+			err = stayAliveTopic.Publish(ctx, uuidByte)
 			if err != nil {
 				log.Errorln("Error publishing stay alive message : ", err)
 			}
