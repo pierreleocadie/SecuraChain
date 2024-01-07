@@ -10,7 +10,6 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/libp2p/go-libp2p/p2p/host/autonat"
 )
 
 func main() {
@@ -45,14 +44,6 @@ func main() {
 
 	// Ping peers to keep the connection alive through NATs
 	go discovery.Ping(host, ctx)
-
-	/*
-	* AUTONAT SERVICE
-	 */
-	_, err := autonat.New(host)
-	if err != nil {
-		log.Fatalf("Failed to create new autonat service: %s", err)
-	}
 
 	/*
 	* PUBSUB
