@@ -22,7 +22,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
-	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
@@ -62,7 +61,7 @@ func main() {
 	node.SetupDHTDiscovery(ctx, host, false)
 
 	// Ping peers to keep the connection alive through NATs
-	go discovery.Ping(host, ctx)
+	// go discovery.Ping(host, ctx)
 
 	/*
 	* PUBSUB
