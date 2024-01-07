@@ -33,7 +33,7 @@ func Ping(host host.Host, ctx context.Context) {
 					// Ping the peer
 					s, err := host.NewStream(ctx, p, ping.ID)
 					if err != nil {
-						log.Printf("Peer %s is unreachable: %v", p, err)
+						log.Printf("Peer %s is unreachable", p)
 						return
 					}
 					defer s.Close()

@@ -33,7 +33,7 @@ import (
 
 func main() {
 	log := ipfsLog.Logger("user-client")
-	ipfsLog.SetLogLevel("*", "DEBUG")
+	ipfsLog.SetLogLevel("user-client", "DEBUG")
 
 	var ecdsaKeyPair ecdsa.KeyPair
 	var aesKey aes.Key
