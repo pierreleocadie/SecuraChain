@@ -22,8 +22,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
-	"github.com/pierreleocadie/SecuraChain/internal/config"
-	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
@@ -33,11 +31,11 @@ import (
 
 func main() {
 	log := ipfsLog.Logger("user-client")
-	ipfsLog.SetLogLevel("user-client", "DEBUG")
+	ipfsLog.SetLogLevel("*", "DEBUG")
 
 	var ecdsaKeyPair ecdsa.KeyPair
 	var aesKey aes.Key
-	var clientAnnouncementChan = make(chan *transaction.ClientAnnouncement)
+	// var clientAnnouncementChan = make(chan *transaction.ClientAnnouncement)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -113,48 +111,48 @@ func main() {
 		}
 	}()
 
-	// Join the topic clientAnnouncementStringFlag
-	clientAnnouncementTopic, err := ps.Join(config.ClientAnnouncementStringFlag)
-	if err != nil {
-		panic(err)
-	}
+	// // Join the topic clientAnnouncementStringFlag
+	// clientAnnouncementTopic, err := ps.Join(config.ClientAnnouncementStringFlag)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	// Subscribe to clientAnnouncementStringFlag topic
-	subClientAnnouncement, err := clientAnnouncementTopic.Subscribe()
-	if err != nil {
-		panic(err)
-	}
+	// // Subscribe to clientAnnouncementStringFlag topic
+	// subClientAnnouncement, err := clientAnnouncementTopic.Subscribe()
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	// Handle publishing ClientAnnouncement messages
-	go func() {
-		for {
-			clientAnnouncement := <-clientAnnouncementChan
-			clientAnnouncementJson, err := clientAnnouncement.Serialize()
-			if err != nil {
-				log.Errorln("Error serializing ClientAnnouncement : ", err)
-				continue
-			}
+	// // Handle publishing ClientAnnouncement messages
+	// go func() {
+	// 	for {
+	// 		clientAnnouncement := <-clientAnnouncementChan
+	// 		clientAnnouncementJson, err := clientAnnouncement.Serialize()
+	// 		if err != nil {
+	// 			log.Errorln("Error serializing ClientAnnouncement : ", err)
+	// 			continue
+	// 		}
 
-			log.Debugln("Publishing ClientAnnouncement : ", string(clientAnnouncementJson))
+	// 		log.Debugln("Publishing ClientAnnouncement : ", string(clientAnnouncementJson))
 
-			err = clientAnnouncementTopic.Publish(ctx, clientAnnouncementJson)
-			if err != nil {
-				log.Errorln("Error publishing ClientAnnouncement : ", err)
-				continue
-			}
-		}
-	}()
+	// 		err = clientAnnouncementTopic.Publish(ctx, clientAnnouncementJson)
+	// 		if err != nil {
+	// 			log.Errorln("Error publishing ClientAnnouncement : ", err)
+	// 			continue
+	// 		}
+	// 	}
+	// }()
 
-	// Handle incoming ClientAnnouncement messages
-	go func() {
-		for {
-			msg, err := subClientAnnouncement.Next(ctx)
-			if err != nil {
-				panic(err)
-			}
-			log.Debugln("Received ClientAnnouncement message from ", msg.GetFrom().String())
-		}
-	}()
+	// // Handle incoming ClientAnnouncement messages
+	// go func() {
+	// 	for {
+	// 		msg, err := subClientAnnouncement.Next(ctx)
+	// 		if err != nil {
+	// 			panic(err)
+	// 		}
+	// 		log.Debugln("Received ClientAnnouncement message from ", msg.GetFrom().String())
+	// 	}
+	// }()
 
 	/*
 	* GUI FYNE
