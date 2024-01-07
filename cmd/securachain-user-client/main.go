@@ -90,6 +90,12 @@ func main() {
 				log.Errorln("Error getting stay alive message : ", err)
 			}
 			log.Debugln("Received stay alive message from ", msg.GetFrom().String())
+			uuidByte, err := uuid.FromBytes(msg.Data)
+			if err != nil {
+				log.Errorln("Error unmarshaling uuid : ", err)
+				continue
+			}
+			log.Debugln("Received stay alive message : ", uuidByte.String())
 		}
 	}()
 
