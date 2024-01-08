@@ -60,9 +60,6 @@ func main() {
 	// Setup DHT discovery
 	node.SetupDHTDiscovery(ctx, host, false)
 
-	// Ping peers to keep the connection alive through NATs
-	// go discovery.Ping(host, ctx)
-
 	/*
 	* PUBSUB
 	 */
