@@ -159,6 +159,29 @@ func main() {
 		}
 	}()
 
+	// Join the topic StorageNodeResponseStringFlag
+	storageNodeResponseTopic, err := ps.Join(config.StorageNodeResponseStringFlag)
+	if err != nil {
+		panic(err)
+	}
+
+	// Subscribe to StorageNodeResponseStringFlag topic
+	subStorageNodeResponse, err := storageNodeResponseTopic.Subscribe()
+	if err != nil {
+		panic(err)
+	}
+
+	// Handle incoming NodeResponse messages
+	go func() {
+		for {
+			msg, err := subStorageNodeResponse.Next(ctx)
+			if err != nil {
+				panic(err)
+			}
+			log.Debugln("Received StorageNodeResponse message from ", msg.GetFrom().String())
+		}
+	}()
+
 	/*
 	* GUI FYNE
 	 */
