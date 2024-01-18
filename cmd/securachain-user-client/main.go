@@ -100,7 +100,6 @@ func main() {
 	}
 
 	// handle incoming StorageNodeResponse messages
-	responseChan := make(chan *transaction.StorageNodeResponse, 10)
 	go func() {
 		for {
 			msg, err := subStorageNodeResponse.Next(ctx)
@@ -109,13 +108,6 @@ func main() {
 			}
 
 			log.Println("Received StorageNodeResponse message : ", string(msg.Data))
-			storageNodeResponse, err := transaction.DeserializeStorageNodeResponse(msg.Data)
-			if err != nil {
-				log.Println("Error deserializing StorageNodeResponse : ", err)
-				continue
-			}
-			responseChan <- storageNodeResponse
-			log.Println("StorageNodeResponse sent to responseChan")
 		}
 	}()
 
