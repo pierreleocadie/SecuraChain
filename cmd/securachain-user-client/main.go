@@ -33,7 +33,7 @@ import (
 
 func main() {
 	log := ipfsLog.Logger("user-client")
-	ipfsLog.SetLogLevel("user-client", "DEBUG")
+	ipfsLog.SetLogLevel("user-client", "INFO")
 
 	var ecdsaKeyPair ecdsa.KeyPair
 	var aesKey aes.Key
@@ -384,6 +384,22 @@ func main() {
 			return
 		}
 		log.Debugln("ClientAnnouncement : ", string(clientAnnouncementJson))
+		// // bis announce the file with a provider
+		// provider.NewNoopProvider().Provide(encryptedFileCid.RootCid())
+
+		//provider.NewNoopProvider().Reprovide(ctx)
+
+		// err = p.Provide(encryptedFileCid.RootCid())
+
+		// if err != nil {
+		// 	log.Debugln("problem", err)
+		// }
+
+		// var x provider.Provide
+		// x.Provide(ctx, encryptedFileCid.RootCid(), true)
+
+		// provider.Online(x)
+		log.Infoln(nodeIpfs.Provider.Stat())
 	})
 
 	hBoxECDSA := container.New(
