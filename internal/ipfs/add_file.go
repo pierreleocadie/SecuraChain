@@ -3,17 +3,13 @@ package ipfs
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 
 	icore "github.com/ipfs/boxo/coreiface"
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/kubo/core"
-	"github.com/pierreleocadie/SecuraChain/internal/config"
-	"github.com/pierreleocadie/SecuraChain/internal/util"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
 
@@ -53,23 +49,23 @@ func AddFile(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI, fi
 	}
 	log.Printf("File added with CID: %s", fileCid.String())
 
-	// Adding the file on the storage node (local system)
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return path.ImmutablePath{}, err
-	}
+	// // Adding the file on the storage node (local system)
+	// home, err := os.UserHomeDir()
+	// if err != nil {
+	// 	return path.ImmutablePath{}, err
+	// }
 
-	localStoragePath := filepath.Join(home, ".IPFS_Local_Storage/")
-	if err := os.MkdirAll(localStoragePath, config.FileRights); err != nil {
-		return path.ImmutablePath{}, fmt.Errorf("error creating output directory : %v", err)
-	}
+	// localStoragePath := filepath.Join(home, ".IPFS_Local_Storage/")
+	// if err := os.MkdirAll(localStoragePath, config.FileRights); err != nil {
+	// 	return path.ImmutablePath{}, fmt.Errorf("error creating output directory : %v", err)
+	// }
 
-	outputFilePath := filepath.Join(localStoragePath, filepath.Base(filePath))
+	// outputFilePath := filepath.Join(localStoragePath, filepath.Base(filePath))
 
-	err = util.CopyFile(filePath, outputFilePath)
-	if err != nil {
-		return path.ImmutablePath{}, fmt.Errorf("error copying file to output directory: %v", err)
-	}
+	// err = util.CopyFile(filePath, outputFilePath)
+	// if err != nil {
+	// 	return path.ImmutablePath{}, fmt.Errorf("error copying file to output directory: %v", err)
+	// }
 
 	return fileCid, nil
 }
