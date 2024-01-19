@@ -128,6 +128,33 @@ func main() {
 		panic(err)
 	}
 
+<<<<<<< HEAD
+=======
+	// Join the topic storageNodeResponseStringFlag
+	storageNodeResponseTopic, err := ps.Join(config.StorageNodeResponseStringFlag)
+	if err != nil {
+		panic(err)
+	}
+
+	// Subscribe to storageNodeResponseStringFlag topic
+	subStorageNodeResponse, err := storageNodeResponseTopic.Subscribe()
+	if err != nil {
+		panic(err)
+	}
+
+	// handle incoming StorageNodeResponse messages
+	go func() {
+		for {
+			msg, err := subStorageNodeResponse.Next(ctx)
+			if err != nil {
+				panic(err)
+			}
+
+			log.Println("Received StorageNodeResponse message : ", string(msg.Data))
+		}
+	}()
+
+>>>>>>> client
 	// Handle publishing ClientAnnouncement messages
 	go func() {
 		for {
