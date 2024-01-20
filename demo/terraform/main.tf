@@ -57,6 +57,4 @@ resource "linode_instance" "nanode" {
             "sudo systemctl enable containerd"
         ]
     }
-
-
 }
