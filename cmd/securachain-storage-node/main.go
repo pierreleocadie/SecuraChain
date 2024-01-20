@@ -150,7 +150,54 @@ func main() {
 				continue
 			}
 
-			log.Debugf("File downloaded successfully")
+			//*
+			// Check if the file exists and announce the response to the client
+			// TODO: Send the response to the client about the file download
+			//*
+
+			// Join the topic StorageNodeResponseStringFlag
+			storageNodeResponseTopic, err := ps.Join(config.StorageNodeResponseStringFlag)
+			if err != nil {
+				panic(err)
+			}
+
+			if os.IsNotExist(err) {
+				log.Debugf("File does not exist")
+				responseDownloadToClient := "File does not exist"
+
+				// Handle publishing StorageNodeResponse messages
+				go func() {
+					for {
+						responseDownloadToClient := []byte(responseDownloadToClient)
+
+						log.Debugln("Publishing StorageNodeResponse : ", responseDownloadToClient)
+
+						err = storageNodeResponseTopic.Publish(ctx, responseDownloadToClient)
+						if err != nil {
+							log.Errorln("Error publishing StorageNodeResponse : ", err)
+							continue
+						}
+					}
+				}()
+			} else {
+				log.Debugf("File downloaded successfully")
+				responseDownloadToClient := "File downloaded successfully"
+
+				// Handle publishing StorageNodeResponse messages
+				go func() {
+					for {
+						responseDownloadToClient := []byte(responseDownloadToClient)
+
+						log.Debugln("Publishing StorageNodeResponse : ", responseDownloadToClient)
+
+						err = storageNodeResponseTopic.Publish(ctx, responseDownloadToClient)
+						if err != nil {
+							log.Errorln("Error publishing StorageNodeResponse : ", err)
+							continue
+						}
+					}
+				}()
+			}
 		}
 	}()
 

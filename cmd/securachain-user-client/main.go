@@ -33,7 +33,7 @@ var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file
 
 func main() {
 	log := ipfsLog.Logger("user-client")
-	ipfsLog.SetLogLevel("user-client", "DEBUG")
+	ipfsLog.SetLogLevel("user-client", "INFO")
 
 	var ecdsaKeyPair ecdsa.KeyPair
 	var aesKey aes.Key
@@ -171,6 +171,29 @@ func main() {
 				panic(err)
 			}
 			log.Debugln("Received ClientAnnouncement message from ", msg.GetFrom().String())
+		}
+	}()
+
+	// Join the topic StorageNodeResponseStringFlag
+	storageNodeResponseTopic, err := ps.Join(config.StorageNodeResponseStringFlag)
+	if err != nil {
+		panic(err)
+	}
+
+	// Subscribe to StorageNodeResponseStringFlag topic
+	subStorageNodeResponse, err := storageNodeResponseTopic.Subscribe()
+	if err != nil {
+		panic(err)
+	}
+
+	// Handle incoming NodeResponse messages
+	go func() {
+		for {
+			msg, err := subStorageNodeResponse.Next(ctx)
+			if err != nil {
+				panic(err)
+			}
+			log.Debugln("Received StorageNodeResponse message from ", msg.GetFrom().String())
 		}
 	}()
 
@@ -399,6 +422,22 @@ func main() {
 			return
 		}
 		log.Debugln("ClientAnnouncement : ", string(clientAnnouncementJson))
+		// // bis announce the file with a provider
+		// provider.NewNoopProvider().Provide(encryptedFileCid.RootCid())
+
+		//provider.NewNoopProvider().Reprovide(ctx)
+
+		// err = p.Provide(encryptedFileCid.RootCid())
+
+		// if err != nil {
+		// 	log.Debugln("problem", err)
+		// }
+
+		// var x provider.Provide
+		// x.Provide(ctx, encryptedFileCid.RootCid(), true)
+
+		// provider.Online(x)
+		log.Infoln(nodeIpfs.Provider.Stat())
 	})
 
 	hBoxECDSA := container.New(
