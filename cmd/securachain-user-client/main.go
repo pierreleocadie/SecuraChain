@@ -33,7 +33,7 @@ var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file
 
 func main() {
 	log := ipfsLog.Logger("user-client")
-	ipfsLog.SetLogLevel("user-client", "INFO")
+	ipfsLog.SetLogLevel("user-client", "DEBUG")
 
 	var ecdsaKeyPair ecdsa.KeyPair
 	var aesKey aes.Key
@@ -175,7 +175,7 @@ func main() {
 	}()
 
 	// Join the topic StorageNodeResponseStringFlag
-	storageNodeResponseTopic, err := ps.Join(config.StorageNodeResponseStringFlag)
+	storageNodeResponseTopic, err := ps.Join(cfg.StorageNodeResponseStringFlag)
 	if err != nil {
 		panic(err)
 	}
