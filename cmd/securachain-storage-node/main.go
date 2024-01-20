@@ -3,12 +3,12 @@ package main
 import (
 	"bytes"
 	"context"
+	"flag"
 	"os"
 	"path/filepath"
 
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
-	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
@@ -20,12 +20,29 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 )
 
+var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
+
 func main() {
 	log := ipfsLog.Logger("storage-node")
 	ipfsLog.SetLogLevel("storage-node", "DEBUG")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	flag.Parse()
+
+	// Load the config file
+	if *yamlConfigFilePath == "" {
+		log.Errorln("Please provide a path to the yaml config file")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	cfg, err := config.LoadConfig(*yamlConfigFilePath)
+	if err != nil {
+		log.Errorln("Error loading config file : ", err)
+		os.Exit(1)
+	}
 
 	/*
 	* IPFS NODE
@@ -42,7 +59,7 @@ func main() {
 	* NODE LIBP2P
 	 */
 	// Initialize the storage node
-	host := node.Initialize()
+	host := node.Initialize(*cfg)
 	defer host.Close()
 
 	// Setup DHT discovery
@@ -51,7 +68,7 @@ func main() {
 	log.Debugf("Storage node initialized with PeerID: %s", host.ID().String())
 
 	// Ping peers to keep the connection alive through NATs
-	go discovery.Ping(host, ctx)
+	// go discovery.Ping(host, ctx)
 
 	/*
 	* PUBSUB
@@ -62,7 +79,7 @@ func main() {
 	}
 
 	// Join the topic clientAnnouncementStringFlag
-	clientAnnouncementTopic, err := ps.Join(config.ClientAnnouncementStringFlag)
+	clientAnnouncementTopic, err := ps.Join(cfg.ClientAnnouncementStringFlag)
 	if err != nil {
 		panic(err)
 	}
