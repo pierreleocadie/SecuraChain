@@ -56,6 +56,29 @@ func main() {
 	log.Debugf("IPFS node spawned with PeerID: %s", nodeIpfs.Identity.String())
 
 	/*
+	* MEMORY SHARE TO THE BLOCKCHAIN BY THE NODE
+	 */
+
+	storageMax, err := ipfs.ChangeStorageMax(ctx, nodeIpfs)
+	if err != nil {
+		log.Fatalf("Failed to change storage max: %s", err)
+	}
+
+	log.Debugf("Storage max set to %dGB", storageMax)
+
+	freeMemoryGB, err := ipfs.FreeMemoryAvailable(ctx, nodeIpfs, storageMax)
+	if err != nil {
+		log.Fatalf("Failed to get free memory available: %s", err)
+	}
+	log.Debugf("Free memory available: %fGB", freeMemoryGB)
+
+	memoryUsedGB, err := ipfs.MemoryUsed(ctx, nodeIpfs)
+	if err != nil {
+		log.Fatalf("Failed to get memory used: %s", err)
+	}
+	log.Debugf("Memory used: %fGB", memoryUsedGB)
+
+	/*
 	* NODE LIBP2P
 	 */
 	// Initialize the storage node
