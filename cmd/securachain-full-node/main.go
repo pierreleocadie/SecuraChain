@@ -9,6 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
+	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
@@ -84,21 +86,40 @@ func main() {
 
 	// Handle incoming block announcement messages
 	go func() {
-		msg, err := subBlockAnnouncement.Next(ctx)
-		if err != nil {
-			log.Errorln("Error getting block announcement message : ", err)
+		for {
+
+			msg, err := subBlockAnnouncement.Next(ctx)
+			if err != nil {
+				log.Panic("Error getting block announcement message : ", err)
+			}
+			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
+			log.Debugln("Received block announcement message : ", msg.Data)
+
+			// Deserialize the block announcement
+			blockAnnounced, err := block.DeserializeBlock(msg.Data)
+			if err != nil {
+				log.Errorf("Error deserializing block announcement : %s", err)
+				continue
+			}
+
+			/*
+			* BLOCK VALIDATION
+			 */
+
+			// Deserialize the previous block
+			prevBlock, err := block.DeserializeBlock(blockAnnounced.PrevBlock)
+			if err != nil {
+				log.Errorf("Error deserializing previous block : %s", err)
+				continue
+			}
+
+			// Validate the block
+			if !consensus.ValidateBlock(blockAnnounced, prevBlock) {
+				log.Error("Block validation failed")
+				continue
+			}
+
 		}
-		log.Debugln("Received block announcement message from ", msg.GetFrom().String())
-		log.Debugln("Received block announcement message : ", msg.Data)
-		// blockAnnouncement, err := transaction.DeserializeTransaction(msg.Data, transaction.TransactionFactory{})
-		// if err != nil {
-		// 	log.Errorln("Error deserializing block announcement : ", err)
-		// 	continue
-		// }
-
-		// Inside the block verify every transaction
-		// Verify the correct proof of work transaction
-
 	}()
 
 	stayAliveTopic, err := ps.Join("stayAlive")
