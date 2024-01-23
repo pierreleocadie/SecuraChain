@@ -14,13 +14,17 @@ import (
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
 	"github.com/ipfs/boxo/path"
+	"github.com/ipfs/go-cid"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
 )
 
-var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
+var (
+	yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
+	generateKeys       = flag.Bool("genKeys", false, "Generate new ECDSA and AES keys to the paths specified in the config file")
+)
 
 func main() {
 	log := ipfsLog.Logger("storage-node")
@@ -34,80 +38,85 @@ func main() {
 
 	flag.Parse()
 
-	// Load the config file
-	if *yamlConfigFilePath == "" {
-		log.Panicln("Please provide a path to the yaml config file")
+	cfg := node.LoadConfig(yamlConfigFilePath, log)
+
+	if *generateKeys {
+		node.GenerateKeys(cfg, log)
 	}
 
-	cfg, err := config.LoadConfig(*yamlConfigFilePath)
-	if err != nil {
-		log.Panicln("Error loading config file : ", err)
-	}
+	ecdsaKeyPair, _ := node.LoadKeys(cfg, log)
 
 	/*
 	* IPFS NODE
 	 */
-	// Spawn an IPFS node
-	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx)
-	if err != nil {
-		log.Panicf("Failed to spawn IPFS node: %s", err)
-	}
-
-	log.Debugf("IPFS node spawned with PeerID: %s", nodeIpfs.Identity.String())
+	ipfsAPI, nodeIpfs := node.InitializeIPFSNode(ctx, log)
 
 	/*
-	* MEMORY SHARE TO THE BLOCKCHAIN BY THE NODE
+	* IPFS MEMORY MANAGEMENT
 	 */
-
 	storageMax, err := ipfs.ChangeStorageMax(nodeIpfs, cfg.MemorySpace)
 	if err != nil {
 		log.Warnf("Failed to change storage max: %s", err)
 	}
+	log.Debugf("Storage max changed: %v", storageMax)
 
-	log.Debugf("Storage max set to %dGB", storageMax)
-
-	freeMemoryGB, err := ipfs.FreeMemoryAvailable(ctx, nodeIpfs)
+	freeMemorySpace, err := ipfs.FreeMemoryAvailable(ctx, nodeIpfs)
 	if err != nil {
 		log.Warnf("Failed to get free memory available: %s", err)
 	}
-	log.Debugf("Free memory available: %fGB", freeMemoryGB)
+	log.Debugf("Free memory available: %v", freeMemorySpace)
 
 	memoryUsedGB, err := ipfs.MemoryUsed(ctx, nodeIpfs)
 	if err != nil {
 		log.Warnf("Failed to get memory used: %s", err)
 	}
-	log.Debugf("Memory used: %fGB", memoryUsedGB)
+	log.Debugf("Memory used: %v", memoryUsedGB)
 
 	/*
 	* NODE LIBP2P
 	 */
-	// Initialize the storage node
 	host := node.Initialize(*cfg)
 	defer host.Close()
-
-	// Setup DHT discovery
-	node.SetupDHTDiscovery(ctx, host, false)
-
 	log.Debugf("Storage node initialized with PeerID: %s", host.ID().String())
+
+	/*
+	* DHT DISCOVERY
+	 */
+	node.SetupDHTDiscovery(ctx, host, false)
 
 	/*
 	* PUBSUB
 	 */
 	ps, err := pubsub.NewGossipSub(ctx, host)
 	if err != nil {
-		panic(err)
+		log.Panicf("Failed to create new pubsub: %s", err)
 	}
+
+	// When a file is fully downloaded without errors, into this chan
+	toTransactionChan := make(chan map[string]interface{})
+
+	// Join the topic StorageNodeResponseStringFlag
+	storageNodeResponseTopic, err := ps.Join(config.StorageNodeResponseStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join StorageNodeResponseStringFlag topic: %s", err)
+	}
+
+	// Subscribe to StorageNodeResponseStringFlag topic
+	// subStorageNodeResponse, err := storageNodeResponseTopic.Subscribe()
+	// if err != nil {
+	// 	log.Panicf("Failed to subscribe to StorageNodeResponseStringFlag topic: %s", err)
+	// }
 
 	// Join the topic clientAnnouncementStringFlag
 	clientAnnouncementTopic, err := ps.Join(cfg.ClientAnnouncementStringFlag)
 	if err != nil {
-		panic(err)
+		log.Panicf("Failed to join clientAnnouncementStringFlag topic: %s", err)
 	}
 
 	// Subscribe to clientAnnouncementStringFlag topic
 	subClientAnnouncement, err := clientAnnouncementTopic.Subscribe()
 	if err != nil {
-		panic(err)
+		log.Panicf("Failed to subscribe to clientAnnouncementStringFlag topic: %s", err)
 	}
 
 	// Handle incoming ClientAnnouncement messages
@@ -128,6 +137,18 @@ func main() {
 			// Verify the ClientAnnouncement
 			if !clientAnnouncement.VerifyTransaction(clientAnnouncement, clientAnnouncement.OwnerSignature, clientAnnouncement.OwnerAddress) {
 				log.Errorf("Failed to verify ClientAnnouncement: %s", err)
+				continue
+			}
+
+			// Check if we have enough space to store the file
+			freeMemorySpace, err := ipfs.FreeMemoryAvailable(ctx, nodeIpfs)
+			if err != nil {
+				log.Warnf("Failed to get free memory available: %s", err)
+			}
+			log.Debugf("Free memory available: %v", freeMemorySpace)
+
+			if clientAnnouncement.FileSize > freeMemorySpace {
+				log.Debugf("Not enough free memory available to store file")
 				continue
 			}
 
@@ -156,6 +177,10 @@ func main() {
 
 			if bytes.Equal(checksum, clientAnnouncement.Checksum) {
 				log.Errorf("Downloaded file checksum does not match announced checksum")
+				err = os.Remove(downloadedFilePath)
+				if err != nil {
+					log.Errorf("Failed to delete file: %s", err)
+				}
 				continue
 			}
 
@@ -167,57 +192,70 @@ func main() {
 
 			if uint64(fileInfo.Size()) != clientAnnouncement.FileSize {
 				log.Errorf("Downloaded file size does not match announced size")
+				err = os.Remove(downloadedFilePath)
+				if err != nil {
+					log.Errorf("Failed to delete file: %s", err)
+				}
 				continue
 			}
 
-			/*
-				Check if the file exists and announce the response to the client
-				TODO: Send the response to the client about the file download
-			*/
-
-			// Join the topic StorageNodeResponseStringFlag
-			storageNodeResponseTopic, err := ps.Join(config.StorageNodeResponseStringFlag)
+			// Add the file to IPFS
+			fileImmutablePathCid, err := ipfs.AddFile(ctx, ipfsAPI, downloadedFilePath)
 			if err != nil {
-				panic(err)
+				log.Errorf("Failed to add file to IPFS: %s", err)
+				continue
 			}
 
-			if os.IsNotExist(err) {
-				log.Debugf("File does not exist")
-				responseDownloadToClient := "File does not exist"
-
-				// Handle publishing StorageNodeResponse messages
-				go func() {
-					for {
-						responseDownloadToClient := []byte(responseDownloadToClient)
-
-						log.Debugln("Publishing StorageNodeResponse : ", responseDownloadToClient)
-
-						err = storageNodeResponseTopic.Publish(ctx, responseDownloadToClient)
-						if err != nil {
-							log.Errorln("Error publishing StorageNodeResponse : ", err)
-							continue
-						}
-					}
-				}()
-			} else {
-				log.Debugf("File downloaded successfully")
-				responseDownloadToClient := "File downloaded successfully"
-
-				// Handle publishing StorageNodeResponse messages
-				go func() {
-					for {
-						responseDownloadToClient := []byte(responseDownloadToClient)
-
-						log.Debugln("Publishing StorageNodeResponse : ", responseDownloadToClient)
-
-						err = storageNodeResponseTopic.Publish(ctx, responseDownloadToClient)
-						if err != nil {
-							log.Errorln("Error publishing StorageNodeResponse : ", err)
-							continue
-						}
-					}
-				}()
+			// Pin the file
+			pinned, err := ipfs.PinFile(ctx, ipfsAPI, fileImmutablePathCid)
+			if err != nil {
+				log.Errorf("Failed to pin file: %s", err)
 			}
+			log.Debugf("File pinned: %s", pinned)
+
+			// From path.ImmutablePath to cid.Cid
+			fileRootCid := fileImmutablePathCid.RootCid()
+			if err != nil {
+				log.Errorf("Failed to parse file cid: %s", err)
+				continue
+			}
+
+			// Send to transaction channel
+			toTransactionChan <- map[string]interface{}{
+				"clientAnnouncement": clientAnnouncement,
+				"fileCid":            fileRootCid,
+			}
+
+			log.Infof("File %s downloaded successfully", fileImmutablePath)
+		}
+	}()
+
+	// Handle outgoing StorageNodeResponse messages
+	go func() {
+		for {
+			toTransaction := <-toTransactionChan
+			trx := transaction.NewAddFileTransaction(
+				toTransaction["clientAnnouncement"].(*transaction.ClientAnnouncement),
+				toTransaction["fileCid"].(cid.Cid), // Type assertion to convert to cid.Cid
+				false,
+				ecdsaKeyPair,
+				host.ID(),
+			)
+
+			// Send the transaction to the storage node response topic
+			transactionBytes, err := trx.Serialize()
+			if err != nil {
+				log.Errorf("Failed to serialize transaction: %s", err)
+				continue
+			}
+
+			err = storageNodeResponseTopic.Publish(ctx, transactionBytes)
+			if err != nil {
+				log.Errorf("Failed to publish transaction: %s", err)
+				continue
+			}
+
+			log.Infof("Transaction %s sent successfully", trx.TransactionID)
 		}
 	}()
 

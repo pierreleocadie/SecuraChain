@@ -12,7 +12,6 @@ import (
 	"github.com/ipfs/boxo/path"
 	icore "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
-	"github.com/pierreleocadie/SecuraChain/internal/util"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
 
@@ -65,9 +64,14 @@ func AddFile(ctx context.Context, ipfsAPI icore.CoreAPI, filePath string) (path.
 
 	outputFilePath := filepath.Join(localStoragePath, filepath.Base(filePath))
 
-	err = util.CopyFile(filePath, outputFilePath)
+	err = MoveFile(filePath, outputFilePath)
 	if err != nil {
 		return path.ImmutablePath{}, fmt.Errorf("error copying file to output directory: %v", err)
+	}
+
+	// restore file permissions
+	if err := os.Chmod(outputFilePath, config.FileRights); err != nil {
+		return path.ImmutablePath{}, fmt.Errorf("error restoring file permissions: %v", err)
 	}
 
 	return fileCid, nil

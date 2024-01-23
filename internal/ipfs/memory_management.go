@@ -10,9 +10,9 @@ import (
 
 const (
 	B  = 1
-	KB = 1024 * B
-	MB = 1024 * KB
-	GB = 1024 * MB
+	KB = 1000 * B
+	MB = 1000 * KB
+	GB = 1000 * MB
 )
 
 /*
@@ -74,6 +74,8 @@ func FreeMemoryAvailable(ctx context.Context, nodeIpfs *core.IpfsNode) (uint64, 
 	if err != nil {
 		return 0, fmt.Errorf("failed to convert storageMax string to int: %s", err)
 	}
+
+	storageMax = storageMax * GB
 
 	freeMemoryAvailable := storageMax - spaceUsed
 

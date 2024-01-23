@@ -17,6 +17,10 @@ type Config struct {
 	UserAgent       string `yaml:"userAgent"`
 	ProtocolVersion string `yaml:"protocolVersion"`
 
+	// ECDSA and AES keys path
+	ECDSAKeyPairPath string `yaml:"ecdsaKeyPairPath"`
+	AESKeyPath       string `yaml:"aesKeyPath"`
+
 	// Connection manager
 	LowWater  int `yaml:"lowWater"`
 	HighWater int `yaml:"highWater"`
