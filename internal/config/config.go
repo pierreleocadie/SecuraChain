@@ -27,10 +27,11 @@ type Config struct {
 	Ip6quic                  string        `yaml:"ip6quic"`
 
 	// PubSub
-	RendezvousStringFlag          string `yaml:"rendezvousStringFlag"`
-	ClientAnnouncementStringFlag  string `yaml:"clientAnnouncementStringFlag"`
-	StorageNodeResponseStringFlag string `yaml:"storageNodeResponseStringFlag"`
-	BlockAnnouncementStringFlag   string `yaml:"blockAnnouncementStringFlag"`
+	RendezvousStringFlag           string `yaml:"rendezvousStringFlag"`
+	ClientAnnouncementStringFlag   string `yaml:"clientAnnouncementStringFlag"`
+	StorageNodeResponseStringFlag  string `yaml:"storageNodeResponseStringFlag"`
+	BlockAnnouncementStringFlag    string `yaml:"blockAnnouncementStringFlag"`
+	FullNodeAnnouncementStringFlag string `yaml:"fullNodeAnnouncementStringFlag"`
 
 	// Embeded IPFS node
 	FileRights               int    `yaml:"fileRights"`

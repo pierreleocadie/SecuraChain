@@ -74,6 +74,31 @@ func main() {
 		panic(err)
 	}
 
+	// Join the topic FullNodeAnnouncementStringFlag
+	fullNodeAnnouncementTopic, err := ps.Join(cfg.FullNodeAnnouncementStringFlag)
+	if err != nil {
+		panic(err)
+	}
+	subFullNodeAnnouncement, err := fullNodeAnnouncementTopic.Subscribe()
+	if err != nil {
+		panic(err)
+	}
+
+	// Handle incoming full node announcement messages
+	go func() {
+		for {
+			msg, err := subFullNodeAnnouncement.Next(ctx)
+			if err != nil {
+				panic(err)
+			}
+			log.Debugln("Received FullNodeAnnouncement message from ", msg.GetFrom().String())
+			log.Debugln("Full Node Announcement: ", string(msg.Data))
+
+			// Deserialize the full node announcement
+			// Ajouter à Pebble
+		}
+	}()
+
 	// Join the topic BlockAnnouncementStringFlag
 	blockAnnouncementTopic, err := ps.Join(cfg.BlockAnnouncementStringFlag)
 	if err != nil {
@@ -117,6 +142,28 @@ func main() {
 			if !consensus.ValidateBlock(blockAnnounced, prevBlock) {
 				log.Error("Block validation failed")
 				continue
+			} else {
+
+				// Handle broadcasting the block to the network (for full nodes, minors, and indexing and search nodes)
+				go func() {
+					for {
+						blockAnnouncedBytes, err := blockAnnounced.Serialize()
+						if err != nil {
+							log.Errorf("Error serializing block announcement : %s", err)
+							continue
+						}
+
+						log.Debugln("Publishing block announcement to the network : ", string(blockAnnouncedBytes))
+
+						err = fullNodeAnnouncementTopic.Publish(ctx, blockAnnouncedBytes)
+						if err != nil {
+							log.Errorf("Error publishing block announcement to the network : %s", err)
+							continue
+						}
+
+					}
+				}()
+
 			}
 
 		}

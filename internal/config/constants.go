@@ -6,19 +6,20 @@ import (
 )
 
 const (
-	ListeningPortFlag             = 0 // 0 means random port, 1211 is the port for the bootstrap node, 1212 is the port for bootstrap node test
-	LowWater                      = 160
-	HighWater                     = 192
-	UserAgent                     = "SecuraChain"
-	ProtocolVersion               = "0.0.1"
-	RendezvousStringFlag          = "SecuraChainNetwork"
-	ClientAnnouncementStringFlag  = "ClientAnnouncement"
-	StorageNodeResponseStringFlag = "StorageNodeResponse"
-	BlockAnnouncementStringFlag   = "BlockAnnouncement"
-	DHTDiscoveryRefreshInterval   = 10 * time.Second
-	FileRights                    = 0700
-	FileMetadataRegistryJson      = "fileMetadataRegistry.json"
-	PeerstoreCleanupInterval      = 1 * time.Minute
+	ListeningPortFlag              = 0 // 0 means random port, 1211 is the port for the bootstrap node, 1212 is the port for bootstrap node test
+	LowWater                       = 160
+	HighWater                      = 192
+	UserAgent                      = "SecuraChain"
+	ProtocolVersion                = "0.0.1"
+	RendezvousStringFlag           = "SecuraChainNetwork"
+	ClientAnnouncementStringFlag   = "ClientAnnouncement"
+	StorageNodeResponseStringFlag  = "StorageNodeResponse"
+	BlockAnnouncementStringFlag    = "BlockAnnouncement"
+	FullNodeAnnouncementStringFlag = "FullNodeAnnouncement"
+	DHTDiscoveryRefreshInterval    = 10 * time.Second
+	FileRights                     = 0700
+	FileMetadataRegistryJson       = "fileMetadataRegistry.json"
+	PeerstoreCleanupInterval       = 1 * time.Minute
 )
 
 var (
