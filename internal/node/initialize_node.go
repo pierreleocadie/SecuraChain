@@ -14,25 +14,25 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 )
 
-func Initialize() host.Host {
+func Initialize(cfg config.Config) host.Host {
 	/*
 	* NODE INITIALIZATION
 	 */
 	// Create a new connection manager - Exactly the same as the default connection manager but with a grace period
-	connManager, err := connmgr.NewConnManager(config.LowWater, config.HighWater, connmgr.WithGracePeriod(time.Minute))
+	connManager, err := connmgr.NewConnManager(cfg.LowWater, cfg.HighWater, connmgr.WithGracePeriod(time.Minute))
 	if err != nil {
 		log.Panicf("Failed to create new connection manager: %s", err)
 	}
 
 	// Create a new libp2p Host
 	host, err := libp2p.New(
-		libp2p.UserAgent(config.UserAgent),
-		libp2p.ProtocolVersion(config.ProtocolVersion),
+		libp2p.UserAgent(cfg.UserAgent),
+		libp2p.ProtocolVersion(cfg.ProtocolVersion),
 		libp2p.AddrsFactory(discovery.FilterOutPrivateAddrs), // Comment this line to build bootstrap node
 		libp2p.EnableNATService(),
 		libp2p.NATPortMap(),
 		libp2p.EnableHolePunching(),
-		libp2p.ListenAddrStrings(config.Ip4tcp, config.Ip6tcp, config.Ip4quic, config.Ip6quic),
+		libp2p.ListenAddrStrings(cfg.Ip4tcp, cfg.Ip6tcp, cfg.Ip4quic, cfg.Ip6quic),
 		libp2p.ConnectionManager(connManager),
 		libp2p.Transport(tcp.NewTCPTransport),
 		libp2p.Transport(libp2pquic.NewTransport),

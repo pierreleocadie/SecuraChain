@@ -3,12 +3,11 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"flag"
 	"fmt"
-	"math/rand"
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -16,7 +15,6 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
-	"github.com/google/uuid"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -31,9 +29,11 @@ import (
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
 
+var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
+
 func main() {
 	log := ipfsLog.Logger("user-client")
-	ipfsLog.SetLogLevel("user-client", "INFO")
+	ipfsLog.SetLogLevel("user-client", "DEBUG")
 
 	var ecdsaKeyPair ecdsa.KeyPair
 	var aesKey aes.Key
@@ -41,6 +41,21 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	flag.Parse()
+
+	// Load the config file
+	if *yamlConfigFilePath == "" {
+		log.Errorln("Please provide a path to the yaml config file")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	cfg, err := config.LoadConfig(*yamlConfigFilePath)
+	if err != nil {
+		log.Errorln("Error loading config file : ", err)
+		os.Exit(1)
+	}
 
 	/*
 	* IPFS NODE
@@ -57,7 +72,7 @@ func main() {
 	* NODE LIBP2P
 	 */
 	// Initialize the node
-	host := node.Initialize()
+	host := node.Initialize(*cfg)
 	defer host.Close()
 
 	// Setup DHT discovery
@@ -71,53 +86,53 @@ func main() {
 		panic(err)
 	}
 
-	stayAliveTopic, err := ps.Join("stayAlive")
-	if err != nil {
-		panic(err)
-	}
+	// stayAliveTopic, err := ps.Join("stayAlive")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	subStayAlive, err := stayAliveTopic.Subscribe()
-	if err != nil {
-		panic(err)
-	}
+	// subStayAlive, err := stayAliveTopic.Subscribe()
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	// Handle incoming stay alive messages
-	go func() {
-		for {
-			msg, err := subStayAlive.Next(ctx)
-			if err != nil {
-				log.Errorln("Error getting stay alive message : ", err)
-			}
-			log.Debugln("Received stay alive message from ", msg.GetFrom().String())
-			uuidByte, err := uuid.FromBytes(msg.Data)
-			if err != nil {
-				log.Errorln("Error unmarshaling uuid : ", err)
-				continue
-			}
-			log.Debugln("Received stay alive message : ", uuidByte.String())
-		}
-	}()
+	// // Handle incoming stay alive messages
+	// go func() {
+	// 	for {
+	// 		msg, err := subStayAlive.Next(ctx)
+	// 		if err != nil {
+	// 			log.Errorln("Error getting stay alive message : ", err)
+	// 		}
+	// 		log.Debugln("Received stay alive message from ", msg.GetFrom().String())
+	// 		uuidByte, err := uuid.FromBytes(msg.Data)
+	// 		if err != nil {
+	// 			log.Errorln("Error unmarshaling uuid : ", err)
+	// 			continue
+	// 		}
+	// 		log.Debugln("Received stay alive message : ", uuidByte.String())
+	// 	}
+	// }()
 
-	// Publish stay alive messages
-	go func() {
-		for {
-			uuidByte, err := uuid.New().MarshalBinary()
-			if err != nil {
-				log.Errorln("Error marshaling uuid : ", err)
-				continue
-			}
-			err = stayAliveTopic.Publish(ctx, uuidByte)
-			if err != nil {
-				log.Errorln("Error publishing stay alive message : ", err)
-			}
-			log.Debugln("Published stay alive message")
-			// Sleep for a random duration between 1 and 5 seconds
-			time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second)
-		}
-	}()
+	// // Publish stay alive messages
+	// go func() {
+	// 	for {
+	// 		uuidByte, err := uuid.New().MarshalBinary()
+	// 		if err != nil {
+	// 			log.Errorln("Error marshaling uuid : ", err)
+	// 			continue
+	// 		}
+	// 		err = stayAliveTopic.Publish(ctx, uuidByte)
+	// 		if err != nil {
+	// 			log.Errorln("Error publishing stay alive message : ", err)
+	// 		}
+	// 		log.Debugln("Published stay alive message")
+	// 		// Sleep for a random duration between 1 and 5 seconds
+	// 		time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second)
+	// 	}
+	// }()
 
 	// Join the topic clientAnnouncementStringFlag
-	clientAnnouncementTopic, err := ps.Join(config.ClientAnnouncementStringFlag)
+	clientAnnouncementTopic, err := ps.Join(cfg.ClientAnnouncementStringFlag)
 	if err != nil {
 		panic(err)
 	}
@@ -180,6 +195,29 @@ func main() {
 				panic(err)
 			}
 			log.Debugln("Received ClientAnnouncement message from ", msg.GetFrom().String())
+		}
+	}()
+
+	// Join the topic StorageNodeResponseStringFlag
+	storageNodeResponseTopic, err = ps.Join(config.StorageNodeResponseStringFlag)
+	if err != nil {
+		panic(err)
+	}
+
+	// Subscribe to StorageNodeResponseStringFlag topic
+	subStorageNodeResponse, err = storageNodeResponseTopic.Subscribe()
+	if err != nil {
+		panic(err)
+	}
+
+	// Handle incoming NodeResponse messages
+	go func() {
+		for {
+			msg, err := subStorageNodeResponse.Next(ctx)
+			if err != nil {
+				panic(err)
+			}
+			log.Debugln("Received StorageNodeResponse message from ", msg.GetFrom().String())
 		}
 	}()
 
