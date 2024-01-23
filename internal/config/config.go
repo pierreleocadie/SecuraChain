@@ -48,7 +48,7 @@ func LoadConfig(yamlConfigFilePath string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	configBytes, err := os.ReadFile(sanitizedPath)
+	configBytes, err := os.ReadFile(sanitizedPath) // #nosec G304
 	if err != nil {
 		return nil, err
 	}

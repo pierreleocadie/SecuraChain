@@ -37,7 +37,10 @@ func CleanUpPeers(ctx context.Context, host host.Host) {
 					log.Printf("Peer %s removed from peerstore", p)
 					continue
 				}
-				s.Close()
+				err = s.Close()
+				if err != nil {
+					log.Printf("Error closing stream: %v", err)
+				}
 			}
 		case <-ctx.Done():
 			return
