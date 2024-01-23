@@ -33,4 +33,5 @@ var (
 		// "/ip4/154.56.63.167/tcp/1211/p2p/12D3KooWA8jcyCRDXhk1H7kgBg1ui1pBi2ezJC4mtmkRuvPFUegc",
 		// "/ip4/154.56.63.167/udp/1211/quic-v1/p2p/12D3KooWA8jcyCRDXhk1H7kgBg1ui1pBi2ezJC4mtmkRuvPFUegc",
 	}
+	MemorySpace uint64 = 10
 )

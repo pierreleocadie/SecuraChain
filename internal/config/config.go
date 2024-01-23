@@ -38,6 +38,7 @@ type Config struct {
 	// Embedded IPFS node
 	FileRights               int    `yaml:"fileRights"`
 	FileMetadataRegistryJSON string `yaml:"fileMetadataRegistryJson"`
+	MemorySpace              uint   `yaml:"memorySpace"`
 }
 
 // Function to load the yaml config file
@@ -48,6 +49,7 @@ func LoadConfig(yamlConfigFilePath string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	configBytes, err := os.ReadFile(sanitizedPath) // #nosec G304
 	if err != nil {
 		return nil, err

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"os"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -44,15 +43,12 @@ func main() {
 
 	// Load the config file
 	if *yamlConfigFilePath == "" {
-		log.Errorln("Please provide a path to the yaml config file")
-		flag.Usage()
-		os.Exit(1)
+		log.Panicln("Please provide a path to the yaml config file")
 	}
 
 	cfg, err := config.LoadConfig(*yamlConfigFilePath)
 	if err != nil {
-		log.Errorln("Error loading config file : ", err)
-		os.Exit(1)
+		log.Panicln("Error loading config file : ", err)
 	}
 
 	/*
@@ -61,7 +57,7 @@ func main() {
 	// Spawn an IPFS node
 	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx)
 	if err != nil {
-		log.Fatalf("Failed to spawn IPFS node: %s", err)
+		log.Panicf("Failed to spawn IPFS node: %s", err)
 	}
 
 	log.Debugf("IPFS node spawned with PeerID: %s", nodeIpfs.Identity.String())

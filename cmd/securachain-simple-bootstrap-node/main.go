@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"os"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/event"
@@ -29,15 +28,12 @@ func main() {
 
 	// Load the config file
 	if *yamlConfigFilePath == "" {
-		log.Errorln("Please provide a path to the yaml config file. Flag: -config <path/to/config.yaml>")
-		flag.Usage()
-		os.Exit(1)
+		log.Panicln("Please provide a path to the yaml config file. Flag: -config <path/to/config.yaml>")
 	}
 
 	cfg, err := config.LoadConfig(*yamlConfigFilePath)
 	if err != nil {
-		log.Errorln("Error loading config file : ", err)
-		os.Exit(1)
+		log.Panicln("Error loading config file : ", err)
 	}
 
 	/*

@@ -36,15 +36,12 @@ func main() {
 
 	// Load the config file
 	if *yamlConfigFilePath == "" {
-		log.Errorln("Please provide a path to the yaml config file")
-		flag.Usage()
-		os.Exit(1)
+		log.Panicln("Please provide a path to the yaml config file")
 	}
 
 	cfg, err := config.LoadConfig(*yamlConfigFilePath)
 	if err != nil {
-		log.Errorln("Error loading config file : ", err)
-		os.Exit(1)
+		log.Panicln("Error loading config file : ", err)
 	}
 
 	/*
@@ -53,7 +50,7 @@ func main() {
 	// Spawn an IPFS node
 	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx)
 	if err != nil {
-		log.Fatalf("Failed to spawn IPFS node: %s", err)
+		log.Panicf("Failed to spawn IPFS node: %s", err)
 	}
 
 	log.Debugf("IPFS node spawned with PeerID: %s", nodeIpfs.Identity.String())
@@ -62,22 +59,22 @@ func main() {
 	* MEMORY SHARE TO THE BLOCKCHAIN BY THE NODE
 	 */
 
-	storageMax, err := ipfs.ChangeStorageMax(nodeIpfs)
+	storageMax, err := ipfs.ChangeStorageMax(nodeIpfs, cfg.MemorySpace)
 	if err != nil {
-		log.Fatalf("Failed to change storage max: %s", err)
+		log.Warnf("Failed to change storage max: %s", err)
 	}
 
 	log.Debugf("Storage max set to %dGB", storageMax)
 
-	freeMemoryGB, err := ipfs.FreeMemoryAvailable(ctx, nodeIpfs, storageMax)
+	freeMemoryGB, err := ipfs.FreeMemoryAvailable(ctx, nodeIpfs)
 	if err != nil {
-		log.Fatalf("Failed to get free memory available: %s", err)
+		log.Warnf("Failed to get free memory available: %s", err)
 	}
 	log.Debugf("Free memory available: %fGB", freeMemoryGB)
 
 	memoryUsedGB, err := ipfs.MemoryUsed(ctx, nodeIpfs)
 	if err != nil {
-		log.Fatalf("Failed to get memory used: %s", err)
+		log.Warnf("Failed to get memory used: %s", err)
 	}
 	log.Debugf("Memory used: %fGB", memoryUsedGB)
 
@@ -173,10 +170,10 @@ func main() {
 				continue
 			}
 
-			//*
-			// Check if the file exists and announce the response to the client
-			// TODO: Send the response to the client about the file download
-			//*
+			/*
+				Check if the file exists and announce the response to the client
+				TODO: Send the response to the client about the file download
+			*/
 
 			// Join the topic StorageNodeResponseStringFlag
 			storageNodeResponseTopic, err := ps.Join(config.StorageNodeResponseStringFlag)
