@@ -13,6 +13,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
+	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -84,6 +85,12 @@ func main() {
 		panic(err)
 	}
 
+	pebbleDB, err := pebble.NewPebbleTransactionDB("blockchain")
+	if err != nil {
+		panic(err)
+	}
+	defer pebbleDB.Close()
+
 	// Handle incoming full node announcement messages
 	go func() {
 		for {
@@ -95,7 +102,28 @@ func main() {
 			log.Debugln("Full Node Announcement: ", string(msg.Data))
 
 			// Deserialize the full node announcement
-			// Ajouter à Pebble
+			blockAnnounced, err := block.DeserializeBlock(msg.Data)
+			if err != nil {
+				log.Errorf("Error deserializing block announcement : %s", err)
+				continue
+			}
+
+			// Verify if the block is existing in the blockchain
+			key := blockAnnounced.Signature
+			emptyBlock := block.Block{}
+			blockVerif, err := pebbleDB.GetBlock(key)
+			if err != nil || blockVerif == &emptyBlock {
+				// Add to blockchain
+				err = pebbleDB.SaveBlock(blockAnnounced.Signature, blockAnnounced)
+				if err != nil {
+					panic(err)
+				}
+				continue
+			} else {
+				log.Debugln("Block already existing in the blockchain")
+				continue
+			}
+
 		}
 	}()
 
@@ -109,7 +137,7 @@ func main() {
 		panic(err)
 	}
 
-	// Handle incoming block announcement messages
+	// Handle incoming block announcement messages from minors
 	go func() {
 		for {
 
