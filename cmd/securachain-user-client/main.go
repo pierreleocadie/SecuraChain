@@ -120,7 +120,9 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			log.Debugln("Received ClientAnnouncement message from ", msg.GetFrom().String())
+			if msg.GetFrom().String() != host.ID().String() {
+				log.Debugln("Received ClientAnnouncement message from ", msg.GetFrom().String())
+			}
 		}
 	}()
 

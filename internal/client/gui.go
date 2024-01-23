@@ -77,12 +77,17 @@ func BrowseButton(w fyne.Window, inputLabel *widget.Label, log *ipfsLog.ZapEvent
 
 func LoadECDSAButton(w fyne.Window, ecdsaKeyPair *ecdsa.KeyPair, ecdsaInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
 	return widget.NewButton("Load ECDSA Key Pair", func() {
+		if ecdsaInputLabel.Text == "" {
+			log.Debug("Please select a directory to save the ECDSA key pair")
+			return
+		}
+
 		ecdsaKeyPairL, err := ecdsa.LoadKeys("ecdsaPrivateKey", "ecdsaPublicKey", ecdsaInputLabel.Text)
 		if err != nil {
 			log.Errorln("Error loading ECDSA key pair : ", err)
 			return
 		}
-		ecdsaKeyPair = &ecdsaKeyPairL
+		*ecdsaKeyPair = ecdsaKeyPairL
 		log.Debug("ECDSA key pair loaded")
 	})
 }
@@ -99,7 +104,7 @@ func LoadAESButton(w fyne.Window, aesKey *aes.Key, aesInputLabel *widget.Label, 
 			log.Errorln("Error loading AES key : ", err)
 			return
 		}
-		aesKey = &aesKeyL
+		*aesKey = aesKeyL
 		log.Debug("AES key loaded")
 	})
 }
@@ -174,7 +179,7 @@ func SendFileButton(ctx context.Context, selectedFile *widget.Label,
 	}
 
 	return widget.NewButton("Send File", func() {
-		err := SendFile(ctx, selectedFile.Text, ecdsaKeyPair, aesKey, nodeIpfs, ipfsApi, clientAnnouncementChan)
+		err := SendFile(ctx, selectedFile.Text, ecdsaKeyPair, aesKey, nodeIpfs, ipfsApi, clientAnnouncementChan, log)
 		if err != nil {
 			log.Errorln("Error sending file : ", err)
 			return

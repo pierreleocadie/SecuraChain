@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	iface "github.com/ipfs/boxo/coreiface"
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/ipfs/kubo/core"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
@@ -19,41 +20,48 @@ import (
 func SendFile(ctx context.Context, selectedFile string,
 	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key,
 	nodeIpfs *core.IpfsNode, ipfsApi iface.CoreAPI,
-	clientAnnouncementChan chan *transaction.ClientAnnouncement) error {
+	clientAnnouncementChan chan *transaction.ClientAnnouncement,
+	log *ipfsLog.ZapEventLogger) error {
 
 	// -1. Check if the ECDSA key pair and the AES key are loaded
 	err := checkKeys(ecdsaKeyPair, aesKey)
 	if err != nil {
+		log.Errorf("failed to check keys: %s", err)
 		return fmt.Errorf("failed to check keys: %s", err)
 	}
 
 	// O. Get the original file name and extension
 	filename, extension, err := getSelectedFileInfo(selectedFile)
 	if err != nil {
+		log.Errorf("failed to get selected file info: %s", err)
 		return fmt.Errorf("failed to get selected file info: %s", err)
 	}
 
 	// 1. Encrypt the filename and file extension with AES
 	encryptedFilename, encryptedExtension, err := encryptFilenameAndExtension(filename, extension, *aesKey)
 	if err != nil {
+		log.Errorf("failed to encrypt filename and extension: %s", err)
 		return fmt.Errorf("failed to encrypt filename and extension: %s", err)
 	}
 
 	// 2. Encrypt the file with AES
 	encryptedFilePath, err := encryptFile(selectedFile, *aesKey, encryptedFilename, encryptedExtension, extension)
 	if err != nil {
+		log.Errorf("failed to encrypt file: %s", err)
 		return fmt.Errorf("failed to encrypt file: %s", err)
 	}
 
 	// 3. Compute the checksum of the encrypted file
 	encryptedFileChecksum, err := utils.ComputeFileChecksum(encryptedFilePath)
 	if err != nil {
+		log.Errorf("failed to compute checksum of encrypted file: %s", err)
 		return fmt.Errorf("failed to compute checksum of encrypted file: %s", err)
 	}
 
 	// 4. Get the size of the encrypted file
 	fileStat, err := os.Stat(encryptedFilePath)
 	if err != nil {
+		log.Errorf("failed to get file stat: %s", err)
 		return fmt.Errorf("failed to get file stat: %s", err)
 	}
 	fileSize := fileStat.Size()
@@ -61,6 +69,7 @@ func SendFile(ctx context.Context, selectedFile string,
 	// 5. Add the encrypted file to IPFS
 	encryptedFileCid, err := ipfs.AddFile(ctx, nodeIpfs, ipfsApi, encryptedFilePath)
 	if err != nil {
+		log.Errorf("failed to add file to IPFS: %s", err)
 		return fmt.Errorf("failed to add file to IPFS: %s", err)
 	}
 
