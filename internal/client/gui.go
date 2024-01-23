@@ -165,17 +165,18 @@ func SendFileButton(ctx context.Context, selectedFile *widget.Label,
 	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, ipfsAPI iface.CoreAPI,
 	clientAnnouncementChan chan *transaction.ClientAnnouncement,
 	log *ipfsLog.ZapEventLogger) *widget.Button {
-	if ecdsaKeyPair == nil {
-		log.Debug("Please generate or load an ECDSA key pair")
-		return nil
-	}
-
-	if aesKey == nil {
-		log.Debug("Please generate or load an AES key")
-		return nil
-	}
 
 	return widget.NewButton("Send File", func() {
+		if *ecdsaKeyPair == nil {
+			log.Debug("Please generate or load an ECDSA key pair")
+			return
+		}
+
+		if *aesKey == nil {
+			log.Debug("Please generate or load an AES key")
+			return
+		}
+
 		err := SendFile(ctx, selectedFile.Text, ecdsaKeyPair, aesKey, ipfsAPI, clientAnnouncementChan, log)
 		if err != nil {
 			log.Errorln("Error sending file : ", err)

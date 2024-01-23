@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -103,6 +104,20 @@ func main() {
 			}
 
 			log.Debugln("Publishing ClientAnnouncement : ", string(clientAnnouncementJSON))
+
+			for {
+				providerStats, err := nodeIpfs.Provider.Stat()
+				if err != nil {
+					log.Errorln("Error getting provider stats : ", err)
+					continue
+				}
+				log.Debugln("Total provides : ", providerStats)
+				if providerStats.TotalProvides >= 10 {
+					break
+				}
+				log.Debugf("Waiting for %d providers to be available", 10-providerStats.TotalProvides)
+				time.Sleep(5 * time.Second)
+			}
 
 			err = clientAnnouncementTopic.Publish(ctx, clientAnnouncementJSON)
 			if err != nil {
