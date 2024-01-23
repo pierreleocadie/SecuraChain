@@ -9,6 +9,10 @@ import (
 )
 
 type Config struct {
+	// GUI
+	WindowWidth  float32 `yaml:"windowWidth"`
+	WindowHeight float32 `yaml:"windowHeight"`
+
 	// SecuraChain node
 	UserAgent       string `yaml:"userAgent"`
 	ProtocolVersion string `yaml:"protocolVersion"`
@@ -21,19 +25,19 @@ type Config struct {
 	BootstrapPeers           []string      `yaml:"bootstrapPeers"`
 	ListeningPort            uint          `yaml:"listeningPort"`
 	DiscoveryRefreshInterval time.Duration `yaml:"discoveryRefreshInterval"`
-	Ip4tcp                   string        `yaml:"ip4tcp"`
-	Ip6tcp                   string        `yaml:"ip6tcp"`
-	Ip4quic                  string        `yaml:"ip4quic"`
-	Ip6quic                  string        `yaml:"ip6quic"`
+	IP4tcp                   string        `yaml:"ip4tcp"`
+	IP6tcp                   string        `yaml:"ip6tcp"`
+	IP4quic                  string        `yaml:"ip4quic"`
+	IP6quic                  string        `yaml:"ip6quic"`
 
 	// PubSub
 	RendezvousStringFlag          string `yaml:"rendezvousStringFlag"`
 	ClientAnnouncementStringFlag  string `yaml:"clientAnnouncementStringFlag"`
 	StorageNodeResponseStringFlag string `yaml:"storageNodeResponseStringFlag"`
 
-	// Embeded IPFS node
+	// Embedded IPFS node
 	FileRights               int    `yaml:"fileRights"`
-	FileMetadataRegistryJson string `yaml:"fileMetadataRegistryJson"`
+	FileMetadataRegistryJSON string `yaml:"fileMetadataRegistryJson"`
 }
 
 // Function to load the yaml config file

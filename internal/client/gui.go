@@ -6,7 +6,6 @@ import (
 
 	iface "github.com/ipfs/boxo/coreiface"
 	ipfsLog "github.com/ipfs/go-log/v2"
-	"github.com/ipfs/kubo/core"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
@@ -18,10 +17,10 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-func CreateECDSAWidgets(w fyne.Window, ecdsaInput *widget.Label, log *ipfsLog.ZapEventLogger, ecdsaKeyPair *ecdsa.KeyPair) (fyne.CanvasObject, *widget.Button, *widget.Button) {
+func CreateECDSAWidgets(w fyne.Window, ecdsaInput *widget.Label, log *ipfsLog.ZapEventLogger, ecdsaKeyPair *ecdsa.KeyPair) (fyne.CanvasObject, *widget.Button, *widget.Button) { //nolint: lll
 	ecdsaBrowseButton := BrowseButton(w, ecdsaInput, log)
-	ecdsaButton := GenerateECDSAKeyPairButton(w, ecdsaInput, log)
-	ecdsaButtonLoad := LoadECDSAButton(w, ecdsaKeyPair, ecdsaInput, log)
+	ecdsaButton := GenerateECDSAKeyPairButton(ecdsaInput, log)
+	ecdsaButtonLoad := LoadECDSAButton(ecdsaKeyPair, ecdsaInput, log)
 
 	hBoxECDSA := container.New(
 		layout.NewHBoxLayout(),
@@ -33,10 +32,10 @@ func CreateECDSAWidgets(w fyne.Window, ecdsaInput *widget.Label, log *ipfsLog.Za
 	return hBoxECDSA, ecdsaButtonLoad, ecdsaButton
 }
 
-func CreateAESWidgets(w fyne.Window, aesInput *widget.Label, log *ipfsLog.ZapEventLogger, aesKey *aes.Key) (fyne.CanvasObject, *widget.Button, *widget.Button) {
+func CreateAESWidgets(w fyne.Window, aesInput *widget.Label, log *ipfsLog.ZapEventLogger, aesKey *aes.Key) (fyne.CanvasObject, *widget.Button, *widget.Button) { //nolint: lll
 	aesBrowseButton := BrowseButton(w, aesInput, log)
-	aesButton := GenerateAESKeyButton(w, aesInput, log)
-	aesButtonLoad := LoadAESButton(w, aesKey, aesInput, log)
+	aesButton := GenerateAESKeyButton(aesInput, log)
+	aesButtonLoad := LoadAESButton(aesKey, aesInput, log)
 
 	hBoxAES := container.New(
 		layout.NewHBoxLayout(),
@@ -75,7 +74,7 @@ func BrowseButton(w fyne.Window, inputLabel *widget.Label, log *ipfsLog.ZapEvent
 	})
 }
 
-func LoadECDSAButton(w fyne.Window, ecdsaKeyPair *ecdsa.KeyPair, ecdsaInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
+func LoadECDSAButton(ecdsaKeyPair *ecdsa.KeyPair, ecdsaInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
 	return widget.NewButton("Load ECDSA Key Pair", func() {
 		if ecdsaInputLabel.Text == "" {
 			log.Debug("Please select a directory to save the ECDSA key pair")
@@ -92,7 +91,7 @@ func LoadECDSAButton(w fyne.Window, ecdsaKeyPair *ecdsa.KeyPair, ecdsaInputLabel
 	})
 }
 
-func LoadAESButton(w fyne.Window, aesKey *aes.Key, aesInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
+func LoadAESButton(aesKey *aes.Key, aesInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
 	return widget.NewButton("Load AES Key", func() {
 		if aesInputLabel.Text == "" {
 			log.Debug("Please select a directory to save the AES key")
@@ -109,7 +108,7 @@ func LoadAESButton(w fyne.Window, aesKey *aes.Key, aesInputLabel *widget.Label, 
 	})
 }
 
-func GenerateECDSAKeyPairButton(w fyne.Window, ecdsaInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
+func GenerateECDSAKeyPairButton(ecdsaInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
 	return widget.NewButton("Generate ECDSA Key Pair", func() {
 		if ecdsaInputLabel.Text == "" {
 			log.Debug("Please select a directory to save the ECDSA key pair")
@@ -129,7 +128,7 @@ func GenerateECDSAKeyPairButton(w fyne.Window, ecdsaInputLabel *widget.Label, lo
 	})
 }
 
-func GenerateAESKeyButton(w fyne.Window, aesInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
+func GenerateAESKeyButton(aesInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
 	return widget.NewButton("Generate AES Key", func() {
 		if aesInputLabel.Text == "" {
 			log.Debug("Please select a directory to save the AES key")
@@ -163,11 +162,9 @@ func SelectFileButton(w fyne.Window, selectedFileInputLabel *widget.Label, log *
 }
 
 func SendFileButton(ctx context.Context, selectedFile *widget.Label,
-	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key,
-	nodeIpfs *core.IpfsNode, ipfsApi iface.CoreAPI,
+	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, ipfsAPI iface.CoreAPI,
 	clientAnnouncementChan chan *transaction.ClientAnnouncement,
 	log *ipfsLog.ZapEventLogger) *widget.Button {
-
 	if ecdsaKeyPair == nil {
 		log.Debug("Please generate or load an ECDSA key pair")
 		return nil
@@ -179,7 +176,7 @@ func SendFileButton(ctx context.Context, selectedFile *widget.Label,
 	}
 
 	return widget.NewButton("Send File", func() {
-		err := SendFile(ctx, selectedFile.Text, ecdsaKeyPair, aesKey, nodeIpfs, ipfsApi, clientAnnouncementChan, log)
+		err := SendFile(ctx, selectedFile.Text, ecdsaKeyPair, aesKey, ipfsAPI, clientAnnouncementChan, log)
 		if err != nil {
 			log.Errorln("Error sending file : ", err)
 			return

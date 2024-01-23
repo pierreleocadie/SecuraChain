@@ -24,7 +24,10 @@ var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file
 
 func main() {
 	log := ipfsLog.Logger("storage-node")
-	ipfsLog.SetLogLevel("storage-node", "DEBUG")
+	err := ipfsLog.SetLogLevel("storage-node", "DEBUG")
+	if err != nil {
+		log.Errorln("Error setting log level : ", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -48,7 +51,7 @@ func main() {
 	* IPFS NODE
 	 */
 	// Spawn an IPFS node
-	ipfsApi, nodeIpfs, err := ipfs.SpawnNode(ctx)
+	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx)
 	if err != nil {
 		log.Fatalf("Failed to spawn IPFS node: %s", err)
 	}
@@ -59,7 +62,7 @@ func main() {
 	* MEMORY SHARE TO THE BLOCKCHAIN BY THE NODE
 	 */
 
-	storageMax, err := ipfs.ChangeStorageMax(ctx, nodeIpfs)
+	storageMax, err := ipfs.ChangeStorageMax(nodeIpfs)
 	if err != nil {
 		log.Fatalf("Failed to change storage max: %s", err)
 	}
@@ -89,9 +92,6 @@ func main() {
 	node.SetupDHTDiscovery(ctx, host, false)
 
 	log.Debugf("Storage node initialized with PeerID: %s", host.ID().String())
-
-	// Ping peers to keep the connection alive through NATs
-	// go discovery.Ping(host, ctx)
 
 	/*
 	* PUBSUB
@@ -137,7 +137,7 @@ func main() {
 			// Download the file
 			fileImmutablePath := path.FromCid(clientAnnouncement.FileCid)
 			log.Debugf("Downloading file %s", fileImmutablePath)
-			err = ipfs.GetFile(ctx, ipfsApi, fileImmutablePath)
+			err = ipfs.GetFile(ctx, ipfsAPI, fileImmutablePath)
 			if err != nil {
 				log.Errorf("Failed to download file: %s", err)
 				continue

@@ -44,7 +44,7 @@ func (a *ClientAnnouncement) SpecificData() ([]byte, error) {
 	return json.Marshal(a)
 }
 
-func NewClientAnnouncement(keyPair ecdsa.KeyPair, fileCid cid.Cid, filename []byte, extension []byte, fileSize uint64, checksum []byte) *ClientAnnouncement {
+func NewClientAnnouncement(keyPair ecdsa.KeyPair, fileCid cid.Cid, filename []byte, extension []byte, fileSize uint64, checksum []byte) *ClientAnnouncement { //nolint: lll
 	ownerAddressBytes, err := keyPair.PublicKeyToBytes()
 	if err != nil {
 		return nil

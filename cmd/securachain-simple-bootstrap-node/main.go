@@ -17,7 +17,10 @@ var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file
 
 func main() {
 	log := ipfsLog.Logger("bootstrap-node")
-	ipfsLog.SetLogLevel("*", "DEBUG")
+	err := ipfsLog.SetLogLevel("*", "DEBUG")
+	if err != nil {
+		log.Errorln("Error setting log level : ", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -46,9 +49,6 @@ func main() {
 
 	// Setup DHT discovery
 	node.SetupDHTDiscovery(ctx, host, true)
-
-	// Setup peerstore cleanup
-	// discovery.CleanUpPeers(host, ctx)
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES

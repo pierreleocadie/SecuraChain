@@ -2,8 +2,9 @@ package discovery
 
 import (
 	"context"
+	"crypto/rand"
 	"log"
-	"math/rand"
+	"math/big"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/host"
@@ -11,8 +12,14 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
 )
 
-func Ping(host host.Host, ctx context.Context) {
-	ticker := time.NewTicker(time.Duration(rand.Intn(10)+1) * time.Second) // adjust interval to your needs
+func Ping(ctx context.Context, host host.Host, randomInterval int64) {
+	// Generate a cryptographically secure random number between 1 and 10
+	n, err := rand.Int(rand.Reader, big.NewInt(randomInterval))
+	if err != nil {
+		log.Fatalf("Failed to generate secure random number: %v", err)
+	}
+
+	ticker := time.NewTicker(time.Duration(n.Int64()+1) * time.Second) // adjust interval to your needs
 	defer ticker.Stop()
 
 	for {

@@ -9,7 +9,6 @@ import (
 
 	iface "github.com/ipfs/boxo/coreiface"
 	ipfsLog "github.com/ipfs/go-log/v2"
-	"github.com/ipfs/kubo/core"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
@@ -17,12 +16,10 @@ import (
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
 
-func SendFile(ctx context.Context, selectedFile string,
-	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key,
-	nodeIpfs *core.IpfsNode, ipfsApi iface.CoreAPI,
+func SendFile(ctx context.Context, selectedFile string, //nolint: funlen
+	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, ipfsAPI iface.CoreAPI,
 	clientAnnouncementChan chan *transaction.ClientAnnouncement,
 	log *ipfsLog.ZapEventLogger) error {
-
 	// -1. Check if the ECDSA key pair and the AES key are loaded
 	err := checkKeys(ecdsaKeyPair, aesKey)
 	if err != nil {
@@ -67,7 +64,7 @@ func SendFile(ctx context.Context, selectedFile string,
 	fileSize := fileStat.Size()
 
 	// 5. Add the encrypted file to IPFS
-	encryptedFileCid, err := ipfs.AddFile(ctx, nodeIpfs, ipfsApi, encryptedFilePath)
+	encryptedFileCid, err := ipfs.AddFile(ctx, ipfsAPI, encryptedFilePath)
 	if err != nil {
 		log.Errorf("failed to add file to IPFS: %s", err)
 		return fmt.Errorf("failed to add file to IPFS: %s", err)
@@ -85,6 +82,7 @@ func SendFile(ctx context.Context, selectedFile string,
 
 	// 7. Send the ClientAnnouncement to the channel
 	clientAnnouncementChan <- clientAnnouncement
+	log.Debugln("ClientAnnouncement sent to the channel")
 
 	return nil
 }

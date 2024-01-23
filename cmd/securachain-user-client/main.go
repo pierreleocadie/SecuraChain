@@ -28,7 +28,10 @@ var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file
 
 func main() {
 	log := ipfsLog.Logger("user-client")
-	ipfsLog.SetLogLevel("user-client", "DEBUG")
+	err := ipfsLog.SetLogLevel("user-client", "DEBUG")
+	if err != nil {
+		log.Errorln("Error setting log level : ", err)
+	}
 
 	var ecdsaKeyPair ecdsa.KeyPair
 	var aesKey aes.Key
@@ -56,7 +59,7 @@ func main() {
 	* IPFS NODE
 	 */
 	// Spawn an IPFS node
-	ipfsApi, nodeIpfs, err := ipfs.SpawnNode(ctx)
+	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx)
 	if err != nil {
 		log.Fatalf("Failed to spawn IPFS node: %s", err)
 	}
@@ -97,15 +100,15 @@ func main() {
 	go func() {
 		for {
 			clientAnnouncement := <-clientAnnouncementChan
-			clientAnnouncementJson, err := clientAnnouncement.Serialize()
+			clientAnnouncementJSON, err := clientAnnouncement.Serialize()
 			if err != nil {
 				log.Errorln("Error serializing ClientAnnouncement : ", err)
 				continue
 			}
 
-			log.Debugln("Publishing ClientAnnouncement : ", string(clientAnnouncementJson))
+			log.Debugln("Publishing ClientAnnouncement : ", string(clientAnnouncementJSON))
 
-			err = clientAnnouncementTopic.Publish(ctx, clientAnnouncementJson)
+			err = clientAnnouncementTopic.Publish(ctx, clientAnnouncementJSON)
 			if err != nil {
 				log.Errorln("Error publishing ClientAnnouncement : ", err)
 				continue
@@ -154,7 +157,7 @@ func main() {
 	 */
 	a := app.New()
 	w := a.NewWindow("SecuraChain User Client")
-	w.Resize(fyne.NewSize(800, 600))
+	w.Resize(fyne.NewSize(cfg.WindowWidth, cfg.WindowHeight))
 
 	ecdsaInput := widget.NewLabel("")
 	hBoxECDSA, ecdsaButtonLoad, ecdsaButton := client.CreateECDSAWidgets(w, ecdsaInput, log, &ecdsaKeyPair)
@@ -170,8 +173,7 @@ func main() {
 		selectedFileLabel,
 		&ecdsaKeyPair,
 		&aesKey,
-		nodeIpfs,
-		ipfsApi,
+		ipfsAPI,
 		clientAnnouncementChan,
 		log,
 	)

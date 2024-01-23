@@ -11,7 +11,6 @@ import (
 	icore "github.com/ipfs/boxo/coreiface"
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
-	"github.com/ipfs/kubo/core"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/util"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
@@ -40,13 +39,13 @@ func prepareFileForIPFS(path string) (files.Node, error) {
 
 // AddFileToIPFS adds a file to IPFS and returns its CID. It also collects and saves file metadata.
 // The function handles the file addition process and records metadata such as file size, type, name, and user public key.
-func AddFile(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI, filePath string) (path.ImmutablePath, error) {
+func AddFile(ctx context.Context, ipfsAPI icore.CoreAPI, filePath string) (path.ImmutablePath, error) {
 	file, err := prepareFileForIPFS(filePath)
 	if err != nil {
 		log.Println("could not get File:", err)
 	}
 
-	fileCid, err := ipfsApi.Unixfs().Add(ctx, file)
+	fileCid, err := ipfsAPI.Unixfs().Add(ctx, file)
 	if err != nil {
 		log.Printf("Could not add file to IPFS %v", err)
 		return path.ImmutablePath{}, err
