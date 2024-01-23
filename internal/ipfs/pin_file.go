@@ -4,8 +4,8 @@ import (
 	"context"
 	"log"
 
-	icore "github.com/ipfs/boxo/coreiface"
 	"github.com/ipfs/boxo/path"
+	icore "github.com/ipfs/kubo/core/coreiface"
 )
 
 func PinFile(ctx context.Context, ipfsAPI icore.CoreAPI, fileCid path.ImmutablePath) (bool, error) {

@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	iface "github.com/ipfs/boxo/coreiface"
 	ipfsLog "github.com/ipfs/go-log/v2"
+	iface "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"

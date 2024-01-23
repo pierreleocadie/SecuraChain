@@ -8,9 +8,9 @@ import (
 	"os"
 	"path/filepath"
 
-	icore "github.com/ipfs/boxo/coreiface"
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
+	icore "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/util"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"

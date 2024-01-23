@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"sync"
 
-	icore "github.com/ipfs/boxo/coreiface"
 	files "github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
+	icore "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 )
 
