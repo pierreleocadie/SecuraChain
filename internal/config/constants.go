@@ -14,6 +14,7 @@ const (
 	RendezvousStringFlag          = "SecuraChainNetwork"
 	ClientAnnouncementStringFlag  = "ClientAnnouncement"
 	StorageNodeResponseStringFlag = "StorageNodeResponse"
+	BlockAnnouncementStringFlag   = "BlockAnnouncement"
 	DHTDiscoveryRefreshInterval   = 10 * time.Second
 	FileRights                    = 0700
 	FileMetadataRegistryJson      = "fileMetadataRegistry.json"

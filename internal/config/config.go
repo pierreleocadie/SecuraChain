@@ -30,6 +30,7 @@ type Config struct {
 	RendezvousStringFlag          string `yaml:"rendezvousStringFlag"`
 	ClientAnnouncementStringFlag  string `yaml:"clientAnnouncementStringFlag"`
 	StorageNodeResponseStringFlag string `yaml:"storageNodeResponseStringFlag"`
+	BlockAnnouncementStringFlag   string `yaml:"blockAnnouncementStringFlag"`
 
 	// Embeded IPFS node
 	FileRights               int    `yaml:"fileRights"`

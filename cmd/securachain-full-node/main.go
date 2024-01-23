@@ -72,6 +72,35 @@ func main() {
 		panic(err)
 	}
 
+	// Join the topic BlockAnnouncementStringFlag
+	blockAnnouncementTopic, err := ps.Join(cfg.BlockAnnouncementStringFlag)
+	if err != nil {
+		panic(err)
+	}
+	subBlockAnnouncement, err := blockAnnouncementTopic.Subscribe()
+	if err != nil {
+		panic(err)
+	}
+
+	// Handle incoming block announcement messages
+	go func() {
+		msg, err := subBlockAnnouncement.Next(ctx)
+		if err != nil {
+			log.Errorln("Error getting block announcement message : ", err)
+		}
+		log.Debugln("Received block announcement message from ", msg.GetFrom().String())
+		log.Debugln("Received block announcement message : ", msg.Data)
+		// blockAnnouncement, err := transaction.DeserializeTransaction(msg.Data, transaction.TransactionFactory{})
+		// if err != nil {
+		// 	log.Errorln("Error deserializing block announcement : ", err)
+		// 	continue
+		// }
+
+		// Inside the block verify every transaction
+		// Verify the correct proof of work transaction
+
+	}()
+
 	stayAliveTopic, err := ps.Join("stayAlive")
 	if err != nil {
 		panic(err)

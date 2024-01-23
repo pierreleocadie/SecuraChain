@@ -6,10 +6,10 @@ import (
 	"log"
 	"os"
 
-	icore "github.com/ipfs/boxo/coreiface"
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/kubo/core"
+	icore "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
 
