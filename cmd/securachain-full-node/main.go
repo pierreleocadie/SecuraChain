@@ -3,14 +3,13 @@ package main
 import (
 	"context"
 	"flag"
-	"math/rand"
 	"os"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
+	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/internal/pebble"
@@ -26,7 +25,7 @@ var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file
 
 func main() {
 	log := ipfsLog.Logger("full-node")
-	ipfsLog.SetLogLevel("user-client", "DEBUG")
+	ipfsLog.SetLogLevel("full-node", "DEBUG")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -67,6 +66,18 @@ func main() {
 	// Setup DHT discovery
 	node.SetupDHTDiscovery(ctx, host, false)
 
+	log.Debugf("Minor node initialized with PeerID: %s", host.ID().String())
+
+	/*
+	* NETWORK PEER DISCOVERY WITH mDNS
+	 */
+	mdnsDiscovery := discovery.NewMDNSDiscovery(config.RendezvousStringFlag)
+
+	// Run mDNS
+	if err := mdnsDiscovery.Run(host); err != nil {
+		log.Fatalf("Failed to run mDNS: %s", err)
+		return
+	}
 	/*
 	* PUBSUB
 	 */
@@ -89,7 +100,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer pebbleDB.Close()
 
 	// Handle incoming full node announcement messages
 	go func() {
@@ -121,6 +131,17 @@ func main() {
 				continue
 			} else {
 				log.Debugln("Block already existing in the blockchain")
+				blockPebble, err := pebbleDB.GetBlock(key)
+				if err != nil {
+					panic(err)
+				}
+				blockPebbleBytes, err := blockPebble.Serialize()
+				if err != nil {
+					panic(err)
+				}
+
+				log.Debugln("\n\nblock :", string(blockPebbleBytes), "/n/n")
+
 				continue
 			}
 
@@ -145,8 +166,13 @@ func main() {
 			if err != nil {
 				log.Panic("Error getting block announcement message : ", err)
 			}
+
 			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
 			log.Debugln("Received block announcement message : ", msg.Data)
+
+			/*
+			* BLOCK VALIDATION
+			 */
 
 			// Deserialize the block announcement
 			blockAnnounced, err := block.DeserializeBlock(msg.Data)
@@ -155,19 +181,14 @@ func main() {
 				continue
 			}
 
-			/*
-			* BLOCK VALIDATION
-			 */
-
-			// Deserialize the previous block
-			prevBlock, err := block.DeserializeBlock(blockAnnounced.PrevBlock)
-			if err != nil {
-				log.Errorf("Error deserializing previous block : %s", err)
-				continue
-			}
+			// blockPrevBlock, err := block.DeserializeBlock(blockAnnounced.PrevBlock)
+			// if err != nil {
+			// 	log.Errorf("Error deserializing block announcement : %s", err)
+			// 	continue
+			// }
 
 			// Validate the block
-			if !consensus.ValidateBlock(blockAnnounced, prevBlock) {
+			if !consensus.ValidateBlock(blockAnnounced, nil) {
 				log.Error("Block validation failed")
 				continue
 			} else {
@@ -188,7 +209,7 @@ func main() {
 							log.Errorf("Error publishing block announcement to the network : %s", err)
 							continue
 						}
-
+						time.Sleep(30 * time.Second)
 					}
 				}()
 
@@ -197,50 +218,50 @@ func main() {
 		}
 	}()
 
-	stayAliveTopic, err := ps.Join("stayAlive")
-	if err != nil {
-		panic(err)
-	}
+	// stayAliveTopic, err := ps.Join("stayAlive")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	subStayAlive, err := stayAliveTopic.Subscribe()
-	if err != nil {
-		panic(err)
-	}
+	// subStayAlive, err := stayAliveTopic.Subscribe()
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	// Handle incoming stay alive messages
-	go func() {
-		for {
-			msg, err := subStayAlive.Next(ctx)
-			if err != nil {
-				log.Errorln("Error getting stay alive message : ", err)
-			}
-			log.Debugln("Received stay alive message from ", msg.GetFrom().String())
-			uuidByte, err := uuid.FromBytes(msg.Data)
-			if err != nil {
-				log.Errorln("Error unmarshaling uuid : ", err)
-				continue
-			}
-			log.Debugln("Received stay alive message : ", uuidByte.String())
-		}
-	}()
+	// // Handle incoming stay alive messages
+	// go func() {
+	// 	for {
+	// 		msg, err := subStayAlive.Next(ctx)
+	// 		if err != nil {
+	// 			log.Errorln("Error getting stay alive message : ", err)
+	// 		}
+	// 		log.Debugln("Received stay alive message from ", msg.GetFrom().String())
+	// 		uuidByte, err := uuid.FromBytes(msg.Data)
+	// 		if err != nil {
+	// 			log.Errorln("Error unmarshaling uuid : ", err)
+	// 			continue
+	// 		}
+	// 		log.Debugln("Received stay alive message : ", uuidByte.String())
+	// 	}
+	// }()
 
-	// Publish stay alive messages
-	go func() {
-		for {
-			uuidByte, err := uuid.New().MarshalBinary()
-			if err != nil {
-				log.Errorln("Error marshaling uuid : ", err)
-				continue
-			}
-			err = stayAliveTopic.Publish(ctx, uuidByte)
-			if err != nil {
-				log.Errorln("Error publishing stay alive message : ", err)
-			}
-			log.Debugln("Published stay alive message")
-			// Sleep for a random duration between 1 and 5 seconds
-			time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second)
-		}
-	}()
+	// // Publish stay alive messages
+	// go func() {
+	// 	for {
+	// 		uuidByte, err := uuid.New().MarshalBinary()
+	// 		if err != nil {
+	// 			log.Errorln("Error marshaling uuid : ", err)
+	// 			continue
+	// 		}
+	// 		err = stayAliveTopic.Publish(ctx, uuidByte)
+	// 		if err != nil {
+	// 			log.Errorln("Error publishing stay alive message : ", err)
+	// 		}
+	// 		log.Debugln("Published stay alive message")
+	// 		// Sleep for a random duration between 1 and 5 seconds
+	// 		time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second)
+	// 	}
+	// }()
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES

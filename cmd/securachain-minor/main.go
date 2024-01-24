@@ -11,6 +11,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
+	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
@@ -25,8 +26,8 @@ var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file
 
 func main() {
 
-	log := ipfsLog.Logger("storage-node")
-	ipfsLog.SetLogLevel("storage-node", "DEBUG")
+	log := ipfsLog.Logger("minor")
+	ipfsLog.SetLogLevel("minor", "DEBUG")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -67,7 +68,18 @@ func main() {
 	// Setup DHT discovery
 	node.SetupDHTDiscovery(ctx, host, false)
 
-	log.Debugf("Storage node initialized with PeerID: %s", host.ID().String())
+	log.Debugf("Minor node initialized with PeerID: %s", host.ID().String())
+
+	/*
+	* NETWORK PEER DISCOVERY WITH mDNS
+	 */
+	mdnsDiscovery := discovery.NewMDNSDiscovery(config.RendezvousStringFlag)
+
+	// Run mDNS
+	if err := mdnsDiscovery.Run(host); err != nil {
+		log.Fatalf("Failed to run mDNS: %s", err)
+		return
+	}
 
 	/*
 	* PUBSUB
@@ -90,19 +102,25 @@ func main() {
 
 	// }
 
-	// Create a sample block
+	//Create a previous block
+
 	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()
 	transactions := []transaction.Transaction{}
 
-	newBlock := block.NewBlock(transactions, []byte("GenesisBlock"), 1, minerKeyPair)
+	prevBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
 
-	consensus.MineBlock(newBlock)
+	consensus.MineBlock(prevBlock)
+
+	err = prevBlock.SignBlock(minerKeyPair)
+	if err != nil {
+		log.Errorf("Failed to sign block: %s", err)
+	}
 
 	// Handle publishing of blocks in a separate goroutine
 	go func() {
 		for {
 			// Publish the block announcement
-			newBlockBytes, err := newBlock.Serialize()
+			newBlockBytes, err := prevBlock.Serialize()
 			if err != nil {
 				log.Errorln("Failed to serialize block:", err)
 			}
@@ -113,7 +131,7 @@ func main() {
 				log.Errorln("Failed to publish block:", err)
 				continue
 			}
-			time.Sleep(15 * time.Second)
+			time.Sleep(40 * time.Second)
 
 		}
 	}()
