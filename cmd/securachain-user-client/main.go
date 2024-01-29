@@ -173,6 +173,7 @@ func main() {
 				panic(err)
 			}
 			log.Debugln("Received StorageNodeResponse message from ", msg.GetFrom().String())
+			log.Debugln("StorageNodeResponse: ", string(msg.Data))
 		}
 	}()
 
