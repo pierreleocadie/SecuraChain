@@ -162,8 +162,9 @@ func main() {
 				}
 				for provider := range providers {
 					log.Debugln("Found provider : ", provider.ID.String())
+					break
 				}
-				if len(providers) > 0 {
+				if len(providers) >= 1 {
 					break
 				}
 			}

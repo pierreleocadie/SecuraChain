@@ -107,7 +107,6 @@ func main() {
 			}
 
 			log.Debugln("Publishing ClientAnnouncement : ", string(clientAnnouncementJSON))
-			dhtApi.Provide(ctx, clientAnnouncementPath)
 			for {
 				providerStats, err := nodeIpfs.Provider.Stat()
 				if err != nil {
