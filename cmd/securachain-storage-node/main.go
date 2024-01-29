@@ -154,6 +154,7 @@ func main() {
 
 			// Download the file
 			fileImmutablePath := path.FromCid(clientAnnouncement.FileCid)
+		outer:
 			for {
 				providers, err := dhtApi.FindProviders(ctx, fileImmutablePath)
 				if err != nil {
@@ -162,8 +163,9 @@ func main() {
 				}
 				for provider := range providers {
 					log.Debugln("Found provider : ", provider.ID.String())
-					break
+					break outer
 				}
+				log.Debugf("Channel contains %d providers", len(providers))
 				if len(providers) >= 1 {
 					break
 				}
