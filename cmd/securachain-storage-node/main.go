@@ -154,6 +154,11 @@ func main() {
 
 			// Download the file
 			fileImmutablePath := path.FromCid(clientAnnouncement.FileCid)
+			providers, err := dhtApi.FindProviders(ctx, fileImmutablePath)
+			if err != nil {
+				log.Errorln("Error finding providers : ", err)
+				continue
+			}
 		outer:
 			for {
 				providers, err := dhtApi.FindProviders(ctx, fileImmutablePath)
@@ -169,6 +174,9 @@ func main() {
 				if len(providers) >= 1 {
 					break
 				}
+			}
+			for provider := range providers {
+				ipfsAPI.Swarm().Connect(ctx, provider)
 			}
 			log.Debugf("Downloading file %s", fileImmutablePath)
 			err = ipfs.GetFile(ctx, cfg, ipfsAPI, fileImmutablePath)
