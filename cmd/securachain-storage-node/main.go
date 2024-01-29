@@ -49,6 +49,7 @@ func main() {
 	* IPFS NODE
 	 */
 	ipfsAPI, nodeIpfs := node.InitializeIPFSNode(ctx, cfg, log)
+	dhtApi := ipfsAPI.Dht()
 
 	/*
 	* IPFS MEMORY MANAGEMENT
@@ -153,6 +154,19 @@ func main() {
 
 			// Download the file
 			fileImmutablePath := path.FromCid(clientAnnouncement.FileCid)
+			for {
+				providers, err := dhtApi.FindProviders(ctx, fileImmutablePath)
+				if err != nil {
+					log.Errorln("Error finding providers : ", err)
+					continue
+				}
+				for provider := range providers {
+					log.Debugln("Found provider : ", provider.ID.String())
+				}
+				if len(providers) > 0 {
+					break
+				}
+			}
 			log.Debugf("Downloading file %s", fileImmutablePath)
 			err = ipfs.GetFile(ctx, cfg, ipfsAPI, fileImmutablePath)
 			if err != nil {

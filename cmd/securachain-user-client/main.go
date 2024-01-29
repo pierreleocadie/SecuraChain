@@ -137,6 +137,7 @@ func main() {
 				log.Errorln("Error publishing ClientAnnouncement : ", err)
 				continue
 			}
+			log.Debugln("Published ClientAnnouncement : ", string(clientAnnouncementJSON))
 		}
 	}()
 
