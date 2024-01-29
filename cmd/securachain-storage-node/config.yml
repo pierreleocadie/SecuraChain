@@ -7,8 +7,8 @@ aesKeyPath: "/Users/pierreleocadie/Documents/dev/SecuraChain/cmd/securachain-sto
 lowWater: 160
 highWater: 192
 bootstrapPeers: [
-  "/ip4/13.37.148.174/tcp/1212/p2p/12D3KooWSwK3gCNp3pc7MQYsF4giuk78wPEGwg5zSGQRXHgrgkan", # bootstrap node test
-  "/ip4/13.37.148.174/udp/1212/quic-v1/p2p/12D3KooWSwK3gCNp3pc7MQYsF4giuk78wPEGwg5zSGQRXHgrgkan", # bootstrap node test
+  "/ip4/13.37.148.174/tcp/1212/p2p/12D3KooWRWobba8bZYeUX2cCKMzvWzkRBG2h5yTZaGzutAH8Sjrx", # bootstrap node test
+  "/ip4/13.37.148.174/udp/1212/quic-v1/p2p/12D3KooWRWobba8bZYeUX2cCKMzvWzkRBG2h5yTZaGzutAH8Sjrx", # bootstrap node test
   # "/ip4/13.37.148.174/tcp/1211/p2p/12D3KooWBm6aEtcGiJNsnsCwaiH4SoqJHZMgvctdQsyAenwyt8Ds",
 	# "/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWBm6aEtcGiJNsnsCwaiH4SoqJHZMgvctdQsyAenwyt8Ds",
 	# "/ip4/154.56.63.167/tcp/1211/p2p/12D3KooWA8jcyCRDXhk1H7kgBg1ui1pBi2ezJC4mtmkRuvPFUegc",
