@@ -200,7 +200,7 @@ func main() {
 			}
 
 			if bytes.Equal(checksum, clientAnnouncement.Checksum) {
-				log.Errorf("Downloaded file checksum does not match announced checksum")
+				log.Errorf("Downloaded file checksum does not match announced checksum, expected %s, got %s", string(clientAnnouncement.Checksum), string(checksum))
 				err = os.Remove(downloadedFilePath)
 				if err != nil {
 					log.Errorf("Failed to delete file: %s", err)
