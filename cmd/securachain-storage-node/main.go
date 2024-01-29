@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"flag"
 	"os"
 	"path/filepath"
@@ -200,7 +201,9 @@ func main() {
 			}
 
 			if bytes.Equal(checksum, clientAnnouncement.Checksum) {
-				log.Errorf("Downloaded file checksum does not match announced checksum, expected %s, got %s", string(clientAnnouncement.Checksum), string(checksum))
+				b64_1 := base64.URLEncoding.EncodeToString(checksum)
+				b64_2 := base64.URLEncoding.EncodeToString(clientAnnouncement.Checksum)
+				log.Errorf("Downloaded file checksum does not match announced checksum, expected %v, got %v", b64_2, b64_1)
 				err = os.Remove(downloadedFilePath)
 				if err != nil {
 					log.Errorf("Failed to delete file: %s", err)
