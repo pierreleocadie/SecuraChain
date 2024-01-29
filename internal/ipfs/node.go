@@ -119,7 +119,10 @@ func SpawnNode(ctx context.Context) (icore.CoreAPI, *core.IpfsNode, error) {
 	}
 
 	// Create an instance of the Core IPFS API to interact with the IPFS network
-	api, err := coreapi.NewCoreAPI(node)
+	coreApi, err := coreapi.NewCoreAPI(node)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	return api, node, err
+	return coreApi, node, err
 }

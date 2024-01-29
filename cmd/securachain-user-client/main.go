@@ -14,6 +14,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
 
+	"github.com/ipfs/boxo/path"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	client "github.com/pierreleocadie/SecuraChain/internal/client"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
@@ -60,6 +61,7 @@ func main() {
 	if err != nil {
 		log.Panicf("Failed to spawn IPFS node: %s", err)
 	}
+	dhtApi := ipfsAPI.Dht()
 
 	log.Debugf("IPFS node spawned with PeerID: %s", nodeIpfs.Identity.String())
 
@@ -98,13 +100,14 @@ func main() {
 		for {
 			clientAnnouncement := <-clientAnnouncementChan
 			clientAnnouncementJSON, err := clientAnnouncement.Serialize()
+			clientAnnouncementPath := path.FromCid(clientAnnouncement.FileCid)
 			if err != nil {
 				log.Errorln("Error serializing ClientAnnouncement : ", err)
 				continue
 			}
 
 			log.Debugln("Publishing ClientAnnouncement : ", string(clientAnnouncementJSON))
-
+			dhtApi.Provide(ctx, clientAnnouncementPath)
 			for {
 				providerStats, err := nodeIpfs.Provider.Stat()
 				if err != nil {
@@ -112,11 +115,21 @@ func main() {
 					continue
 				}
 				log.Debugln("Total provides : ", providerStats)
-				if providerStats.TotalProvides >= 10 {
+				if providerStats.TotalProvides >= 1 {
 					break
 				}
 				log.Debugf("Waiting for %d providers to be available", 10-providerStats.TotalProvides)
-				time.Sleep(5 * time.Second)
+				time.Sleep(10 * time.Second)
+			}
+
+			// Find providers for the file
+			providers, err := dhtApi.FindProviders(ctx, clientAnnouncementPath)
+			if err != nil {
+				log.Errorln("Error finding providers : ", err)
+				continue
+			}
+			for provider := range providers {
+				log.Debugln("Found provider : ", provider.ID.String())
 			}
 
 			err = clientAnnouncementTopic.Publish(ctx, clientAnnouncementJSON)
