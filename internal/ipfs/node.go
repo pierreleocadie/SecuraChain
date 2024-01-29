@@ -16,7 +16,7 @@ import (
 	"github.com/ipfs/kubo/core/node/libp2p"
 	"github.com/ipfs/kubo/plugin/loader"
 	"github.com/ipfs/kubo/repo/fsrepo"
-	cfg "github.com/pierreleocadie/SecuraChain/internal/config"
+	inconfig "github.com/pierreleocadie/SecuraChain/internal/config"
 )
 
 var loadPluginsOnce sync.Once
@@ -43,7 +43,7 @@ func setupPlugins(externalPluginsPath string) error {
 }
 
 // Create a repo ipfs-shell/ in the home directory
-func createRepo() (string, error) {
+func createRepo(cfgg *inconfig.Config) (string, error) {
 	var key = 2048
 
 	homeDir, err := os.UserHomeDir()
@@ -53,7 +53,7 @@ func createRepo() (string, error) {
 
 	ipfsPath := filepath.Join(homeDir, ".ipfs-shell")
 
-	err = os.Mkdir(ipfsPath, cfg.FileRights)
+	err = os.Mkdir(ipfsPath, os.FileMode(cfgg.FileRights))
 	if err != nil && !os.IsExist(err) {
 		log.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func createNode(ctx context.Context, repoPath string) (*core.IpfsNode, error) {
 }
 
 // Spawns a node
-func SpawnNode(ctx context.Context) (icore.CoreAPI, *core.IpfsNode, error) {
+func SpawnNode(ctx context.Context, cfgg *inconfig.Config) (icore.CoreAPI, *core.IpfsNode, error) {
 	// Load the plugins once
 	var onceErr error
 
@@ -106,7 +106,7 @@ func SpawnNode(ctx context.Context) (icore.CoreAPI, *core.IpfsNode, error) {
 	}
 
 	// Create a Repo IPFS
-	repoPath, err := createRepo()
+	repoPath, err := createRepo(cfgg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create the repo ./ipfs-shell: %s", err)
 	}

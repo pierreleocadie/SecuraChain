@@ -10,14 +10,14 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 )
 
-func SetupDHTDiscovery(ctx context.Context, host host.Host, bootstrapNode bool) {
+func SetupDHTDiscovery(ctx context.Context, cfg *config.Config, host host.Host, bootstrapNode bool) {
 	/*
 	* NETWORK PEER DISCOVERY WITH DHT
 	 */
 	// Convert the bootstrap peers from string to multiaddr
 	var bootstrapPeersMultiaddr []multiaddr.Multiaddr
 	if !bootstrapNode {
-		for _, peer := range config.BootstrapPeers {
+		for _, peer := range cfg.BootstrapPeers {
 			peerMultiaddr, err := multiaddr.NewMultiaddr(peer)
 			if err != nil {
 				log.Println("Error converting bootstrap peer to multiaddr : ", err)
@@ -30,9 +30,9 @@ func SetupDHTDiscovery(ctx context.Context, host host.Host, bootstrapNode bool) 
 	// Initialize DHT in server mode
 	dhtDiscovery := discovery.NewDHTDiscovery(
 		bootstrapNode,
-		config.RendezvousStringFlag,
+		cfg.RendezvousStringFlag,
 		bootstrapPeersMultiaddr,
-		config.DHTDiscoveryRefreshInterval,
+		cfg.DiscoveryRefreshInterval,
 	)
 
 	// Run DHT

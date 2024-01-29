@@ -11,8 +11,8 @@ import (
 )
 
 // FIXME: This function does not work as intended. It should remove peers from the peerstore if they are unreachable.
-func CleanUpPeers(ctx context.Context, host host.Host) {
-	ticker := time.NewTicker(config.PeerstoreCleanupInterval) // adjust interval to your needs
+func CleanUpPeers(ctx context.Context, host host.Host, cfg *config.Config) {
+	ticker := time.NewTicker(cfg.DiscoveryRefreshInterval) // adjust interval to your needs
 	defer ticker.Stop()
 
 	for {

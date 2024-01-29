@@ -16,7 +16,7 @@ import (
 
 // GetFile download a file using its CID (Content Identifier).
 // It creates the necessary directory if it doesn't exist and writes the file to a specified path.
-func GetFile(ctx context.Context, ipfsAPI icore.CoreAPI, cidFile path.ImmutablePath) error {
+func GetFile(ctx context.Context, config *config.Config, ipfsAPI icore.CoreAPI, cidFile path.ImmutablePath) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -24,7 +24,7 @@ func GetFile(ctx context.Context, ipfsAPI icore.CoreAPI, cidFile path.ImmutableP
 
 	downloadsStoragePath := filepath.Join(home, ".IPFS_Downloads/")
 	// Ensure the output directory exists or create it.
-	if err := os.MkdirAll(downloadsStoragePath, config.FileRights); err != nil {
+	if err := os.MkdirAll(downloadsStoragePath, os.FileMode(config.FileRights)); err != nil {
 		return fmt.Errorf("error creating output directory: %v", err)
 	}
 

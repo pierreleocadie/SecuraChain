@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
@@ -49,7 +48,7 @@ func main() {
 	/*
 	* IPFS NODE
 	 */
-	ipfsAPI, nodeIpfs := node.InitializeIPFSNode(ctx, log)
+	ipfsAPI, nodeIpfs := node.InitializeIPFSNode(ctx, cfg, log)
 
 	/*
 	* IPFS MEMORY MANAGEMENT
@@ -82,7 +81,7 @@ func main() {
 	/*
 	* DHT DISCOVERY
 	 */
-	node.SetupDHTDiscovery(ctx, host, false)
+	node.SetupDHTDiscovery(ctx, cfg, host, false)
 
 	/*
 	* PUBSUB
@@ -96,7 +95,7 @@ func main() {
 	toTransactionChan := make(chan map[string]interface{})
 
 	// Join the topic StorageNodeResponseStringFlag
-	storageNodeResponseTopic, err := ps.Join(config.StorageNodeResponseStringFlag)
+	storageNodeResponseTopic, err := ps.Join(cfg.StorageNodeResponseStringFlag)
 	if err != nil {
 		log.Panicf("Failed to join StorageNodeResponseStringFlag topic: %s", err)
 	}
@@ -155,7 +154,7 @@ func main() {
 			// Download the file
 			fileImmutablePath := path.FromCid(clientAnnouncement.FileCid)
 			log.Debugf("Downloading file %s", fileImmutablePath)
-			err = ipfs.GetFile(ctx, ipfsAPI, fileImmutablePath)
+			err = ipfs.GetFile(ctx, cfg, ipfsAPI, fileImmutablePath)
 			if err != nil {
 				log.Errorf("Failed to download file: %s", err)
 				continue
@@ -200,7 +199,7 @@ func main() {
 			}
 
 			// Add the file to IPFS
-			fileImmutablePathCid, err := ipfs.AddFile(ctx, ipfsAPI, downloadedFilePath)
+			fileImmutablePathCid, err := ipfs.AddFile(ctx, cfg, ipfsAPI, downloadedFilePath)
 			if err != nil {
 				log.Errorf("Failed to add file to IPFS: %s", err)
 				continue

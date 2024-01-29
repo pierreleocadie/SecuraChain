@@ -27,13 +27,13 @@ type MetadataRegistry struct {
 }
 
 // saveToJSON saves the metadata registry records to a JSON file.
-func saveToJSON(filePath string, registry MetadataRegistry) error {
+func saveToJSON(config *config.Config, filePath string, registry MetadataRegistry) error {
 	jsonData, err := json.Marshal(registry)
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(filepath.Clean(filePath), jsonData, config.FileRights)
+	return os.WriteFile(filepath.Clean(filePath), jsonData, os.FileMode(config.FileRights))
 }
 
 // loadFromJSON loads the metadata registry records from a JSON file.
@@ -49,7 +49,7 @@ func loadFromJSON(filePath string) (MetadataRegistry, error) {
 	return registry, err
 }
 
-func AddFileMetadataToRegistry(fileCid path.ImmutablePath, filePath string) error {
+func AddFileMetadataToRegistry(config *config.Config, fileCid path.ImmutablePath, filePath string) error {
 	var metadataRegistry = MetadataRegistry{}
 
 	fileName, fileSize, fileType, err := utils.FileInfo(filePath)
@@ -68,7 +68,7 @@ func AddFileMetadataToRegistry(fileCid path.ImmutablePath, filePath string) erro
 	if _, err := os.Stat(config.FileMetadataRegistryJSON); os.IsNotExist(err) {
 		metadataRegistry.Files = append(metadataRegistry.Files, fileMetadata)
 
-		if err := saveToJSON(config.FileMetadataRegistryJSON, metadataRegistry); err != nil {
+		if err := saveToJSON(config, config.FileMetadataRegistryJSON, metadataRegistry); err != nil {
 			log.Printf("Error saving JSON data %v", err)
 			return err
 		}
@@ -82,7 +82,7 @@ func AddFileMetadataToRegistry(fileCid path.ImmutablePath, filePath string) erro
 
 	metadataRegistry.Files = append(metadataRegistry.Files, fileMetadata)
 
-	if err := saveToJSON(config.FileMetadataRegistryJSON, metadataRegistry); err != nil {
+	if err := saveToJSON(config, config.FileMetadataRegistryJSON, metadataRegistry); err != nil {
 		log.Printf("Error saving JSON data %v", err)
 		return err
 	}
@@ -90,7 +90,7 @@ func AddFileMetadataToRegistry(fileCid path.ImmutablePath, filePath string) erro
 	return nil
 }
 
-func RemoveFileMetadataFromRegistry(fileCid path.ImmutablePath) error {
+func RemoveFileMetadataFromRegistry(config *config.Config, fileCid path.ImmutablePath) error {
 	metadataRegistry, err := loadFromJSON(config.FileMetadataRegistryJSON)
 	if err != nil {
 		log.Printf("Error loading JSON data %v", err)
@@ -106,7 +106,7 @@ func RemoveFileMetadataFromRegistry(fileCid path.ImmutablePath) error {
 	}
 
 	// Save the new metadata
-	if err := saveToJSON(config.FileMetadataRegistryJSON, metadataRegistry); err != nil {
+	if err := saveToJSON(config, config.FileMetadataRegistryJSON, metadataRegistry); err != nil {
 		log.Fatalf("Error saving JSON data: %v", err)
 		return err
 	}

@@ -38,7 +38,7 @@ func prepareFileForIPFS(path string) (files.Node, error) {
 
 // AddFileToIPFS adds a file to IPFS and returns its CID. It also collects and saves file metadata.
 // The function handles the file addition process and records metadata such as file size, type, name, and user public key.
-func AddFile(ctx context.Context, ipfsAPI icore.CoreAPI, filePath string) (path.ImmutablePath, error) {
+func AddFile(ctx context.Context, config *config.Config, ipfsAPI icore.CoreAPI, filePath string) (path.ImmutablePath, error) {
 	file, err := prepareFileForIPFS(filePath)
 	if err != nil {
 		log.Println("could not get File:", err)
@@ -58,7 +58,7 @@ func AddFile(ctx context.Context, ipfsAPI icore.CoreAPI, filePath string) (path.
 	}
 
 	localStoragePath := filepath.Join(home, ".IPFS_Local_Storage/")
-	if err := os.MkdirAll(localStoragePath, config.FileRights); err != nil {
+	if err := os.MkdirAll(localStoragePath, os.FileMode(config.FileRights)); err != nil {
 		return path.ImmutablePath{}, fmt.Errorf("error creating output directory : %v", err)
 	}
 
@@ -70,7 +70,7 @@ func AddFile(ctx context.Context, ipfsAPI icore.CoreAPI, filePath string) (path.
 	}
 
 	// restore file permissions
-	if err := os.Chmod(outputFilePath, config.FileRights); err != nil {
+	if err := os.Chmod(outputFilePath, os.FileMode(config.FileRights)); err != nil {
 		return path.ImmutablePath{}, fmt.Errorf("error restoring file permissions: %v", err)
 	}
 

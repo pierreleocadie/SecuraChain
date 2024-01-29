@@ -9,6 +9,7 @@ import (
 
 	ipfsLog "github.com/ipfs/go-log/v2"
 	iface "github.com/ipfs/kubo/core/coreiface"
+	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
@@ -16,7 +17,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
 
-func SendFile(ctx context.Context, selectedFile string, //nolint: funlen
+func SendFile(ctx context.Context, cfg *config.Config, selectedFile string, //nolint: funlen
 	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, ipfsAPI iface.CoreAPI,
 	clientAnnouncementChan chan *transaction.ClientAnnouncement,
 	log *ipfsLog.ZapEventLogger) error {
@@ -64,7 +65,7 @@ func SendFile(ctx context.Context, selectedFile string, //nolint: funlen
 	fileSize := fileStat.Size()
 
 	// 5. Add the encrypted file to IPFS
-	encryptedFileCid, err := ipfs.AddFile(ctx, ipfsAPI, encryptedFilePath)
+	encryptedFileCid, err := ipfs.AddFile(ctx, cfg, ipfsAPI, encryptedFilePath)
 	if err != nil {
 		log.Errorf("failed to add file to IPFS: %s", err)
 		return fmt.Errorf("failed to add file to IPFS: %s", err)

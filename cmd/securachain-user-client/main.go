@@ -57,7 +57,7 @@ func main() {
 	* IPFS NODE
 	 */
 	// Spawn an IPFS node
-	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx)
+	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx, cfg)
 	if err != nil {
 		log.Panicf("Failed to spawn IPFS node: %s", err)
 	}
@@ -73,7 +73,7 @@ func main() {
 	defer host.Close()
 
 	// Setup DHT discovery
-	node.SetupDHTDiscovery(ctx, host, false)
+	node.SetupDHTDiscovery(ctx, cfg, host, false)
 
 	/*
 	* PUBSUB
@@ -118,7 +118,7 @@ func main() {
 				if providerStats.TotalProvides >= 1 {
 					break
 				}
-				log.Debugf("Waiting for %d providers to be available", 10-providerStats.TotalProvides)
+				log.Debugf("Waiting for %d providers to be available", providerStats.TotalProvides)
 				time.Sleep(10 * time.Second)
 			}
 
@@ -194,6 +194,7 @@ func main() {
 
 	// create a new button to send a file over the network
 	sendFileButton := client.SendFileButton(ctx,
+		cfg,
 		selectedFileLabel,
 		&ecdsaKeyPair,
 		&aesKey,
