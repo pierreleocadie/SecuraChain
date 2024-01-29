@@ -3,7 +3,7 @@ windowHeight: 600
 userAgent: "SecuraChain"
 protocolVersion: "0.0.1"
 ecdsaKeyPairPath: "/Users/pierreleocadie/Documents/dev/SecuraChain/cmd/securachain-storage-node"
-ecdsaKeyPairPassword: "/Users/pierreleocadie/Documents/dev/SecuraChain/cmd/securachain-storage-node"
+aesKeyPath: "/Users/pierreleocadie/Documents/dev/SecuraChain/cmd/securachain-storage-node"
 lowWater: 160
 highWater: 192
 bootstrapPeers: [

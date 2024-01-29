@@ -3,7 +3,7 @@ windowHeight: 600
 userAgent: "SecuraChain"
 protocolVersion: "0.0.1"
 ecdsaKeyPairPath: ""
-ecdsaKeyPairPassword: ""
+aesKeyPath: ""
 lowWater: 160
 highWater: 192
 bootstrapPeers: [
