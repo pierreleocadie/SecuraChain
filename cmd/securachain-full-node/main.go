@@ -15,6 +15,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
+	"github.com/ipfs/boxo/path"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
@@ -49,7 +50,7 @@ func main() {
 	* IPFS NODE
 	 */
 	// Spawn an IPFS node
-	_, nodeIpfs, err := ipfs.SpawnNode(ctx)
+	ipfsApi, nodeIpfs, err := ipfs.SpawnNode(ctx)
 	if err != nil {
 		log.Fatalf("Failed to spawn IPFS node: %s", err)
 	}
@@ -262,6 +263,43 @@ func main() {
 	// 		time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second)
 	// 	}
 	// }()
+
+	/*
+	* SYNCHRONIZATION AND RE-SYNCHRONIZATION of nodes in case of absence
+	 */
+	// if the folder "blockchain doesn't exist, announce that the node is new and ask for the blockchain
+	// if the folder has not been updated for a long time, ask for the blockchain
+
+	var oldCid path.ImmutablePath
+
+	go func() {
+		// Add the blockchain to IPFS
+		fileImmutablePathCid, err := ipfs.AddFile(ctx, nodeIpfs, ipfsApi, "./blockchain")
+		if err != nil {
+			log.Errorln("Error adding the blockhain to IPFS : ", err)
+		}
+		// Pin the file on IPFS
+		pinned, err := ipfs.PinFile(ctx, ipfsApi, fileImmutablePathCid)
+		if err != nil {
+			log.Errorln("Error pinning the blockchain to IPFS : ", err)
+		}
+		log.Debugln("Blockchain pinned on IPFS : ", pinned)
+
+		// Unpin the file on IPFS
+		unpinned, err := ipfs.UnpinFile(ctx, ipfsApi, oldCid)
+		if err != nil {
+			log.Errorln("Error unpinning the blockchain to IPFS : ", err)
+		}
+		log.Debugln("Blockchain unpinned on IPFS : ", unpinned)
+
+		oldCid = fileImmutablePathCid
+
+		time.Sleep(300 * time.Second) // Every five minutes add and pin the last version of the blockchain on IPFS
+
+	}()
+	// 1. If the node is the first full node, or every node are inactive then he can create a data base
+	// 2. If the node is not the first full node, he can ask to the other full nodes to send him the data base, and donwnload it and write on it after
+	// 3. If the node stopping and restarting ecraer la version précédente
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES
