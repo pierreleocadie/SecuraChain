@@ -297,6 +297,42 @@ func main() {
 		time.Sleep(300 * time.Second) // Every five minutes add and pin the last version of the blockchain on IPFS
 
 	}()
+
+	// Ask for the blockchain to the other full nodes
+
+	// Join the topic FullNodeAskingForBlockchain
+	fullNodeAskingForBlockchainTopic, err := ps.Join(cfg.FullNodeAskingForBlockchainStringFlag)
+	if err != nil {
+		panic(err)
+	}
+	subFullNodeAskingForBlockchain, err := fullNodeAskingForBlockchainTopic.Subscribe()
+	if err != nil {
+		panic(err)
+	}
+
+	go func() {
+		for {
+			err = fullNodeAskingForBlockchainTopic.Publish(ctx, []byte("I need the blockchain"))
+			if err != nil {
+				log.Errorf("Error publishing block announcement to the network : %s", err)
+				continue
+			}
+		}
+
+	}()
+
+	// Handle incoming full node asking for blockchain messages
+	go func() {
+		for {
+			msg, err := subFullNodeAskingForBlockchain.Next(ctx)
+			if err != nil {
+				panic(err)
+			}
+			log.Debugln("Received FullNodeAskingForBlockchain message from ", msg.GetFrom().String())
+			log.Debugln("Full Node Asking For Blockchain: ", string(msg.Data))
+		}
+	}()
+
 	// 1. If the node is the first full node, or every node are inactive then he can create a data base
 	// 2. If the node is not the first full node, he can ask to the other full nodes to send him the data base, and donwnload it and write on it after
 	// 3. If the node stopping and restarting ecraer la version précédente

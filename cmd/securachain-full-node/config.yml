@@ -21,5 +21,6 @@ clientAnnouncementStringFlag: "ClientAnnouncement"
 storageNodeResponseStringFlag: "StorageNodeResponse"
 BlockAnnouncementStringFlag: "BlockAnnouncement"
 fullNodeAnnouncementStringFlag: "FullNodeAnnouncement"
+FullNodeAskingForBlockchainStringFlag: "FullNodeAskingForBlockchain"
 fileRights: 0700
 fileMetadataRegistryJson: "fileMetadataRegistry.json"
