@@ -15,7 +15,6 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
-	"github.com/ipfs/boxo/path"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
@@ -50,7 +49,7 @@ func main() {
 	* IPFS NODE
 	 */
 	// Spawn an IPFS node
-	ipfsApi, nodeIpfs, err := ipfs.SpawnNode(ctx)
+	_, nodeIpfs, err := ipfs.SpawnNode(ctx)
 	if err != nil {
 		log.Fatalf("Failed to spawn IPFS node: %s", err)
 	}
@@ -67,7 +66,7 @@ func main() {
 	// Setup DHT discovery
 	node.SetupDHTDiscovery(ctx, host, false)
 
-	log.Debugf("Minor node initialized with PeerID: %s", host.ID().String())
+	log.Debugf("Full node initialized with PeerID: %s", host.ID().String())
 
 	/*
 	* NETWORK PEER DISCOVERY WITH mDNS
@@ -79,6 +78,7 @@ func main() {
 		log.Fatalf("Failed to run mDNS: %s", err)
 		return
 	}
+
 	/*
 	* PUBSUB
 	 */
@@ -86,6 +86,120 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	/*
+	* First step : ask for the blockchain to the other full nodes if I'm not up to date, or if I'm new
+	 */
+
+	// Checks if the node got the blockchain
+	blockChainInfo, err := os.Stat("./blockchain")
+
+	// if the blockchain doesn't exist, or is not up to date, ask for the blockchain to the other full nodes
+	if os.IsNotExist(err) {
+		log.Debugln("Blockchain doesn't exist")
+
+		// Join the topic FullNodeAskingForBlockchain
+		fullNodeAskingForBlockchainTopic, err := ps.Join("FullNodeAskingForBlockchain")
+		if err != nil {
+			panic(err)
+		}
+
+		// Ask for the blockchain to the other full nodes
+		log.Debugln("Full Node Asking For Blockchain")
+		err = fullNodeAskingForBlockchainTopic.Publish(ctx, []byte("I need the blockchain"))
+		if err != nil {
+			log.Errorf("Error publishing block announcement to the network : %s", err)
+
+		}
+
+		// Handle incoming blockchain from full nodes
+
+		// Join the topic FullNodeGivingBlockchain
+		fullNodeGivingBlockchainTopic, err := ps.Join("FullNodeGivingBlockchain")
+		if err != nil {
+			panic(err)
+		}
+		subFullNodeGivingBlockchain, err := fullNodeGivingBlockchainTopic.Subscribe()
+		if err != nil {
+			panic(err)
+		}
+
+		msg, err := subFullNodeGivingBlockchain.Next(ctx)
+		if err != nil {
+			panic(err)
+		}
+		log.Debugln("Blockchain: ", string(msg.Data))
+
+	} else {
+		log.Debugln("Blockchain exists")
+
+		lastTimeModified := blockChainInfo.ModTime()
+		currentTime := time.Now()
+
+		if currentTime.Sub(lastTimeModified) > 1*time.Hour {
+			// If the blockchain has not been updated for more than an hour, it means that the node is not up to date
+
+			log.Debugln("Blockchain is not up to date")
+
+			// Join the topic FullNodeAskingForBlockchain
+			fullNodeAskingForBlockchainTopic, err := ps.Join("FullNodeAskingForBlockchain")
+			if err != nil {
+				panic(err)
+			}
+
+			// Ask for the blockchain to the other full nodes
+			log.Debugln("Full Node Asking For Blockchain")
+			err = fullNodeAskingForBlockchainTopic.Publish(ctx, []byte("I need the blockchain"))
+			if err != nil {
+				log.Errorf("Error publishing block announcement to the network : %s", err)
+
+			}
+
+			// Handle incoming blockchain from full nodes
+
+			// Join the topic FullNodeGivingBlockchain
+			fullNodeGivingBlockchainTopic, err := ps.Join("FullNodeGivingBlockchain")
+			if err != nil {
+				panic(err)
+			}
+			subFullNodeGivingBlockchain, err := fullNodeGivingBlockchainTopic.Subscribe()
+			if err != nil {
+				panic(err)
+			}
+
+			msg, err := subFullNodeGivingBlockchain.Next(ctx)
+			if err != nil {
+				panic(err)
+			}
+			log.Debugln("Blockchain: ", string(msg.Data))
+
+		} else {
+			log.Debugln("Blockchain is up to date")
+		}
+	}
+
+	// Simplifiy the code above
+	// Create the code to giving the blockchain to the other full nodes asking for it
+
+	/*
+	* Second step : Wait for blocks coming from minors
+	 */
+
+	/*
+	* Thrid step : Wait for blocks coming from minors
+	 */
+
+	/*
+	* Fourth step : Add the blocks to the blockchain
+	 */
+
+	/*
+	* Fifth step : Share the blockchain with the nodes in the network
+	 */
+
+	/*
+	* Sixth step : Manage random selection if several blocks arrive at the same time
+	 */
 
 	// Join the topic FullNodeAnnouncementStringFlag
 	fullNodeAnnouncementTopic, err := ps.Join(cfg.FullNodeAnnouncementStringFlag)
@@ -270,68 +384,33 @@ func main() {
 	// if the folder "blockchain doesn't exist, announce that the node is new and ask for the blockchain
 	// if the folder has not been updated for a long time, ask for the blockchain
 
-	var oldCid path.ImmutablePath
+	// var oldCid path.ImmutablePath
 
-	go func() {
-		// Add the blockchain to IPFS
-		fileImmutablePathCid, err := ipfs.AddFile(ctx, nodeIpfs, ipfsApi, "./blockchain")
-		if err != nil {
-			log.Errorln("Error adding the blockhain to IPFS : ", err)
-		}
-		// Pin the file on IPFS
-		pinned, err := ipfs.PinFile(ctx, ipfsApi, fileImmutablePathCid)
-		if err != nil {
-			log.Errorln("Error pinning the blockchain to IPFS : ", err)
-		}
-		log.Debugln("Blockchain pinned on IPFS : ", pinned)
+	// go func() {
+	// 	// Add the blockchain to IPFS
+	// 	fileImmutablePathCid, err := ipfs.AddFile(ctx, nodeIpfs, ipfsApi, "./blockchain")
+	// 	if err != nil {
+	// 		log.Errorln("Error adding the blockhain to IPFS : ", err)
+	// 	}
+	// 	// Pin the file on IPFS
+	// 	pinned, err := ipfs.PinFile(ctx, ipfsApi, fileImmutablePathCid)
+	// 	if err != nil {
+	// 		log.Errorln("Error pinning the blockchain to IPFS : ", err)
+	// 	}
+	// 	log.Debugln("Blockchain pinned on IPFS : ", pinned)
 
-		// Unpin the file on IPFS
-		unpinned, err := ipfs.UnpinFile(ctx, ipfsApi, oldCid)
-		if err != nil {
-			log.Errorln("Error unpinning the blockchain to IPFS : ", err)
-		}
-		log.Debugln("Blockchain unpinned on IPFS : ", unpinned)
+	// 	// Unpin the file on IPFS
+	// 	unpinned, err := ipfs.UnpinFile(ctx, ipfsApi, oldCid)
+	// 	if err != nil {
+	// 		log.Errorln("Error unpinning the blockchain to IPFS : ", err)
+	// 	}
+	// 	log.Debugln("Blockchain unpinned on IPFS : ", unpinned)
 
-		oldCid = fileImmutablePathCid
+	// 	oldCid = fileImmutablePathCid
 
-		time.Sleep(300 * time.Second) // Every five minutes add and pin the last version of the blockchain on IPFS
+	// 	time.Sleep(300 * time.Second) // Every five minutes add and pin the last version of the blockchain on IPFS
 
-	}()
-
-	// Ask for the blockchain to the other full nodes
-
-	// Join the topic FullNodeAskingForBlockchain
-	fullNodeAskingForBlockchainTopic, err := ps.Join(cfg.FullNodeAskingForBlockchainStringFlag)
-	if err != nil {
-		panic(err)
-	}
-	subFullNodeAskingForBlockchain, err := fullNodeAskingForBlockchainTopic.Subscribe()
-	if err != nil {
-		panic(err)
-	}
-
-	go func() {
-		for {
-			err = fullNodeAskingForBlockchainTopic.Publish(ctx, []byte("I need the blockchain"))
-			if err != nil {
-				log.Errorf("Error publishing block announcement to the network : %s", err)
-				continue
-			}
-		}
-
-	}()
-
-	// Handle incoming full node asking for blockchain messages
-	go func() {
-		for {
-			msg, err := subFullNodeAskingForBlockchain.Next(ctx)
-			if err != nil {
-				panic(err)
-			}
-			log.Debugln("Received FullNodeAskingForBlockchain message from ", msg.GetFrom().String())
-			log.Debugln("Full Node Asking For Blockchain: ", string(msg.Data))
-		}
-	}()
+	// }()
 
 	// 1. If the node is the first full node, or every node are inactive then he can create a data base
 	// 2. If the node is not the first full node, he can ask to the other full nodes to send him the data base, and donwnload it and write on it after
