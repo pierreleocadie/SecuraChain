@@ -18,7 +18,7 @@ var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file
 
 func main() {
 	log := ipfsLog.Logger("bootstrap-node")
-	err := ipfsLog.SetLogLevel("*", "DEBUG")
+	err := ipfsLog.SetLogLevel("bootstrap-node", "DEBUG")
 	if err != nil {
 		log.Errorln("Error setting log level : ", err)
 	}
@@ -63,6 +63,7 @@ func main() {
 		if err != nil {
 			log.Errorln("Error instantiating relay service : ", err)
 		}
+		log.Debugln("Relay service started")
 	} else {
 		log.Debugln("Node is behind NAT")
 	}
