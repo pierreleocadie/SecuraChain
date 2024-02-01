@@ -15,7 +15,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/libp2p/go-libp2p/core/peerstore"
 	relayClient "github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/client"
 	"github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
 	"github.com/multiformats/go-multiaddr"
@@ -104,24 +103,20 @@ func main() {
 							if protocol == "/libp2p/circuit/relay/0.2.0/hop" || protocol == "/libp2p/circuit/relay/0.2.0/stop" {
 								log.Debugln("Found relay node : ", p.String())
 								// Reserve with the relay node
-								_, err := relayClient.Reserve(ctx, host, host.Peerstore().PeerInfo(p))
+								reservation, err := relayClient.Reserve(ctx, host, host.Peerstore().PeerInfo(p))
 								if err != nil {
 									log.Errorln("Error reserving with relay node : ", err)
 									continue
 								}
-								// Remove all current host addresses to avoid dialing directly that would bypass the relay and fail
-								host.Peerstore().ClearAddrs(host.ID())
-								log.Debugf("Removed all host addresses")
-								log.Debugf("Host addresses : %v", host.Addrs())
 								// Add a new address using the relay node for the host
 								relayAddr, err := multiaddr.NewMultiaddr("/p2p/" + p.String() + "/p2p-circuit/p2p/" + host.ID().String())
 								if err != nil {
 									log.Errorln("Error creating relay address : ", err)
 									continue
 								}
-								host.Peerstore().AddAddr(host.ID(), relayAddr, peerstore.PermanentAddrTTL)
+								reservation.Addrs = append(reservation.Addrs, relayAddr)
 								log.Debugln("Added relay address : ", relayAddr.String())
-								log.Debugf("Host addresses : %v", host.Addrs())
+								log.Debugf("Host addresses : %v", reservation.Addrs)
 								break
 							}
 						}
