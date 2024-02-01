@@ -15,6 +15,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
+	"github.com/ipfs/boxo/path"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
@@ -49,7 +50,7 @@ func main() {
 	* IPFS NODE
 	 */
 	// Spawn an IPFS node
-	_, nodeIpfs, err := ipfs.SpawnNode(ctx)
+	ipfsApi, nodeIpfs, err := ipfs.SpawnNode(ctx)
 	if err != nil {
 		log.Fatalf("Failed to spawn IPFS node: %s", err)
 	}
@@ -180,26 +181,23 @@ func main() {
 
 	// Simplifiy the code above
 	// Create the code to giving the blockchain to the other full nodes asking for it
+	// Case where there's no blockchain (create it)
+	// 1. If the node is the first full node, or every node are inactive then he can create a data base
+	// 2. If the node is not the first full node, he can ask to the other full nodes to send him the data base, and donwnload it and write on it after
 
 	/*
 	* Second step : Wait for blocks coming from minors
 	 */
 
-	/*
-	* Thrid step : Wait for blocks coming from minors
-	 */
-
-	/*
-	* Fourth step : Add the blocks to the blockchain
-	 */
-
-	/*
-	* Fifth step : Share the blockchain with the nodes in the network
-	 */
-
-	/*
-	* Sixth step : Manage random selection if several blocks arrive at the same time
-	 */
+	// Join the topic BlockAnnouncementStringFlag
+	blockAnnouncementTopic, err := ps.Join(cfg.BlockAnnouncementStringFlag)
+	if err != nil {
+		panic(err)
+	}
+	subBlockAnnouncement, err := blockAnnouncementTopic.Subscribe()
+	if err != nil {
+		panic(err)
+	}
 
 	// Join the topic FullNodeAnnouncementStringFlag
 	fullNodeAnnouncementTopic, err := ps.Join(cfg.FullNodeAnnouncementStringFlag)
@@ -210,6 +208,72 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// Handle incoming block announcement messages from minors
+	go func() {
+		for {
+
+			msg, err := subBlockAnnouncement.Next(ctx)
+			if err != nil {
+				log.Panic("Error getting block announcement message : ", err)
+			}
+
+			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
+			log.Debugln("Received block announcement message : ", msg.Data)
+
+			/*
+			* BLOCK VALIDATION
+			 */
+
+			// Deserialize the block announcement
+			blockAnnounced, err := block.DeserializeBlock(msg.Data)
+			if err != nil {
+				log.Errorf("Error deserializing block announcement : %s", err)
+				continue
+			}
+
+			// blockPrevBlock, err := block.DeserializeBlock(blockAnnounced.PrevBlock)
+			// if err != nil {
+			// 	log.Errorf("Error deserializing block announcement : %s", err)
+			// 	continue
+			// }
+
+			/*
+			* Thrid step : Validate blocks coming from minors
+			 */
+			if !consensus.ValidateBlock(blockAnnounced, nil) {
+				log.Error("Block validation failed")
+				continue
+			} else {
+
+				// Handle broadcasting the block to the network (for full nodes, minors, and indexing and search nodes)
+				go func() {
+					for {
+						blockAnnouncedBytes, err := blockAnnounced.Serialize()
+						if err != nil {
+							log.Errorf("Error serializing block announcement : %s", err)
+							continue
+						}
+
+						log.Debugln("Publishing block announcement to the network : ", string(blockAnnouncedBytes))
+
+						err = fullNodeAnnouncementTopic.Publish(ctx, blockAnnouncedBytes)
+						if err != nil {
+							log.Errorf("Error publishing block announcement to the network : %s", err)
+							continue
+						}
+						time.Sleep(30 * time.Second)
+					}
+				}()
+
+			}
+
+		}
+	}()
+
+	/*
+	* Fourth step : Add the blocks to the blockchain
+	 */
 
 	pebbleDB, err := pebble.NewPebbleTransactionDB("blockchain")
 	if err != nil {
@@ -263,75 +327,41 @@ func main() {
 		}
 	}()
 
-	// Join the topic BlockAnnouncementStringFlag
-	blockAnnouncementTopic, err := ps.Join(cfg.BlockAnnouncementStringFlag)
-	if err != nil {
-		panic(err)
-	}
-	subBlockAnnouncement, err := blockAnnouncementTopic.Subscribe()
-	if err != nil {
-		panic(err)
-	}
+	/*
+	* Fifth step : SYNCHRONIZATION AND RE-SYNCHRONIZATION of nodes in case of absence
+	 */
 
-	// Handle incoming block announcement messages from minors
+	var oldCid path.ImmutablePath
+
 	go func() {
-		for {
-
-			msg, err := subBlockAnnouncement.Next(ctx)
-			if err != nil {
-				log.Panic("Error getting block announcement message : ", err)
-			}
-
-			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
-			log.Debugln("Received block announcement message : ", msg.Data)
-
-			/*
-			* BLOCK VALIDATION
-			 */
-
-			// Deserialize the block announcement
-			blockAnnounced, err := block.DeserializeBlock(msg.Data)
-			if err != nil {
-				log.Errorf("Error deserializing block announcement : %s", err)
-				continue
-			}
-
-			// blockPrevBlock, err := block.DeserializeBlock(blockAnnounced.PrevBlock)
-			// if err != nil {
-			// 	log.Errorf("Error deserializing block announcement : %s", err)
-			// 	continue
-			// }
-
-			// Validate the block
-			if !consensus.ValidateBlock(blockAnnounced, nil) {
-				log.Error("Block validation failed")
-				continue
-			} else {
-
-				// Handle broadcasting the block to the network (for full nodes, minors, and indexing and search nodes)
-				go func() {
-					for {
-						blockAnnouncedBytes, err := blockAnnounced.Serialize()
-						if err != nil {
-							log.Errorf("Error serializing block announcement : %s", err)
-							continue
-						}
-
-						log.Debugln("Publishing block announcement to the network : ", string(blockAnnouncedBytes))
-
-						err = fullNodeAnnouncementTopic.Publish(ctx, blockAnnouncedBytes)
-						if err != nil {
-							log.Errorf("Error publishing block announcement to the network : %s", err)
-							continue
-						}
-						time.Sleep(30 * time.Second)
-					}
-				}()
-
-			}
-
+		// Add the blockchain to IPFS
+		fileImmutablePathCid, err := ipfs.AddFile(ctx, nodeIpfs, ipfsApi, "./blockchain")
+		if err != nil {
+			log.Errorln("Error adding the blockhain to IPFS : ", err)
 		}
+		// Pin the file on IPFS
+		pinned, err := ipfs.PinFile(ctx, ipfsApi, fileImmutablePathCid)
+		if err != nil {
+			log.Errorln("Error pinning the blockchain to IPFS : ", err)
+		}
+		log.Debugln("Blockchain pinned on IPFS : ", pinned)
+
+		// Unpin the file on IPFS
+		unpinned, err := ipfs.UnpinFile(ctx, ipfsApi, oldCid)
+		if err != nil {
+			log.Errorln("Error unpinning the blockchain to IPFS : ", err)
+		}
+		log.Debugln("Blockchain unpinned on IPFS : ", unpinned)
+
+		oldCid = fileImmutablePathCid
+
+		time.Sleep(300 * time.Second) // Every five minutes add and pin the last version of the blockchain on IPFS
+
 	}()
+
+	/*
+	* Sixth step : Manage random selection if several blocks arrive at the same time
+	 */
 
 	// stayAliveTopic, err := ps.Join("stayAlive")
 	// if err != nil {
@@ -377,44 +407,6 @@ func main() {
 	// 		time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second)
 	// 	}
 	// }()
-
-	/*
-	* SYNCHRONIZATION AND RE-SYNCHRONIZATION of nodes in case of absence
-	 */
-	// if the folder "blockchain doesn't exist, announce that the node is new and ask for the blockchain
-	// if the folder has not been updated for a long time, ask for the blockchain
-
-	// var oldCid path.ImmutablePath
-
-	// go func() {
-	// 	// Add the blockchain to IPFS
-	// 	fileImmutablePathCid, err := ipfs.AddFile(ctx, nodeIpfs, ipfsApi, "./blockchain")
-	// 	if err != nil {
-	// 		log.Errorln("Error adding the blockhain to IPFS : ", err)
-	// 	}
-	// 	// Pin the file on IPFS
-	// 	pinned, err := ipfs.PinFile(ctx, ipfsApi, fileImmutablePathCid)
-	// 	if err != nil {
-	// 		log.Errorln("Error pinning the blockchain to IPFS : ", err)
-	// 	}
-	// 	log.Debugln("Blockchain pinned on IPFS : ", pinned)
-
-	// 	// Unpin the file on IPFS
-	// 	unpinned, err := ipfs.UnpinFile(ctx, ipfsApi, oldCid)
-	// 	if err != nil {
-	// 		log.Errorln("Error unpinning the blockchain to IPFS : ", err)
-	// 	}
-	// 	log.Debugln("Blockchain unpinned on IPFS : ", unpinned)
-
-	// 	oldCid = fileImmutablePathCid
-
-	// 	time.Sleep(300 * time.Second) // Every five minutes add and pin the last version of the blockchain on IPFS
-
-	// }()
-
-	// 1. If the node is the first full node, or every node are inactive then he can create a data base
-	// 2. If the node is not the first full node, he can ask to the other full nodes to send him the data base, and donwnload it and write on it after
-	// 3. If the node stopping and restarting ecraer la version précédente
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES
