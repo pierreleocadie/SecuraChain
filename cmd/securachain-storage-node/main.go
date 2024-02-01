@@ -7,8 +7,12 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"time"
 
+	relayClient "github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/client"
+	"github.com/multiformats/go-multiaddr"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
+	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
@@ -19,6 +23,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peerstore"
+	"github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
 )
 
 var (
@@ -84,6 +90,62 @@ func main() {
 	* DHT DISCOVERY
 	 */
 	node.SetupDHTDiscovery(ctx, cfg, host, false)
+
+	/*
+	* RELAY SERVICE
+	 */
+	// Check if the node is behind NAT
+	behindNAT := discovery.NATDiscovery(log)
+
+	// If the node is behind NAT, search for a node that supports relay
+	// TODO: Optimize this code
+	if behindNAT {
+		go func() {
+			ticker := time.NewTicker(10 * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ticker.C:
+					for _, p := range host.Network().Peers() {
+						peerProtocols, err := host.Peerstore().GetProtocols(p)
+						if err != nil {
+							log.Errorln("Error getting peer protocols : ", err)
+							continue
+						}
+						for _, protocol := range peerProtocols {
+							if protocol == "/libp2p/circuit/relay/0.2.0" {
+								log.Debugln("Found relay node : ", p.String())
+								// Reserve with the relay node
+								_, err := relayClient.Reserve(ctx, host, host.Peerstore().PeerInfo(p))
+								if err != nil {
+									log.Errorln("Error reserving with relay node : ", err)
+									continue
+								}
+								// Add a new address using the relay node for the host
+								relayAddr, err := multiaddr.NewMultiaddr("/p2p/" + p.String() + "/p2p-circuit/p2p/" + host.ID().String())
+								if err != nil {
+									log.Errorln("Error creating relay address : ", err)
+									continue
+								}
+								host.Peerstore().AddAddr(host.ID(), relayAddr, peerstore.PermanentAddrTTL)
+								log.Debugln("Added relay address : ", relayAddr.String())
+								break
+							}
+						}
+					}
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+	} else {
+		log.Debugln("Node is not behind NAT")
+		// Start the relay service
+		_, err = relay.New(host)
+		if err != nil {
+			log.Errorln("Error instantiating relay service : ", err)
+		}
+	}
 
 	/*
 	* PUBSUB
