@@ -101,7 +101,7 @@ func main() {
 							continue
 						}
 						for _, protocol := range peerProtocols {
-							if protocol == "/libp2p/circuit/relay/0.2.0" {
+							if protocol == "/libp2p/circuit/relay/0.2.0/hop" || protocol == "/libp2p/circuit/relay/0.2.0/stop" {
 								log.Debugln("Found relay node : ", p.String())
 								// Reserve with the relay node
 								_, err := relayClient.Reserve(ctx, host, host.Peerstore().PeerInfo(p))
