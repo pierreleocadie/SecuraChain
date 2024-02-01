@@ -42,19 +42,19 @@ func NewDHTDiscovery(bootstrapNode bool, rendezvousString string, bootstrapPeers
 // bootstrap peers if necessary, and sets up continuous discovery of new peers.
 func (d *DHT) Run(ctx context.Context, host host.Host) error {
 	if err := d.startDHT(ctx, host); err != nil {
-		return fmt.Errorf("starting DHT failed: %w", err)
+		return fmt.Errorf("[Run] starting DHT failed: %w", err)
 	}
 
 	if d.BootstrapNode {
-		log.Print("BOOTSTRAP NODE - DHT IN SERVER MODE")
+		log.Print("[Run] BOOTSTRAP NODE - DHT IN SERVER MODE")
 	} else {
 		if err := d.IpfsDHT.Bootstrap(ctx); err != nil {
-			return fmt.Errorf("DHT bootstrap failed: %w", err)
+			return fmt.Errorf("[Run] DHT bootstrap failed: %w", err)
 		}
-		log.Println("Bootstrapping DHT...")
+		log.Println("[Run] Bootstrapping DHT...")
 		d.bootstrapPeers(ctx, host)
 
-		log.Println("Announcing ourselves...")
+		log.Println("[Run] Announcing ourselves...")
 		routingDiscovery := routing.NewRoutingDiscovery(d.IpfsDHT)
 
 		go func() {
@@ -100,7 +100,7 @@ func (d *DHT) bootstrapPeers(ctx context.Context, host host.Host) {
 	for _, peerAddr := range d.BootstrapPeers {
 		peerInfo, err := peer.AddrInfoFromP2pAddr(peerAddr)
 		if err != nil {
-			log.Printf("Invalid peer address: %v", err)
+			log.Printf("[bootstrapPeers] Invalid peer address: %v", err)
 			continue
 		}
 
@@ -115,7 +115,7 @@ func (d *DHT) bootstrapPeers(ctx context.Context, host host.Host) {
 				log.Println("[bootstrapPeers] Connection failed")
 				// log.Printf("Connection failed to %s: %v", pi.ID, err)
 			} else {
-				log.Printf("Connection successful to %s", pi.ID)
+				log.Printf("[bootstrapPeers] Connection successful to %s", pi.ID)
 			}
 		}(*peerInfo)
 	}

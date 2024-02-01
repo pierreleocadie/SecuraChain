@@ -1,0 +1,61 @@
+package discovery
+
+import (
+	"io"
+	"net"
+	"net/http"
+
+	ipfsLog "github.com/ipfs/go-log/v2"
+)
+
+func getLocalIP() (string, error) {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+	return localAddr.IP.String(), nil
+}
+
+func getPublicIP() (string, error) {
+	resp, err := http.Get("https://api.ipify.org")
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	ip, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(ip), nil
+}
+
+func NATDiscovery(log *ipfsLog.ZapEventLogger) bool {
+	localIP, err := getLocalIP()
+	if err != nil {
+		log.Errorf("Error getting local IP: %s", err)
+		return false
+	}
+
+	publicIP, err := getPublicIP()
+	if err != nil {
+		log.Errorf("Error getting public IP: %s", err)
+		return false
+	}
+
+	log.Debugf("Local IP: %s", localIP)
+	log.Debugf("Public IP: %s", publicIP)
+
+	if localIP != publicIP {
+		log.Infof("This machine is behind NAT.")
+		return true
+	} else {
+		log.Infof("This machine is not behind NAT.")
+		return false
+	}
+}
