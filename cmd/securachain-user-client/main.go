@@ -15,6 +15,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	relayClient "github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/client"
 	"github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
 	"github.com/multiformats/go-multiaddr"
@@ -90,10 +91,14 @@ func main() {
 		go func() {
 			ticker := time.NewTicker(10 * time.Second)
 			defer ticker.Stop()
+			relayNodes := make(map[peer.ID]bool)
 			for {
 				select {
 				case <-ticker.C:
 					for _, p := range host.Network().Peers() {
+						if relayNodes[p] {
+							continue
+						}
 						peerProtocols, err := host.Peerstore().GetProtocols(p)
 						if err != nil {
 							log.Errorln("Error getting peer protocols : ", err)
@@ -117,6 +122,8 @@ func main() {
 								reservation.Addrs = append(reservation.Addrs, relayAddr)
 								log.Debugln("Added relay address : ", relayAddr.String())
 								log.Debugf("Host addresses : %v", reservation.Addrs)
+								// Add the relay node to the relayNodes map
+								relayNodes[p] = true
 								break
 							}
 						}
