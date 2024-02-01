@@ -109,6 +109,10 @@ func main() {
 									log.Errorln("Error reserving with relay node : ", err)
 									continue
 								}
+								// Remove all current host addresses to avoid dialing directly that would bypass the relay and fail
+								host.Peerstore().ClearAddrs(host.ID())
+								log.Debugf("Removed all host addresses")
+								log.Debugf("Host addresses : %v", host.Addrs())
 								// Add a new address using the relay node for the host
 								relayAddr, err := multiaddr.NewMultiaddr("/p2p/" + p.String() + "/p2p-circuit/p2p/" + host.ID().String())
 								if err != nil {
@@ -117,6 +121,7 @@ func main() {
 								}
 								host.Peerstore().AddAddr(host.ID(), relayAddr, peerstore.PermanentAddrTTL)
 								log.Debugln("Added relay address : ", relayAddr.String())
+								log.Debugf("Host addresses : %v", host.Addrs())
 								break
 							}
 						}
