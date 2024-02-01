@@ -18,7 +18,7 @@ var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file
 
 func main() {
 	log := ipfsLog.Logger("bootstrap-node")
-	err := ipfsLog.SetLogLevel("bootstrap-node", "DEBUG")
+	err := ipfsLog.SetLogLevel("*", "DEBUG")
 	if err != nil {
 		log.Errorln("Error setting log level : ", err)
 	}
