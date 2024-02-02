@@ -10,6 +10,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/discovery"
+	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/internal/pebble"
@@ -92,94 +93,15 @@ func main() {
 	* First step : ask for the blockchain to the other full nodes if I'm not up to date, or if I'm new
 	 */
 
-	// Checks if the node got the blockchain
-	blockChainInfo, err := os.Stat("./blockchain")
-
-	// if the blockchain doesn't exist, or is not up to date, ask for the blockchain to the other full nodes
-	if os.IsNotExist(err) {
-		log.Debugln("Blockchain doesn't exist")
-
-		// Join the topic FullNodeAskingForBlockchain
-		fullNodeAskingForBlockchainTopic, err := ps.Join("FullNodeAskingForBlockchain")
-		if err != nil {
-			panic(err)
-		}
-
-		// Ask for the blockchain to the other full nodes
-		log.Debugln("Full Node Asking For Blockchain")
-		err = fullNodeAskingForBlockchainTopic.Publish(ctx, []byte("I need the blockchain"))
-		if err != nil {
-			log.Errorf("Error publishing block announcement to the network : %s", err)
-
-		}
-
-		// Handle incoming blockchain from full nodes
-
-		// Join the topic FullNodeGivingBlockchain
-		fullNodeGivingBlockchainTopic, err := ps.Join("FullNodeGivingBlockchain")
-		if err != nil {
-			panic(err)
-		}
-		subFullNodeGivingBlockchain, err := fullNodeGivingBlockchainTopic.Subscribe()
-		if err != nil {
-			panic(err)
-		}
-
-		msg, err := subFullNodeGivingBlockchain.Next(ctx)
-		if err != nil {
-			panic(err)
-		}
-		log.Debugln("Blockchain: ", string(msg.Data))
-
+	// Check if the blockchain exists
+	if fullnode.NeedToFetchBlockchain(ctx) {
+		log.Debugln("Blockchain doesn't exist or is not up to date")
+		fullnode.FetchBlockchain(ctx, 5*time.Minute, ps)
 	} else {
-		log.Debugln("Blockchain exists")
-
-		lastTimeModified := blockChainInfo.ModTime()
-		currentTime := time.Now()
-
-		if currentTime.Sub(lastTimeModified) > 1*time.Hour {
-			// If the blockchain has not been updated for more than an hour, it means that the node is not up to date
-
-			log.Debugln("Blockchain is not up to date")
-
-			// Join the topic FullNodeAskingForBlockchain
-			fullNodeAskingForBlockchainTopic, err := ps.Join("FullNodeAskingForBlockchain")
-			if err != nil {
-				panic(err)
-			}
-
-			// Ask for the blockchain to the other full nodes
-			log.Debugln("Full Node Asking For Blockchain")
-			err = fullNodeAskingForBlockchainTopic.Publish(ctx, []byte("I need the blockchain"))
-			if err != nil {
-				log.Errorf("Error publishing block announcement to the network : %s", err)
-
-			}
-
-			// Handle incoming blockchain from full nodes
-
-			// Join the topic FullNodeGivingBlockchain
-			fullNodeGivingBlockchainTopic, err := ps.Join("FullNodeGivingBlockchain")
-			if err != nil {
-				panic(err)
-			}
-			subFullNodeGivingBlockchain, err := fullNodeGivingBlockchainTopic.Subscribe()
-			if err != nil {
-				panic(err)
-			}
-
-			msg, err := subFullNodeGivingBlockchain.Next(ctx)
-			if err != nil {
-				panic(err)
-			}
-			log.Debugln("Blockchain: ", string(msg.Data))
-
-		} else {
-			log.Debugln("Blockchain is up to date")
-		}
+		log.Debugln("Blockchain exists and is up to date")
 	}
 
-	// Simplifiy the code above
+	// TODO
 	// Create the code to giving the blockchain to the other full nodes asking for it
 	// Case where there's no blockchain (create it)
 	// 1. If the node is the first full node, or every node are inactive then he can create a data base
