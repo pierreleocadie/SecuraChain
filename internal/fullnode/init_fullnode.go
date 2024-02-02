@@ -7,7 +7,7 @@ import (
 	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/pierreleocadie/SecuraChain/internal/pebble"
+	"github.com/pierreleocadie/SecuraChain/internal/fullnode/pebble"
 )
 
 // Verify if the blockchain needs be fetched from the network
@@ -40,7 +40,7 @@ func NeedToFetchBlockchain(ctx context.Context) bool {
 }
 
 // Ask the network for the blockchain
-func FetchBlockchain(ctx context.Context, timeout time.Duration, ps *pubsub.PubSub) {
+func FetchBlockchain(ctx context.Context, timeout time.Duration, ps *pubsub.PubSub) *pebble.PebbleTransactionDB {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -86,12 +86,13 @@ func FetchBlockchain(ctx context.Context, timeout time.Duration, ps *pubsub.PubS
 		select {
 		case <-ctx.Done():
 			fmt.Println("Timeout reached, creating a new blockchain database with Pebble")
-			createDatabase()
-			return
+			database := createDatabase()
+			return database
 
 		case <-blockchainReceive:
 			fmt.Println("Blockchain successfully received. Exiting request loop.")
-			return
+			//process to pull the blockchain with ipfs ...
+			return nil
 
 		case <-ticker.C:
 			fmt.Println("Requesting blockchain from the network")
@@ -106,12 +107,12 @@ func FetchBlockchain(ctx context.Context, timeout time.Duration, ps *pubsub.PubS
 }
 
 // Create a database with Pebble db
-func createDatabase() {
+func createDatabase() *pebble.PebbleTransactionDB {
 	pebbleDB, err := pebble.NewPebbleTransactionDB("blockchain")
 	if err != nil {
 		fmt.Printf("Error creating database: %s", err)
+		return nil
 	}
 
-	pebbleDB.Close()
-
+	return pebbleDB
 }
