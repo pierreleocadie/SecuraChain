@@ -84,6 +84,7 @@ func main() {
 	 */
 	// Check if the node is behind NAT
 	behindNAT := discovery.NATDiscovery(log)
+	var relayAddrs []multiaddr.Multiaddr
 
 	// If the node is behind NAT, search for a node that supports relay
 	// TODO: Optimize this code
@@ -108,7 +109,7 @@ func main() {
 							if protocol == "/libp2p/circuit/relay/0.2.0/hop" || protocol == "/libp2p/circuit/relay/0.2.0/stop" {
 								log.Debugln("Found relay node : ", p.String())
 								// Reserve with the relay node
-								reservation, err := relayClient.Reserve(ctx, host, host.Peerstore().PeerInfo(p))
+								_, err := relayClient.Reserve(ctx, host, host.Peerstore().PeerInfo(p))
 								if err != nil {
 									log.Errorln("Error reserving with relay node : ", err)
 									continue
@@ -119,9 +120,11 @@ func main() {
 									log.Errorln("Error creating relay address : ", err)
 									continue
 								}
-								reservation.Addrs = append(reservation.Addrs, relayAddr)
 								log.Debugln("Added relay address : ", relayAddr.String())
-								log.Debugf("Host addresses : %v", reservation.Addrs)
+								// Add the relay address to the host addresses that are announced to the network
+								relayAddrs = append(relayAddrs, relayAddr)
+								host.Network()
+								log.Debugf("Host addresses : %v", host.Addrs())
 								// Add the relay node to the relayNodes map
 								relayNodes[p] = true
 								break
@@ -139,6 +142,49 @@ func main() {
 		_, err = relay.New(host)
 		if err != nil {
 			log.Errorln("Error instantiating relay service : ", err)
+		}
+	}
+
+	if relayAddrs != nil {
+		// Node info
+		go func() {
+			ticker := time.NewTicker(10 * time.Second)
+			defer ticker.Stop()
+			hostInfo := peer.AddrInfo{
+				ID:    host.ID(),
+				Addrs: relayAddrs,
+			}
+
+			for {
+				select {
+				case <-ticker.C:
+					addrs, err := peer.AddrInfoToP2pAddrs(&hostInfo)
+					if err != nil {
+						log.Panicf("Failed to convert peer.AddrInfo to p2p.Addr: %s", err)
+					}
+
+					for _, addr := range addrs {
+						log.Debugln("Node address: ", addr)
+					}
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+	} else {
+		// Node info
+		hostInfo := peer.AddrInfo{
+			ID:    host.ID(),
+			Addrs: host.Addrs(),
+		}
+
+		addrs, err := peer.AddrInfoToP2pAddrs(&hostInfo)
+		if err != nil {
+			log.Panicf("Failed to convert peer.AddrInfo to p2p.Addr: %s", err)
+		}
+
+		for _, addr := range addrs {
+			log.Debugln("Node address: ", addr)
 		}
 	}
 

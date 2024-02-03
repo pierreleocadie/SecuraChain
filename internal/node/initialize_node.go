@@ -10,7 +10,6 @@ import (
 	iface "github.com/ipfs/kubo/core/coreiface"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
@@ -53,19 +52,19 @@ func Initialize(cfg config.Config) host.Host {
 	log.Printf("Our node ID: %s\n", host.ID())
 
 	// Node info
-	hostInfo := peer.AddrInfo{
-		ID:    host.ID(),
-		Addrs: host.Addrs(),
-	}
+	// hostInfo := peer.AddrInfo{
+	// 	ID:    host.ID(),
+	// 	Addrs: host.Addrs(),
+	// }
 
-	addrs, err := peer.AddrInfoToP2pAddrs(&hostInfo)
-	if err != nil {
-		log.Panicf("Failed to convert peer.AddrInfo to p2p.Addr: %s", err)
-	}
+	// addrs, err := peer.AddrInfoToP2pAddrs(&hostInfo)
+	// if err != nil {
+	// 	log.Panicf("Failed to convert peer.AddrInfo to p2p.Addr: %s", err)
+	// }
 
-	for _, addr := range addrs {
-		log.Println("Node address: ", addr)
-	}
+	// for _, addr := range addrs {
+	// 	log.Println("Node address: ", addr)
+	// }
 
 	for _, addr := range host.Addrs() {
 		log.Println("Listening on address: ", addr)
