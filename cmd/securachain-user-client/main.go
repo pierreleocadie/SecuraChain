@@ -115,15 +115,18 @@ func main() {
 									continue
 								}
 								// Add a new address using the relay node for the host
-								relayAddr, err := multiaddr.NewMultiaddr("/p2p/" + p.String() + "/p2p-circuit/p2p/" + host.ID().String())
-								if err != nil {
-									log.Errorln("Error creating relay address : ", err)
-									continue
+								// for each transport address of the relay node we add a new address to the host
+								// that uses the relay node as a relay
+								for _, addr := range host.Peerstore().Addrs(p) {
+									relayAddr, err := multiaddr.NewMultiaddr(addr.String() + "/p2p-circuit/p2p/" + host.ID().String())
+									if err != nil {
+										log.Errorln("Error creating relay address : ", err)
+										continue
+									}
+									// Add the relay address to the host addresses that are announced to the network
+									relayAddrs = append(relayAddrs, relayAddr)
+									log.Debugln("Added relay address : ", relayAddr.String())
 								}
-								log.Debugln("Added relay address : ", relayAddr.String())
-								// Add the relay address to the host addresses that are announced to the network
-								relayAddrs = append(relayAddrs, relayAddr)
-								host.Network()
 								log.Debugf("Host addresses : %v", host.Addrs())
 								// Add the relay node to the relayNodes map
 								relayNodes[p] = true
@@ -136,16 +139,6 @@ func main() {
 				}
 			}
 		}()
-	} else {
-		log.Debugln("Node is not behind NAT")
-		// Start the relay service
-		_, err = relay.New(host)
-		if err != nil {
-			log.Errorln("Error instantiating relay service : ", err)
-		}
-	}
-
-	if relayAddrs != nil {
 		// Node info
 		go func() {
 			ticker := time.NewTicker(10 * time.Second)
@@ -185,6 +178,13 @@ func main() {
 
 		for _, addr := range addrs {
 			log.Debugln("Node address: ", addr)
+		}
+
+		log.Debugln("Node is not behind NAT")
+		// Start the relay service
+		_, err = relay.New(host)
+		if err != nil {
+			log.Errorln("Error instantiating relay service : ", err)
 		}
 	}
 
