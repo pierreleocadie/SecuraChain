@@ -75,6 +75,7 @@ func Initialize(cfg config.Config) host.Host {
 						if protocol == "/libp2p/circuit/relay/0.2.0/hop" || protocol == "/libp2p/circuit/relay/0.2.0/stop" {
 							select {
 							case r <- host.Peerstore().PeerInfo(p):
+								log.Println("Relay peer added to autorelay")
 							case <-ctx.Done():
 								return r
 							default:
@@ -86,8 +87,8 @@ func Initialize(cfg config.Config) host.Host {
 				return r
 			},
 			autorelay.WithBackoff(10*time.Second),
-			autorelay.WithBootDelay(time.Minute),
 			autorelay.WithMinInterval(10*time.Second),
+			autorelay.WithMinCandidates(1),
 		),
 	)
 	if err != nil {
