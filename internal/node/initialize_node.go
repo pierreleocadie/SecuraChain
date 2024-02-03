@@ -20,6 +20,40 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 )
 
+func newPeerSource(hostGetter func() host.Host) autorelay.PeerSource {
+	return func(ctx context.Context, numPeers int) <-chan peer.AddrInfo {
+		r := make(chan peer.AddrInfo, numPeers)
+		defer close(r)
+		log.Println("AutoRelayWithPeerSource called")
+		host := hostGetter()
+		if host == nil { // context canceled etc.
+			return r
+		}
+		log.Println("AutoRelayWithPeerSource called with host")
+		log.Printf("AutoRelayWithPeerSource requested for %d peers\n", numPeers)
+		for _, p := range host.Network().Peers() {
+			peerProtocols, err := host.Peerstore().GetProtocols(p)
+			if err != nil {
+				// log.Errorln("Error getting peer protocols : ", err)
+				continue
+			}
+			for _, protocol := range peerProtocols {
+				if protocol == "/libp2p/circuit/relay/0.2.0/hop" || protocol == "/libp2p/circuit/relay/0.2.0/stop" {
+					log.Println("AutoRelayWithPeerSource found relay peer")
+					select {
+					case r <- host.Peerstore().PeerInfo(p):
+						log.Println("AutoRelayWithPeerSource sent relay peer")
+					case <-ctx.Done():
+						log.Println("AutoRelayWithPeerSource context done")
+						return r
+					}
+				}
+			}
+		}
+		return r
+	}
+}
+
 func Initialize(cfg config.Config) host.Host {
 	/*
 	* NODE INITIALIZATION
@@ -57,36 +91,10 @@ func Initialize(cfg config.Config) host.Host {
 		libp2p.DefaultEnableRelay,
 		libp2p.EnableRelayService(),
 		libp2p.EnableAutoRelayWithPeerSource(
-			func(ctx context.Context, numPeers int) <-chan peer.AddrInfo {
-				r := make(chan peer.AddrInfo)
-				defer close(r)
-				host := hostGetter()
-				if host == nil { // context canceled etc.
-					return r
-				}
-				for _, p := range host.Network().Peers() {
-					peerProtocols, err := host.Peerstore().GetProtocols(p)
-					if err != nil {
-						// log.Errorln("Error getting peer protocols : ", err)
-						continue
-					}
-					for _, protocol := range peerProtocols {
-						if protocol == "/libp2p/circuit/relay/0.2.0/hop" || protocol == "/libp2p/circuit/relay/0.2.0/stop" {
-							select {
-							case r <- host.Peerstore().PeerInfo(p):
-								log.Println("Relay peer added to autorelay")
-							case <-ctx.Done():
-								return r
-							default:
-								return r
-							}
-						}
-					}
-				}
-				return r
-			},
+			newPeerSource(hostGetter),
 			autorelay.WithBackoff(10*time.Second),
 			autorelay.WithMinInterval(10*time.Second),
+			autorelay.WithNumRelays(1),
 			autorelay.WithMinCandidates(1),
 		),
 	)
