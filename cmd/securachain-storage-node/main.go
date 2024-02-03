@@ -30,7 +30,7 @@ var (
 
 func main() {
 	log := ipfsLog.Logger("storage-node")
-	err := ipfsLog.SetLogLevel("storage-node", "DEBUG")
+	err := ipfsLog.SetLogLevel("*", "DEBUG")
 	if err != nil {
 		log.Errorln("Error setting log level : ", err)
 	}
