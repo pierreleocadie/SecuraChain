@@ -33,7 +33,6 @@ func Initialize(cfg config.Config) host.Host {
 	}
 
 	hostReady := make(chan struct{})
-	defer close(hostReady)
 
 	hostGetter := func() host.Host {
 		<-hostReady // closed when we finish setting up the host
@@ -95,6 +94,7 @@ func Initialize(cfg config.Config) host.Host {
 		log.Panicf("Failed to create new libp2p Host: %s", err)
 	}
 	log.Printf("Our node ID: %s\n", h.ID())
+	close(hostReady)
 
 	// Node info
 	hostInfo := peer.AddrInfo{
