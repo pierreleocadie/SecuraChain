@@ -15,10 +15,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/libp2p/go-libp2p/core/peer"
-	relayClient "github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/client"
 	"github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
-	"github.com/multiformats/go-multiaddr"
 	client "github.com/pierreleocadie/SecuraChain/internal/client"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
@@ -84,102 +81,8 @@ func main() {
 	 */
 	// Check if the node is behind NAT
 	behindNAT := discovery.NATDiscovery(log)
-	var relayAddrs []multiaddr.Multiaddr
 
-	// If the node is behind NAT, search for a node that supports relay
-	// TODO: Optimize this code
-	if behindNAT {
-		go func() {
-			ticker := time.NewTicker(10 * time.Second)
-			defer ticker.Stop()
-			relayNodes := make(map[peer.ID]bool)
-			for {
-				select {
-				case <-ticker.C:
-					for _, p := range host.Network().Peers() {
-						if relayNodes[p] {
-							continue
-						}
-						peerProtocols, err := host.Peerstore().GetProtocols(p)
-						if err != nil {
-							log.Errorln("Error getting peer protocols : ", err)
-							continue
-						}
-						for _, protocol := range peerProtocols {
-							if protocol == "/libp2p/circuit/relay/0.2.0/hop" || protocol == "/libp2p/circuit/relay/0.2.0/stop" {
-								log.Debugln("Found relay node : ", p.String())
-								// Reserve with the relay node
-								_, err := relayClient.Reserve(ctx, host, host.Peerstore().PeerInfo(p))
-								if err != nil {
-									log.Errorln("Error reserving with relay node : ", err)
-									continue
-								}
-								// Add a new address using the relay node for the host
-								// for each transport address of the relay node we add a new address to the host
-								// that uses the relay node as a relay
-								for _, addr := range host.Peerstore().Addrs(p) {
-									relayAddr, err := multiaddr.NewMultiaddr(addr.String() + "/p2p-circuit/p2p/" + host.ID().String())
-									if err != nil {
-										log.Errorln("Error creating relay address : ", err)
-										continue
-									}
-									// Add the relay address to the host addresses that are announced to the network
-									relayAddrs = append(relayAddrs, relayAddr)
-									log.Debugln("Added relay address : ", relayAddr.String())
-								}
-								log.Debugf("Host addresses : %v", host.Addrs())
-								// Add the relay node to the relayNodes map
-								relayNodes[p] = true
-								break
-							}
-						}
-					}
-				case <-ctx.Done():
-					return
-				}
-			}
-		}()
-		// Node info
-		go func() {
-			ticker := time.NewTicker(10 * time.Second)
-			defer ticker.Stop()
-			hostInfo := peer.AddrInfo{
-				ID:    host.ID(),
-				Addrs: relayAddrs,
-			}
-
-			for {
-				select {
-				case <-ticker.C:
-					addrs, err := peer.AddrInfoToP2pAddrs(&hostInfo)
-					if err != nil {
-						log.Panicf("Failed to convert peer.AddrInfo to p2p.Addr: %s", err)
-					}
-
-					for _, addr := range addrs {
-						log.Debugln("Node address: ", addr)
-					}
-				case <-ctx.Done():
-					return
-				}
-			}
-		}()
-	} else {
-		// Node info
-		hostInfo := peer.AddrInfo{
-			ID:    host.ID(),
-			Addrs: host.Addrs(),
-		}
-
-		addrs, err := peer.AddrInfoToP2pAddrs(&hostInfo)
-		if err != nil {
-			log.Panicf("Failed to convert peer.AddrInfo to p2p.Addr: %s", err)
-		}
-
-		for _, addr := range addrs {
-			log.Debugln("Node address: ", addr)
-		}
-
+	if !behindNAT {
 		log.Debugln("Node is not behind NAT")
 		// Start the relay service
 		_, err = relay.New(host)
