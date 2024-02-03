@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/p2p/host/autorelay"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
@@ -84,6 +85,9 @@ func Initialize(cfg config.Config) host.Host {
 				}
 				return r
 			},
+			autorelay.WithBackoff(10*time.Second),
+			autorelay.WithBootDelay(time.Minute),
+			autorelay.WithMinInterval(10*time.Second),
 		),
 	)
 	if err != nil {
