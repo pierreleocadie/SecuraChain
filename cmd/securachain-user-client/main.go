@@ -116,6 +116,7 @@ func main() {
 	// Handle outgoing KeepRelayConnectionAlive messages
 	go func() {
 		for {
+			time.Sleep(15 * time.Second)
 			err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(host.ID()))
 			if err != nil {
 				log.Errorf("Failed to publish KeepRelayConnectionAlive message: %s", err)

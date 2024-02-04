@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"flag"
+	"time"
 
 	"os"
 	"path/filepath"
@@ -130,6 +131,7 @@ func main() {
 
 	// Handle outgoing KeepRelayConnectionAlive messages
 	go func() {
+		time.Sleep(15 * time.Second)
 		for {
 			err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(host.ID()))
 			if err != nil {
