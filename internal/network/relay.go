@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -17,7 +18,10 @@ func RelayService(log *ipfsLog.ZapEventLogger, h host.Host) {
 	if !behindNAT {
 		log.Debugln("Node is not behind NAT")
 		// Start the relay service
-		_, err := relay.New(h, relay.WithInfiniteLimits())
+		_, err := relay.New(h, relay.WithLimit(&relay.RelayLimit{
+			Duration: 10 * time.Minute,
+			Data:     1 << 30, // 1 GB
+		}))
 		if err != nil {
 			log.Errorln("Error instantiating relay service : ", err)
 		}

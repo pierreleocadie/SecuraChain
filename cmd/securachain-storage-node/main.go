@@ -29,7 +29,7 @@ var (
 
 func main() {
 	log := ipfsLog.Logger("storage-node")
-	err := ipfsLog.SetLogLevel("*", "DEBUG")
+	err := ipfsLog.SetLogLevel("storage-node", "DEBUG")
 	if err != nil {
 		log.Errorln("Error setting log level : ", err)
 	}
@@ -85,8 +85,6 @@ func main() {
 	* DHT DISCOVERY
 	 */
 	node.SetupDHTDiscovery(ctx, cfg, host, false)
-
-	netwrk.Ping(ctx, host, 10)
 
 	/*
 	* RELAY SERVICE

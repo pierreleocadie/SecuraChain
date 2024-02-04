@@ -75,8 +75,6 @@ func main() {
 	// Setup DHT discovery
 	_ = node.SetupDHTDiscovery(ctx, cfg, host, false)
 
-	netwrk.Ping(ctx, host, 10)
-
 	/*
 	* RELAY SERVICE
 	 */
