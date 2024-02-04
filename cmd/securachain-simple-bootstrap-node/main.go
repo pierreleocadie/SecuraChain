@@ -7,7 +7,6 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
@@ -51,22 +50,7 @@ func main() {
 	/*
 	* RELAY SERVICE
 	 */
-	// Check if the node is behind NAT
-	behindNAT := netwrk.NATDiscovery(log)
-
-	// If the node is behind NAT, search for a node that supports relay
-	// TODO: Optimize this code
-	if !behindNAT {
-		log.Debugln("Node is not behind NAT")
-		// Start the relay service
-		_, err = relay.New(host, relay.WithInfiniteLimits())
-		if err != nil {
-			log.Errorln("Error instantiating relay service : ", err)
-		}
-		log.Debugln("Relay service started")
-	} else {
-		log.Debugln("Node is behind NAT")
-	}
+	netwrk.RelayService(log, host)
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES

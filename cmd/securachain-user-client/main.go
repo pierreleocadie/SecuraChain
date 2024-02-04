@@ -15,7 +15,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
 	client "github.com/pierreleocadie/SecuraChain/internal/client"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
@@ -79,17 +78,7 @@ func main() {
 	/*
 	* RELAY SERVICE
 	 */
-	// Check if the node is behind NAT
-	behindNAT := netwrk.NATDiscovery(log)
-
-	if !behindNAT {
-		log.Debugln("Node is not behind NAT")
-		// Start the relay service
-		_, err = relay.New(host)
-		if err != nil {
-			log.Errorln("Error instantiating relay service : ", err)
-		}
-	}
+	netwrk.RelayService(log, host)
 
 	/*
 	* PUBSUB
