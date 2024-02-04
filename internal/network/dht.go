@@ -1,6 +1,6 @@
 // Package discovery provides functionalities to discover peers in a
 // libp2p network using a Distributed Hash Table (DHT) and mDNS.
-package discovery
+package network
 
 import (
 	"context"

@@ -2,7 +2,6 @@ package node
 
 import (
 	"context"
-	"log"
 	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -16,45 +15,11 @@ import (
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
-	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
+	"github.com/pierreleocadie/SecuraChain/internal/network"
 )
 
-func newPeerSource(hostGetter func() host.Host) autorelay.PeerSource {
-	return func(ctx context.Context, numPeers int) <-chan peer.AddrInfo {
-		r := make(chan peer.AddrInfo, numPeers)
-		defer close(r)
-		log.Println("AutoRelayWithPeerSource called")
-		host := hostGetter()
-		if host == nil { // context canceled etc.
-			return r
-		}
-		log.Println("AutoRelayWithPeerSource called with host")
-		log.Printf("AutoRelayWithPeerSource requested for %d peers\n", numPeers)
-		for _, p := range host.Network().Peers() {
-			peerProtocols, err := host.Peerstore().GetProtocols(p)
-			if err != nil {
-				log.Println("Error getting peer protocols : ", err)
-				continue
-			}
-			for _, protocol := range peerProtocols {
-				if protocol == "/libp2p/circuit/relay/0.2.0/hop" || protocol == "/libp2p/circuit/relay/0.2.0/stop" {
-					log.Println("AutoRelayWithPeerSource found relay peer")
-					select {
-					case r <- host.Peerstore().PeerInfo(p):
-						log.Println("AutoRelayWithPeerSource sent relay peer")
-					case <-ctx.Done():
-						log.Println("AutoRelayWithPeerSource context done")
-						return r
-					}
-				}
-			}
-		}
-		return r
-	}
-}
-
-func Initialize(cfg config.Config) host.Host {
+func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host {
 	/*
 	* NODE INITIALIZATION
 	 */
@@ -76,7 +41,7 @@ func Initialize(cfg config.Config) host.Host {
 	h, err = libp2p.New(
 		libp2p.UserAgent(cfg.UserAgent),
 		libp2p.ProtocolVersion(cfg.ProtocolVersion),
-		libp2p.AddrsFactory(discovery.FilterOutPrivateAddrs), // Comment this line to build bootstrap node
+		libp2p.AddrsFactory(network.FilterOutPrivateAddrs), // Comment this line to build bootstrap node
 		libp2p.EnableNATService(),
 		// libp2p.NATPortMap(),
 		// libp2p.EnableHolePunching(),
@@ -90,7 +55,7 @@ func Initialize(cfg config.Config) host.Host {
 		libp2p.DefaultEnableRelay,
 		libp2p.EnableRelayService(),
 		libp2p.EnableAutoRelayWithPeerSource(
-			newPeerSource(hostGetter),
+			network.NewPeerSource(log, hostGetter),
 			autorelay.WithBackoff(10*time.Second),
 			autorelay.WithMinInterval(10*time.Second),
 			autorelay.WithNumRelays(1),
@@ -100,7 +65,7 @@ func Initialize(cfg config.Config) host.Host {
 	if err != nil {
 		log.Panicf("Failed to create new libp2p Host: %s", err)
 	}
-	log.Printf("Our node ID: %s\n", h.ID())
+	log.Debugf("Our node ID: %s\n", h.ID())
 
 	// Close the hostReady channel to signal that the host is ready
 	close(hostReady)
@@ -117,11 +82,11 @@ func Initialize(cfg config.Config) host.Host {
 	}
 
 	for _, addr := range addrs {
-		log.Println("Node address: ", addr)
+		log.Debugln("Node address: ", addr)
 	}
 
 	for _, addr := range h.Addrs() {
-		log.Println("Listening on address: ", addr)
+		log.Debugln("Listening on address: ", addr)
 	}
 
 	return h

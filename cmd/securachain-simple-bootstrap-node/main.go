@@ -9,7 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
-	"github.com/pierreleocadie/SecuraChain/internal/discovery"
+	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
@@ -42,7 +42,7 @@ func main() {
 	* NODE LIBP2P
 	 */
 	// Initialize the node
-	host := node.Initialize(*cfg)
+	host := node.Initialize(log, *cfg)
 	defer host.Close()
 
 	// Setup DHT discovery
@@ -52,7 +52,7 @@ func main() {
 	* RELAY SERVICE
 	 */
 	// Check if the node is behind NAT
-	behindNAT := discovery.NATDiscovery(log)
+	behindNAT := netwrk.NATDiscovery(log)
 
 	// If the node is behind NAT, search for a node that supports relay
 	// TODO: Optimize this code

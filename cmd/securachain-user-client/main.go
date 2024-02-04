@@ -19,8 +19,8 @@ import (
 	client "github.com/pierreleocadie/SecuraChain/internal/client"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
-	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
+	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
@@ -70,17 +70,17 @@ func main() {
 	* NODE LIBP2P
 	 */
 	// Initialize the node
-	host := node.Initialize(*cfg)
+	host := node.Initialize(log, *cfg)
 	defer host.Close()
 
 	// Setup DHT discovery
-	node.SetupDHTDiscovery(ctx, cfg, host, false)
+	_ = node.SetupDHTDiscovery(ctx, cfg, host, false)
 
 	/*
 	* RELAY SERVICE
 	 */
 	// Check if the node is behind NAT
-	behindNAT := discovery.NATDiscovery(log)
+	behindNAT := netwrk.NATDiscovery(log)
 
 	if !behindNAT {
 		log.Debugln("Node is not behind NAT")

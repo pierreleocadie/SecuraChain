@@ -1,5 +1,5 @@
 // Package discovery provides functionality for peer discovery in a libp2p network.
-package discovery
+package network
 
 import (
 	"context"

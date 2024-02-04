@@ -9,7 +9,7 @@ import (
 	// "path/filepath"
 
 	// "github.com/pierreleocadie/SecuraChain/internal/core/transaction"
-	"github.com/pierreleocadie/SecuraChain/internal/discovery"
+	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	// "github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
@@ -78,7 +78,7 @@ func main() {
 	/*
 	* NODE LIBP2P
 	 */
-	host := node.Initialize(*cfg)
+	host := node.Initialize(log, *cfg)
 	defer host.Close()
 	log.Debugf("Storage node initialized with PeerID: %s", host.ID().String())
 
@@ -91,7 +91,7 @@ func main() {
 	* RELAY SERVICE
 	 */
 	// Check if the node is behind NAT
-	behindNAT := discovery.NATDiscovery(log)
+	behindNAT := netwrk.NATDiscovery(log)
 
 	if !behindNAT {
 		log.Debugln("Node is not behind NAT")

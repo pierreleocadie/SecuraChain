@@ -7,10 +7,10 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
-	"github.com/pierreleocadie/SecuraChain/internal/discovery"
+	"github.com/pierreleocadie/SecuraChain/internal/network"
 )
 
-func SetupDHTDiscovery(ctx context.Context, cfg *config.Config, host host.Host, bootstrapNode bool) {
+func SetupDHTDiscovery(ctx context.Context, cfg *config.Config, host host.Host, bootstrapNode bool) *network.DHT {
 	/*
 	* NETWORK PEER DISCOVERY WITH DHT
 	 */
@@ -21,14 +21,14 @@ func SetupDHTDiscovery(ctx context.Context, cfg *config.Config, host host.Host, 
 			peerMultiaddr, err := multiaddr.NewMultiaddr(peer)
 			if err != nil {
 				log.Println("Error converting bootstrap peer to multiaddr : ", err)
-				return
+				return nil
 			}
 			bootstrapPeersMultiaddr = append(bootstrapPeersMultiaddr, peerMultiaddr)
 		}
 	}
 
 	// Initialize DHT in server mode
-	dhtDiscovery := discovery.NewDHTDiscovery(
+	dhtDiscovery := network.NewDHTDiscovery(
 		bootstrapNode,
 		cfg.RendezvousStringFlag,
 		bootstrapPeersMultiaddr,
@@ -38,6 +38,8 @@ func SetupDHTDiscovery(ctx context.Context, cfg *config.Config, host host.Host, 
 	// Run DHT
 	if err := dhtDiscovery.Run(ctx, host); err != nil {
 		log.Fatalf("Failed to run DHT: %s", err)
-		return
+		return nil
 	}
+
+	return dhtDiscovery
 }
