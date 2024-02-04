@@ -59,7 +59,7 @@ func main() {
 	if !behindNAT {
 		log.Debugln("Node is not behind NAT")
 		// Start the relay service
-		_, err = relay.New(host)
+		_, err = relay.New(host, relay.WithInfiniteLimits())
 		if err != nil {
 			log.Errorln("Error instantiating relay service : ", err)
 		}

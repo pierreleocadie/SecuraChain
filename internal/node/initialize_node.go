@@ -34,7 +34,7 @@ func newPeerSource(hostGetter func() host.Host) autorelay.PeerSource {
 		for _, p := range host.Network().Peers() {
 			peerProtocols, err := host.Peerstore().GetProtocols(p)
 			if err != nil {
-				// log.Errorln("Error getting peer protocols : ", err)
+				log.Println("Error getting peer protocols : ", err)
 				continue
 			}
 			for _, protocol := range peerProtocols {
@@ -67,7 +67,6 @@ func Initialize(cfg config.Config) host.Host {
 	}
 
 	hostReady := make(chan struct{})
-
 	hostGetter := func() host.Host {
 		<-hostReady // closed when we finish setting up the host
 		return h
@@ -102,6 +101,8 @@ func Initialize(cfg config.Config) host.Host {
 		log.Panicf("Failed to create new libp2p Host: %s", err)
 	}
 	log.Printf("Our node ID: %s\n", h.ID())
+
+	// Close the hostReady channel to signal that the host is ready
 	close(hostReady)
 
 	// Node info
