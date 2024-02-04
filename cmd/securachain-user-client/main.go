@@ -88,6 +88,43 @@ func main() {
 		panic(err)
 	}
 
+	// KeepRelayConnectionAlive
+	keepRelayConnectionAliveTopic, err := ps.Join("KeepRelayConnectionAlive")
+	if err != nil {
+		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	// Subscribe to KeepRelayConnectionAlive topic
+	subKeepRelayConnectionAlive, err := keepRelayConnectionAliveTopic.Subscribe()
+	if err != nil {
+		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	// Handle incoming KeepRelayConnectionAlive messages
+	go func() {
+		for {
+			msg, err := subKeepRelayConnectionAlive.Next(ctx)
+			if err != nil {
+				log.Errorf("Failed to get next message from KeepRelayConnectionAlive topic: %s", err)
+				continue
+			}
+			log.Debugf("Received KeepRelayConnectionAlive message from %s", msg.GetFrom().String())
+			log.Debugf("KeepRelayConnectionAlive: %s", string(msg.Data))
+		}
+	}()
+
+	// Handle outgoing KeepRelayConnectionAlive messages
+	go func() {
+		for {
+			err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(host.ID()))
+			if err != nil {
+				log.Errorf("Failed to publish KeepRelayConnectionAlive message: %s", err)
+				continue
+			}
+			log.Debugf("KeepRelayConnectionAlive message sent successfully")
+		}
+	}()
+
 	// Join the topic clientAnnouncementStringFlag
 	clientAnnouncementTopic, err := ps.Join(cfg.ClientAnnouncementStringFlag)
 	if err != nil {
