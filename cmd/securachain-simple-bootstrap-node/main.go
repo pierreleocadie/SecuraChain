@@ -8,7 +8,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
-	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
@@ -46,11 +45,6 @@ func main() {
 
 	// Setup DHT discovery
 	node.SetupDHTDiscovery(ctx, cfg, host, true)
-
-	/*
-	* RELAY SERVICE
-	 */
-	netwrk.RelayService(log, host)
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES

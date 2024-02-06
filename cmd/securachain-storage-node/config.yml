@@ -7,15 +7,32 @@ aesKeyPath: "/Users/pierreleocadie/Documents/dev/SecuraChain/cmd/securachain-sto
 lowWater: 160
 highWater: 192
 bootstrapPeers: [
-  "/ip4/13.37.148.174/tcp/1212/p2p/12D3KooWRWobba8bZYeUX2cCKMzvWzkRBG2h5yTZaGzutAH8Sjrx", # bootstrap node test
-  "/ip4/13.37.148.174/udp/1212/quic-v1/p2p/12D3KooWRWobba8bZYeUX2cCKMzvWzkRBG2h5yTZaGzutAH8Sjrx", # bootstrap node test
-  "/ip4/13.37.148.174/tcp/1211/p2p/12D3KooWMX4fAauTifC6fuDTWymjPTVkAuYsw3Ksc2DUoQdtwsEd",
-	"/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWMX4fAauTifC6fuDTWymjPTVkAuYsw3Ksc2DUoQdtwsEd",
-	"/ip4/154.56.63.167/tcp/1211/p2p/12D3KooWLRxRgyy5KAHWbU5LSPdYsMnZz5ArbtkLG72bdanEgFsK",
-	"/ip4/154.56.63.167/udp/1211/quic-v1/p2p/12D3KooWLRxRgyy5KAHWbU5LSPdYsMnZz5ArbtkLG72bdanEgFsK",
+  # "/ip4/13.37.148.174/tcp/1212/p2p/12D3KooWRWobba8bZYeUX2cCKMzvWzkRBG2h5yTZaGzutAH8Sjrx", # bootstrap node test
+  # "/ip4/13.37.148.174/udp/1212/quic-v1/p2p/12D3KooWRWobba8bZYeUX2cCKMzvWzkRBG2h5yTZaGzutAH8Sjrx", # bootstrap node test
+  # "/ip4/13.37.148.174/tcp/1211/p2p/12D3KooWMX4fAauTifC6fuDTWymjPTVkAuYsw3Ksc2DUoQdtwsEd",
+	# "/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWMX4fAauTifC6fuDTWymjPTVkAuYsw3Ksc2DUoQdtwsEd",
+	# "/ip4/154.56.63.167/tcp/1211/p2p/12D3KooWLRxRgyy5KAHWbU5LSPdYsMnZz5ArbtkLG72bdanEgFsK",
+	# "/ip4/154.56.63.167/udp/1211/quic-v1/p2p/12D3KooWLRxRgyy5KAHWbU5LSPdYsMnZz5ArbtkLG72bdanEgFsK",
+  "/ip4/172.232.44.124/tcp/1211/p2p/12D3KooWLWRmiysxpmbsBqGvREi8mXqT4VAochQRxT1JK7Gqu3s7",
+  "/ip4/172.232.44.124/udp/1211/quic-v1/p2p/12D3KooWLWRmiysxpmbsBqGvREi8mXqT4VAochQRxT1JK7Gqu3s7",
+  "/ip6/2600:3c07::f03c:94ff:fecc:aee6/tcp/1211/p2p/12D3KooWLWRmiysxpmbsBqGvREi8mXqT4VAochQRxT1JK7Gqu3s7",
+  "/ip6/2600:3c07::f03c:94ff:fecc:aee6/udp/1211/quic-v1/p2p/12D3KooWLWRmiysxpmbsBqGvREi8mXqT4VAochQRxT1JK7Gqu3s7",
 ]
 listeningPort: 0
 discoveryRefreshInterval: 10s
+autorelayWithBackoffInterval: 10s
+autorelayWithMinCallbackInterval: 10s
+keepRelayConnectionAliveInterval: 15s
+maxRelayedConnectionDuration: 1h
+maxDataRelayed: 1073741824 # 1GB
+relayReservationTTL: 1h
+maxRelayReservations: 128
+maxRelayCircuits: 16
+maxRelayedConnectionBufferSize: 2048
+maxRelayReservationsPerPeer: 4
+maxRelayReservationsPerIP: 8
+maxRelayReservationsPerASN: 32
+ipfsProvidersDiscoveryRefreshInterval: 10s
 ip4tcp: "/ip4/0.0.0.0/tcp/0"
 ip6tcp: "/ip6/::/tcp/0"
 ip4quic: "/ip4/0.0.0.0/udp/0/quic-v1"
@@ -23,6 +40,7 @@ ip6quic: "/ip6/::/udp/0/quic-v1"
 rendezvousStringFlag: "SecuraChainNetwork"
 clientAnnouncementStringFlag: "ClientAnnouncement"
 storageNodeResponseStringFlag: "StorageNodeResponse"
+keepRelayConnectionAliveStringFlag: "KeepRelayConnectionAlive"
 fileRights: 0700
 fileMetadataRegistryJson: "fileMetadataRegistry.json"
 memorySpace: 10 # in GB

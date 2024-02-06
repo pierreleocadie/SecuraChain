@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"io"
 	"net"
 	"net/http"
@@ -21,7 +22,9 @@ func getLocalIP() (string, error) {
 }
 
 func getPublicIP() (string, error) {
-	resp, err := http.Get("https://api.ipify.org")
+	ctx := context.Background()
+
+	resp, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.ipify.org", nil)
 	if err != nil {
 		return "", err
 	}
@@ -54,8 +57,8 @@ func NATDiscovery(log *ipfsLog.ZapEventLogger) bool {
 	if localIP != publicIP {
 		log.Infof("This machine is behind NAT.")
 		return true
-	} else {
-		log.Infof("This machine is not behind NAT.")
-		return false
 	}
+
+	log.Infof("This machine is not behind NAT.")
+	return false
 }

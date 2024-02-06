@@ -75,7 +75,7 @@ func FreeMemoryAvailable(ctx context.Context, nodeIpfs *core.IpfsNode) (uint64, 
 		return 0, fmt.Errorf("failed to convert storageMax string to int: %s", err)
 	}
 
-	storageMax = storageMax * GB
+	storageMax *= GB
 
 	freeMemoryAvailable := storageMax - spaceUsed
 

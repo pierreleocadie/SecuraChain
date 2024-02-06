@@ -166,7 +166,6 @@ func SendFileButton(ctx context.Context, cfg *config.Config, selectedFile *widge
 	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, ipfsAPI iface.CoreAPI,
 	clientAnnouncementChan chan *transaction.ClientAnnouncement,
 	log *ipfsLog.ZapEventLogger) *widget.Button {
-
 	return widget.NewButton("Send File", func() {
 		if *ecdsaKeyPair == nil {
 			log.Debug("Please generate or load an ECDSA key pair")

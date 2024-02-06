@@ -57,6 +57,7 @@ func SendFile(ctx context.Context, cfg *config.Config, selectedFile string, //no
 	}
 
 	// 4. Get the size of the encrypted file
+	log.Infof("Getting file stat for %s", encryptedFilePath)
 	fileStat, err := os.Stat(encryptedFilePath)
 	if err != nil {
 		log.Errorf("failed to get file stat: %s", err)

@@ -26,18 +26,32 @@ type Config struct {
 	HighWater int `yaml:"highWater"`
 
 	// Network
-	BootstrapPeers           []string      `yaml:"bootstrapPeers"`
-	ListeningPort            uint          `yaml:"listeningPort"`
-	DiscoveryRefreshInterval time.Duration `yaml:"discoveryRefreshInterval"`
-	IP4tcp                   string        `yaml:"ip4tcp"`
-	IP6tcp                   string        `yaml:"ip6tcp"`
-	IP4quic                  string        `yaml:"ip4quic"`
-	IP6quic                  string        `yaml:"ip6quic"`
+	BootstrapPeers                        []string      `yaml:"bootstrapPeers"`
+	ListeningPort                         uint          `yaml:"listeningPort"`
+	DiscoveryRefreshInterval              time.Duration `yaml:"discoveryRefreshInterval"`
+	AutorelayWithBackoffInterval          time.Duration `yaml:"autorelayWithBackoffInterval"`
+	AutorelayWithMinCallbackInterval      time.Duration `yaml:"autorelayWithMinCallbackInterval"`
+	KeepRelayConnectionAliveInterval      time.Duration `yaml:"keepRelayConnectionAliveInterval"`
+	MaxRelayedConnectionDuration          time.Duration `yaml:"maxRelayedConnectionDuration"`
+	MaxDataRelayed                        int64         `yaml:"maxDataRelayed"`
+	RelayReservationTTL                   time.Duration `yaml:"relayReservationTTL"`
+	MaxRelayReservations                  int           `yaml:"maxRelayReservations"`
+	MaxRelayCircuits                      int           `yaml:"maxRelayCircuits"`
+	MaxRelayedConnectionBufferSize        int           `yaml:"maxRelayedConnectionBufferSize"`
+	MaxRelayReservationsPerPeer           int           `yaml:"maxRelayReservationsPerPeer"`
+	MaxRelayReservationsPerIP             int           `yaml:"maxRelayReservationsPerIP"`
+	MaxRelayReservationsPerASN            int           `yaml:"maxRelayReservationsPerASN"`
+	IpfsProvidersDiscoveryRefreshInterval time.Duration `yaml:"ipfsProvidersDiscoveryRefreshInterval"`
+	IP4tcp                                string        `yaml:"ip4tcp"`
+	IP6tcp                                string        `yaml:"ip6tcp"`
+	IP4quic                               string        `yaml:"ip4quic"`
+	IP6quic                               string        `yaml:"ip6quic"`
 
 	// PubSub
-	RendezvousStringFlag          string `yaml:"rendezvousStringFlag"`
-	ClientAnnouncementStringFlag  string `yaml:"clientAnnouncementStringFlag"`
-	StorageNodeResponseStringFlag string `yaml:"storageNodeResponseStringFlag"`
+	RendezvousStringFlag               string `yaml:"rendezvousStringFlag"`
+	ClientAnnouncementStringFlag       string `yaml:"clientAnnouncementStringFlag"`
+	StorageNodeResponseStringFlag      string `yaml:"storageNodeResponseStringFlag"`
+	KeepRelayConnectionAliveStringFlag string `yaml:"keepRelayConnectionAliveStringFlag"`
 
 	// Embedded IPFS node
 	FileRights               int    `yaml:"fileRights"`

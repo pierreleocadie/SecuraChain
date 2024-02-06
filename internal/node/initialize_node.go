@@ -12,6 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/host/autorelay"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
+	"github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
@@ -19,7 +20,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/network"
 )
 
-func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host {
+func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host { //nolint: funlen
 	/*
 	* NODE INITIALIZATION
 	 */
@@ -53,11 +54,42 @@ func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host {
 		libp2p.DefaultSecurity,
 		libp2p.DefaultMuxers,
 		libp2p.DefaultEnableRelay,
-		libp2p.EnableRelayService(),
+		libp2p.EnableRelayService(
+			relay.WithResources(relay.Resources{
+				Limit: &relay.RelayLimit{
+					// Duration is the time limit before resetting a relayed connection; defaults to 2min.
+					Duration: cfg.MaxRelayedConnectionDuration,
+					// Data is the limit of data relayed (on each direction) before resetting the connection.
+					// Defaults to 128KB
+					// Data: 1 << 30, // 1 GB
+					Data: cfg.MaxDataRelayed,
+				},
+				// Default values
+				// ReservationTTL is the duration of a new (or refreshed reservation).
+				// Defaults to 1hr.
+				ReservationTTL: cfg.RelayReservationTTL,
+				// MaxReservations is the maximum number of active relay slots; defaults to 128.
+				MaxReservations: cfg.MaxRelayReservations,
+				// MaxCircuits is the maximum number of open relay connections for each peer; defaults to 16.
+				MaxCircuits: cfg.MaxRelayCircuits,
+				// BufferSize is the size of the relayed connection buffers; defaults to 2048.
+				BufferSize: cfg.MaxRelayedConnectionBufferSize,
+
+				// MaxReservationsPerPeer is the maximum number of reservations originating from the same
+				// peer; default is 4.
+				MaxReservationsPerPeer: cfg.MaxRelayReservationsPerPeer,
+				// MaxReservationsPerIP is the maximum number of reservations originating from the same
+				// IP address; default is 8.
+				MaxReservationsPerIP: cfg.MaxRelayReservationsPerIP,
+				// MaxReservationsPerASN is the maximum number of reservations origination from the same
+				// ASN; default is 32
+				MaxReservationsPerASN: cfg.MaxRelayReservationsPerASN,
+			}),
+		),
 		libp2p.EnableAutoRelayWithPeerSource(
 			network.NewPeerSource(log, hostGetter),
-			autorelay.WithBackoff(10*time.Second),
-			autorelay.WithMinInterval(10*time.Second),
+			autorelay.WithBackoff(cfg.DiscoveryRefreshInterval),
+			autorelay.WithMinInterval(cfg.DiscoveryRefreshInterval),
 			autorelay.WithNumRelays(1),
 			autorelay.WithMinCandidates(1),
 		),

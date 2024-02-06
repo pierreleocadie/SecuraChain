@@ -2,32 +2,12 @@ package network
 
 import (
 	"context"
-	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/host/autorelay"
-	"github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
 )
-
-func RelayService(log *ipfsLog.ZapEventLogger, h host.Host) {
-	// Check if the node is behind NAT
-	behindNAT := NATDiscovery(log)
-
-	if !behindNAT {
-		log.Debugln("Node is not behind NAT")
-		// Start the relay service
-		_, err := relay.New(h, relay.WithLimit(&relay.RelayLimit{
-			Duration: 10 * time.Minute,
-			Data:     1 << 30, // 1 GB
-		}))
-		if err != nil {
-			log.Errorln("Error instantiating relay service : ", err)
-		}
-		log.Infof("Relay service started")
-	}
-}
 
 func NewPeerSource(log *ipfsLog.ZapEventLogger, hostGetter func() host.Host) autorelay.PeerSource {
 	return func(ctx context.Context, numPeers int) <-chan peer.AddrInfo {
