@@ -10,31 +10,31 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 )
 
+// AddBlockchainToIPFS adds the local blockchain to IPFS for synchronization and re-synchronization of nodes in case of absence.
 func AddBlockchainToIPFS(ctx context.Context, nodeIpfs *core.IpfsNode, ipfsApi icore.CoreAPI, oldCid path.ImmutablePath) (path.ImmutablePath, error) {
-	/*
-	* Fifth step : SYNCHRONIZATION AND RE-SYNCHRONIZATION of nodes in case of absence
-	 */
-
 	// Add the blockchain to IPFS
 	fileImmutablePathCid, err := ipfs.AddFile(ctx, nodeIpfs, ipfsApi, "./blockchain")
 	if err != nil {
-		fmt.Println("Error adding the blockhain to IPFS : ", err)
+		fmt.Printf("Error adding the blockhain to IPFS : %s\n ", err)
+		return path.ImmutablePath{}, err
 	}
 
 	// Pin the file on IPFS
 	pinned, err := ipfs.PinFile(ctx, ipfsApi, fileImmutablePathCid)
 	if err != nil {
-		fmt.Println("Error pinning the blockchain to IPFS : ", err)
+		fmt.Printf("Error pinning the blockchain to IPFS : %s\n", err)
+		return path.ImmutablePath{}, err
 	}
 	fmt.Println("Blockchain pinned on IPFS : ", pinned)
 
+	// Unpin the old CID if defined
 	if oldCid.RootCid().Defined() {
 		_, err := ipfs.UnpinFile(ctx, ipfsApi, oldCid)
 		if err != nil {
-			fmt.Println("Error unpinning the blockchain to IPFS : ", err)
+			fmt.Printf("Error unpinning the old blockchain from IPFS : %s\n", err)
+			// Not returning the error on unpin to allow process continuation
 		}
 	}
-	oldCid = fileImmutablePathCid
-
-	return oldCid, nil
+	// Return the new CID for the blockchain
+	return fileImmutablePathCid, nil
 }
