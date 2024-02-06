@@ -6,8 +6,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/ipfs/boxo/path"
+	icore "github.com/ipfs/kubo/core/coreiface"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode/pebble"
+	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 )
 
 // NeedToFet@chBlockchain checks if the blockchain exists and if it is up to date
@@ -34,7 +37,7 @@ func NeedToFetchBlockchain() bool {
 }
 
 // FetchBlockchain requests the blockchain from the network or creates a new one if not received.
-func FetchBlockchain(ctx context.Context, timeout time.Duration, ps *pubsub.PubSub) *pebble.PebbleTransactionDB {
+func FetchBlockchain(ctx context.Context, ipfsAPI icore.CoreAPI, timeout time.Duration, ps *pubsub.PubSub) *pebble.PebbleTransactionDB {
 	var interval = 30 * time.Second
 
 	ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -70,7 +73,22 @@ func FetchBlockchain(ctx context.Context, timeout time.Duration, ps *pubsub.PubS
 			if msg != nil {
 				fmt.Println("Blockchain received from the network")
 				blockchainReceive <- true
-				//process to pull the blockchain with ipfs ...
+
+				cidStr := string(msg.Data)
+				newPath, err := path.NewPath(cidStr)
+				if err != nil {
+					fmt.Printf("Error parsing CID to path : %s\n", err)
+				}
+
+				cidDirectory, err := path.NewImmutablePath(newPath)
+				if err != nil {
+					fmt.Printf("Error parsing CID to path : %s\n", err)
+				}
+
+				// Get the blockchain from IPFS
+				if err := ipfs.GetDirectoryWithPath(ctx, ipfsAPI, cidDirectory, "./blockchain"); err != nil {
+					fmt.Printf("Error getting blockchain from IPFS : %s\n", err)
+				}
 				break
 			}
 		}

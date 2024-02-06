@@ -202,7 +202,6 @@ func main() {
 				log.Debugf("error adding the blockchain to IPFS : %s\n", err)
 				continue
 			}
-
 		}
 	}()
 
