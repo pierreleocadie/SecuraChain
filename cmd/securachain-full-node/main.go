@@ -25,6 +25,7 @@ import (
 
 var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
 var databaseInstance *pebble.PebbleTransactionDB
+var cidBlockChain path.ImmutablePath
 
 func main() {
 	log := ipfsLog.Logger("full-node")
@@ -100,21 +101,18 @@ func main() {
 		log.Debugln("Blockchain exists and is up to date")
 	}
 
-	// TODO
-	// Create the code to giving the blockchain to the other full nodes asking for it
-
 	/*
-	* Second step : Wait for blocks coming from minors
+	* Wait for blocks coming from minors
 	 */
 
 	// Join the topic BlockAnnouncementStringFlag
 	blockAnnouncementTopic, err := ps.Join(cfg.BlockAnnouncementStringFlag)
 	if err != nil {
-		panic(err)
+		log.Panicf("Failed to join block announcement topic : %s", err)
 	}
 	subBlockAnnouncement, err := blockAnnouncementTopic.Subscribe()
 	if err != nil {
-		panic(err)
+		log.Panicf("Failed to subscribe to block announcement topic : %s", err)
 	}
 
 	// Join the topic FullNodeAnnouncementStringFlag
@@ -130,7 +128,6 @@ func main() {
 	// Handle incoming block announcement messages from minors
 	go func() {
 		for {
-
 			msg, err := subBlockAnnouncement.Next(ctx)
 			if err != nil {
 				log.Panic("Error getting block announcement message : ", err)
@@ -138,10 +135,6 @@ func main() {
 
 			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
 			log.Debugln("Received block announcement message : ", msg.Data)
-
-			/*
-			* BLOCK VALIDATION
-			 */
 
 			// Deserialize the block announcement
 			blockAnnounced, err := block.DeserializeBlock(msg.Data)
@@ -157,7 +150,7 @@ func main() {
 			// }
 
 			/*
-			* Thrid step : Validate blocks coming from minors
+			* Validate blocks coming from minors
 			* Manage random selection if several blocks arrive at the same time
 			* Add the block to the blockchain
 			* Add the blockchain to IPFS
@@ -165,12 +158,25 @@ func main() {
 			 */
 
 			blockBuff := make(map[int64][]*block.Block)
-			blockBytes := fullnode.HandleIncomingBlock(blockAnnounced, blockBuff, databaseInstance)
+			listOfBlocks, err := fullnode.HandleIncomingBlock(blockAnnounced, blockBuff, databaseInstance)
+
+			blockAnnouncedBytes, err := blocks[0].Serialize()
+			if err != nil {
+				fmt.Printf("Errior serializing block announcement: %s\n", err)
+				return nil
+			}
+			return
+
+			if len(listOfBlocks) > 1 {
+				// Return all blocks with the same timestamp for the minor node to select based on the longest chain
+				continue
+			}
 
 			var oldCid path.ImmutablePath
 
 			fullnode.AddBlockchainToIPFS(ctx, nodeIpfs, ipfsApi, oldCid)
 
+			// Publish the block to the network
 			fmt.Println("Publishing block announcement to the network : ", string(blockBytes))
 
 			err = fullNodeAnnouncementTopic.Publish(ctx, blockBytes)
@@ -180,6 +186,13 @@ func main() {
 			}
 
 		}
+	}()
+
+	// If I go the blockchain, and still up to date
+	// If I also one time pushed the blockchain to the network with IPFS
+	// Handle incoming full node announcement messages
+	go func() {
+
 	}()
 
 	/*

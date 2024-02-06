@@ -70,6 +70,7 @@ func FetchBlockchain(ctx context.Context, timeout time.Duration, ps *pubsub.PubS
 			if msg != nil {
 				fmt.Println("Blockchain received from the network")
 				blockchainReceive <- true
+				//process to pull the blockchain with ipfs ...
 				break
 			}
 		}

@@ -2,7 +2,6 @@ package fullnode
 
 import (
 	"fmt"
-	"math/rand"
 	"time"
 
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
@@ -11,7 +10,7 @@ import (
 )
 
 // HandleIncomingBlock handles the logic for processing incoming blocks, including conflict resolution.
-func HandleIncomingBlock(incomingBlock *block.Block, blockBuffer map[int64][]*block.Block, database *pebble.PebbleTransactionDB) []byte {
+func HandleIncomingBlock(incomingBlock *block.Block, blockBuffer map[int64][]*block.Block, database *pebble.PebbleTransactionDB) ([]*block.Block, error) {
 	var timeToWait = 2 * time.Second
 
 	// Add the block to the buffer based on its timestamp.
@@ -22,39 +21,48 @@ func HandleIncomingBlock(incomingBlock *block.Block, blockBuffer map[int64][]*bl
 	time.Sleep(timeToWait)
 
 	blocks := blockBuffer[timestamp]
-	var selectedBlock *block.Block
 
 	if len(blocks) > 1 {
-		// Randomly choose one block if there are conflicts.
-		selectedBlock = blocks[rand.Intn(len(blocks))]
+		// Return all blocks with the same timestamp for the minor node to select based on the longest chain
+		return blocks, nil
+	}
+
+	// Proceed normally if there is only one block.
+
+	if processedSuccessfully, err := processBlock(blocks[0], database); processedSuccessfully {
+		return []*block.Block{blocks[0]}, nil
 	} else {
-		// Proceed normally if there is only one block.
-		selectedBlock = blocks[0]
+		fmt.Printf("Error processing block: %s\n", err)
+		return nil, err
 	}
-
-	// Process the selected block.
-	if processedSuccessfully := processBlock(selectedBlock, database); processedSuccessfully {
-		blockAnnouncedBytes, err := selectedBlock.Serialize()
-		if err != nil {
-			fmt.Printf("Errior serializing block announcement: %s\n", err)
-			return nil
-		}
-		return blockAnnouncedBytes
-	}
-
-	// Clear the buffer for this timestamp after processing.
-	delete(blockBuffer, timestamp)
-	return nil
 }
 
 // processBlock validates and adds a block to the blockchain.
-func processBlock(block *block.Block, database *pebble.PebbleTransactionDB) bool {
-	if consensus.ValidateBlock(block, nil) {
+func processBlock(bblock *block.Block, database *pebble.PebbleTransactionDB) (bool, error) {
+	if bblock.PrevBlock == nil {
+		// Handle the genesis block.
+		if consensus.ValidateBlock(bblock, nil) {
+			// Block is valid, attempt to add it to the blockchain.
+			added, message := AddBlockToBlockchain(database, bblock)
+			fmt.Println(message)
+			return added, nil
+		}
+		// Block is invalid
+		return false, fmt.Errorf("genesis block is invalid")
+	}
+
+	// Handle non-genesis blocks.
+	prevBlock, err := block.DeserializeBlock(bblock.PrevBlock)
+	if err != nil {
+		return false, fmt.Errorf("error deserializing previous block: %s", err)
+	}
+
+	if consensus.ValidateBlock(bblock, prevBlock) {
 		// Block is valid, attempt to add it to the blockchain.
-		added, message := AddBlockToBlockchain(database, block)
+		added, message := AddBlockToBlockchain(database, bblock)
 		fmt.Println(message)
-		return added
+		return added, nil
 	}
 	// Block is invalid
-	return false
+	return false, fmt.Errorf("block is invalid")
 }
