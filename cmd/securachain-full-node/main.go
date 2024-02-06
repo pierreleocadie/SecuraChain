@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"os"
 	"time"
 
@@ -109,17 +108,17 @@ func main() {
 	// Join the topic BlockAnnouncementStringFlag
 	blockAnnouncementTopic, err := ps.Join(cfg.BlockAnnouncementStringFlag)
 	if err != nil {
-		log.Panicf("Failed to join block announcement topic : %s", err)
+		log.Panicf("Failed to join block announcement topic : %s\n", err)
 	}
 	subBlockAnnouncement, err := blockAnnouncementTopic.Subscribe()
 	if err != nil {
-		log.Panicf("Failed to subscribe to block announcement topic : %s", err)
+		log.Panicf("Failed to subscribe to block announcement topic : %s\n", err)
 	}
 
 	// Join the topic FullNodeAnnouncementStringFlag
 	fullNodeAnnouncementTopic, err := ps.Join(cfg.FullNodeAnnouncementStringFlag)
 	if err != nil {
-		log.Panicf("Failed to join full node announcement topic : %s", err)
+		log.Panicf("Failed to join full node announcement topic : %s\n", err)
 	}
 	// subFullNodeAnnouncement, err := fullNodeAnnouncementTopic.Subscribe()
 	// if err != nil {
@@ -129,7 +128,7 @@ func main() {
 	// Join the topic MinorConflicts
 	MinorConflictsTopic, err := ps.Join("MinorConflicts")
 	if err != nil {
-		log.Panicf("Failed to join minor conflicts topic : %s", err)
+		log.Panicf("Failed to join minor conflicts topic : %s\n", err)
 	}
 
 	// Handle incoming block announcement messages from minors
@@ -146,7 +145,7 @@ func main() {
 			// Deserialize the block announcement
 			blockAnnounced, err := block.DeserializeBlock(msg.Data)
 			if err != nil {
-				log.Errorf("Error deserializing block announcement : %s", err)
+				log.Debugln("Error deserializing block announcement : %s", err)
 				continue
 			}
 
@@ -160,18 +159,22 @@ func main() {
 
 			blockBuff := make(map[int64][]*block.Block)
 			listOfBlocks, err := fullnode.HandleIncomingBlock(blockAnnounced, blockBuff, databaseInstance)
+			if err != nil {
+				log.Debugf("error handling incoming block : %s\n", err)
+				continue
+			}
 
 			if len(listOfBlocks) > 1 {
 				// Serialize the list of blocks
 				listOfBlocksBytes, err := json.Marshal(listOfBlocks)
 				if err != nil {
-					fmt.Errorf("error serializing list of blocks : %s\n", err)
+					log.Debugf("error serializing list of blocks : %s\n", err)
 					continue
 				}
 
 				// Return all blocks with the same timestamp for the minor node to select based on the longest chain
 				if err := MinorConflictsTopic.Publish(ctx, listOfBlocksBytes); err != nil {
-					fmt.Errorf("error publishing blocks with the same timestamp to the minor : %s\n", err)
+					log.Debugf("error publishing blocks with the same timestamp to the minor : %s\n", err)
 					continue
 				}
 
@@ -180,23 +183,23 @@ func main() {
 			// Serialize the block
 			blockBytes, err := listOfBlocks[0].Serialize()
 			if err != nil {
-				fmt.Errorf("error serializing block : %s\n", err)
+				log.Debugf("error serializing block : %s\n", err)
 				continue
 			}
 
 			// Publish the block to the network (for minors and indexing and searching nodes)
-			fmt.Println("Publishing block announcement to the network :", string(blockBytes))
+			log.Debugln("Publishing block announcement to the network :", string(blockBytes))
 
 			err = fullNodeAnnouncementTopic.Publish(ctx, blockBytes)
 			if err != nil {
-				fmt.Println("Error publishing block announcement to the network : ", err)
+				log.Debugln("Error publishing block announcement to the network : ", err)
 
 			}
 
 			// Send the blockchain to IPFS
 			cidBlockChain, err = fullnode.AddBlockchainToIPFS(ctx, nodeIpfs, ipfsApi, cidBlockChain)
 			if err != nil {
-				fmt.Errorf("error adding the blockchain to IPFS : %s\n", err)
+				log.Debugf("error adding the blockchain to IPFS : %s\n", err)
 				continue
 			}
 
@@ -208,26 +211,26 @@ func main() {
 	// Join the topic to ask for the blockchain
 	fullNodeAskingForBlockchainTopic, err := ps.Join("FullNodeAskingForBlockchain")
 	if err != nil {
-		fmt.Errorf("error joining FullNodeAskingForBlockchain topic : ", err)
+		log.Debugln("error joining FullNodeAskingForBlockchain topic : ", err)
 	}
 
 	// Join the topic to ask for the blockchain
 	subFullNodeAskingForBlockchain, err := fullNodeAskingForBlockchainTopic.Subscribe()
 	if err != nil {
-		fmt.Errorf("error joining FullNodeAskingForBlockchain topic : ", err)
+		log.Debugln("error joining FullNodeAskingForBlockchain topic : ", err)
 	}
 
 	// Join the topic to receive the blockchain
 	fullNodeGivingBlockchainTopic, err := ps.Join("FullNodeGivingBlockchain")
 	if err != nil {
-		fmt.Println("Error joining to FullNodeGivingBlockchain topic : ", err)
+		log.Debugln("Error joining to FullNodeGivingBlockchain topic : ", err)
 	}
 
 	go func() {
 		for {
 			msg, err := subFullNodeAskingForBlockchain.Next(ctx)
 			if err != nil {
-				fmt.Errorf("error getting blockchain request message : %s\n", err)
+				log.Debugf("error getting blockchain request message : %s\n", err)
 			}
 
 			// Ignore self messages
@@ -241,7 +244,7 @@ func main() {
 			if cidBlockChain.RootCid().Defined() {
 				err := fullNodeGivingBlockchainTopic.Publish(ctx, []byte(cidBlockChain.String()))
 				if err != nil {
-					log.Errorf("failed to publish latest blockchain CID: %s", err)
+					log.Debugln("failed to publish latest blockchain CID: %s", err)
 				}
 			}
 		}
