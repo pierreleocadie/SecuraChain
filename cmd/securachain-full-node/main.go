@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -118,12 +119,18 @@ func main() {
 	// Join the topic FullNodeAnnouncementStringFlag
 	fullNodeAnnouncementTopic, err := ps.Join(cfg.FullNodeAnnouncementStringFlag)
 	if err != nil {
-		panic(err)
+		log.Panicf("Failed to join full node announcement topic : %s", err)
 	}
 	// subFullNodeAnnouncement, err := fullNodeAnnouncementTopic.Subscribe()
 	// if err != nil {
 	// 	panic(err)
 	// }
+
+	// Join the topic MinorConflicts
+	MinorConflictsTopic, err := ps.Join("MinorConflicts")
+	if err != nil {
+		log.Panicf("Failed to join minor conflicts topic : %s", err)
+	}
 
 	// Handle incoming block announcement messages from minors
 	go func() {
@@ -143,41 +150,42 @@ func main() {
 				continue
 			}
 
-			// blockPrevBlock, err := block.DeserializeBlock(blockAnnounced.PrevBlock)
-			// if err != nil {
-			// 	log.Errorf("Error deserializing block announcement : %s", err)
-			// 	continue
-			// }
-
 			/*
 			* Validate blocks coming from minors
-			* Manage random selection if several blocks arrive at the same time
+			* Manage conflicts
 			* Add the block to the blockchain
-			* Add the blockchain to IPFS
 			* Publish the block to the network
+			* Add the blockchain to IPFS
 			 */
 
 			blockBuff := make(map[int64][]*block.Block)
 			listOfBlocks, err := fullnode.HandleIncomingBlock(blockAnnounced, blockBuff, databaseInstance)
 
-			blockAnnouncedBytes, err := blocks[0].Serialize()
-			if err != nil {
-				fmt.Printf("Errior serializing block announcement: %s\n", err)
-				return nil
-			}
-			return
-
 			if len(listOfBlocks) > 1 {
+				// Serialize the list of blocks
+				listOfBlocksBytes, err := json.Marshal(listOfBlocks)
+				if err != nil {
+					fmt.Errorf("error serializing list of blocks : %s\n", err)
+					continue
+				}
+
 				// Return all blocks with the same timestamp for the minor node to select based on the longest chain
+				if err := MinorConflictsTopic.Publish(ctx, listOfBlocksBytes); err != nil {
+					fmt.Errorf("error publishing blocks with the same timestamp to the minor : %s\n", err)
+					continue
+				}
+
+			}
+
+			// Serialize the block
+			blockBytes, err := listOfBlocks[0].Serialize()
+			if err != nil {
+				fmt.Errorf("error serializing block : %s\n", err)
 				continue
 			}
 
-			var oldCid path.ImmutablePath
-
-			fullnode.AddBlockchainToIPFS(ctx, nodeIpfs, ipfsApi, oldCid)
-
-			// Publish the block to the network
-			fmt.Println("Publishing block announcement to the network : ", string(blockBytes))
+			// Publish the block to the network (for minors and indexing and searching nodes)
+			fmt.Println("Publishing block announcement to the network :", string(blockBytes))
 
 			err = fullNodeAnnouncementTopic.Publish(ctx, blockBytes)
 			if err != nil {
@@ -185,14 +193,58 @@ func main() {
 
 			}
 
+			// Send the blockchain to IPFS
+			cidBlockChain, err = fullnode.AddBlockchainToIPFS(ctx, nodeIpfs, ipfsApi, cidBlockChain)
+			if err != nil {
+				fmt.Errorf("error adding the blockchain to IPFS : %s\n", err)
+				continue
+			}
+
 		}
 	}()
 
-	// If I go the blockchain, and still up to date
-	// If I also one time pushed the blockchain to the network with IPFS
-	// Handle incoming full node announcement messages
-	go func() {
+	// Handle incoming asking blockchain messages from full nodes
 
+	// Join the topic to ask for the blockchain
+	fullNodeAskingForBlockchainTopic, err := ps.Join("FullNodeAskingForBlockchain")
+	if err != nil {
+		fmt.Errorf("error joining FullNodeAskingForBlockchain topic : ", err)
+	}
+
+	// Join the topic to ask for the blockchain
+	subFullNodeAskingForBlockchain, err := fullNodeAskingForBlockchainTopic.Subscribe()
+	if err != nil {
+		fmt.Errorf("error joining FullNodeAskingForBlockchain topic : ", err)
+	}
+
+	// Join the topic to receive the blockchain
+	fullNodeGivingBlockchainTopic, err := ps.Join("FullNodeGivingBlockchain")
+	if err != nil {
+		fmt.Println("Error joining to FullNodeGivingBlockchain topic : ", err)
+	}
+
+	go func() {
+		for {
+			msg, err := subFullNodeAskingForBlockchain.Next(ctx)
+			if err != nil {
+				fmt.Errorf("error getting blockchain request message : %s\n", err)
+			}
+
+			// Ignore self messages
+			if msg.ReceivedFrom == host.ID() {
+				continue
+			}
+
+			log.Debugln("Blockchain request received")
+
+			// Answer to the request with the last CID of the blockchain
+			if cidBlockChain.RootCid().Defined() {
+				err := fullNodeGivingBlockchainTopic.Publish(ctx, []byte(cidBlockChain.String()))
+				if err != nil {
+					log.Errorf("failed to publish latest blockchain CID: %s", err)
+				}
+			}
+		}
 	}()
 
 	/*
