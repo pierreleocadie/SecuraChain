@@ -37,5 +37,4 @@ func AddBlockchainToIPFS(ctx context.Context, nodeIpfs *core.IpfsNode, ipfsApi i
 	oldCid = fileImmutablePathCid
 
 	return oldCid, nil
-
 }

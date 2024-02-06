@@ -6,8 +6,7 @@ import (
 )
 
 func AddBlockToBlockchain(database *pebble.PebbleTransactionDB, blockAnnounced *block.Block) (bool, string) {
-
-	key := []byte(blockAnnounced.Signature)
+	key := blockAnnounced.Signature
 	existingBlock, err := database.GetBlock(key)
 	if err == nil && existingBlock != nil {
 		return false, "Block already existing in the blockchain"
@@ -18,6 +17,6 @@ func AddBlockToBlockchain(database *pebble.PebbleTransactionDB, blockAnnounced *
 	if err != nil {
 		return false, "Error adding block to the database"
 	} else {
-		return true, "Block addded to the blockchain succesfully"
+		return true, "Block addded succesfully to the blockchain "
 	}
 }

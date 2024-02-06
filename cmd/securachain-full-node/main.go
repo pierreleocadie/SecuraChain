@@ -95,7 +95,7 @@ func main() {
 	 */
 
 	// Check if the blockchain exists
-	if fullnode.NeedToFetchBlockchain(ctx) {
+	if fullnode.NeedToFetchBlockchain() {
 		log.Debugln("Blockchain doesn't exist or is not up to date")
 		databaseInstance = fullnode.FetchBlockchain(ctx, 2*time.Minute, ps)
 	} else {

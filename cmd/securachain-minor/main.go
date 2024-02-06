@@ -23,11 +23,14 @@ import (
 )
 
 var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
+var timeToSendBlock = 40
 
 func main() {
 
 	log := ipfsLog.Logger("minor")
-	ipfsLog.SetLogLevel("minor", "DEBUG")
+	if err := ipfsLog.SetLogLevel("minor", "DEBUG"); err != nil {
+		log.Errorln("Failed to set log level:", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -131,8 +134,7 @@ func main() {
 				log.Errorln("Failed to publish block:", err)
 				continue
 			}
-			time.Sleep(40 * time.Second)
-
+			time.Sleep(time.Duration(timeToSendBlock) * time.Second)
 		}
 	}()
 
