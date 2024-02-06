@@ -15,7 +15,7 @@ func PubsubKeepRelayConnectionAlive(ctx context.Context,
 	ps *pubsub.PubSub, cfg *config.Config,
 	log *ipfsLog.ZapEventLogger, host host.Host) {
 	// Run KeepRelayConnectionAlive only if its behind a NAT
-	if network.NATDiscovery(log) {
+	if !network.NATDiscovery(log) {
 		return
 	}
 
