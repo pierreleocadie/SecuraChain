@@ -13,56 +13,48 @@ import (
 // HandleIncomingBlock handles the logic for processing incoming blocks, including conflict resolution.
 func HandleIncomingBlock(incomingBlock *block.Block, blockBuffer map[int64][]*block.Block, database *pebble.PebbleTransactionDB) []byte {
 	var timeToWait = 2 * time.Second
-	// Add the block to the buffer base on his timestamp
+
+	// Add the block to the buffer based on its timestamp.
 	timestamp := incomingBlock.Timestamp
 	blockBuffer[timestamp] = append(blockBuffer[timestamp], incomingBlock)
 
-	// Wait a short time to collect more blocks
-	time.Sleep(timeToWait) // example of delay
+	// Artificial delay to allow for more blocks with the same timestamp to arrive.
+	time.Sleep(timeToWait)
 
-	// Check if there's more than 1 block with the same timestamp
 	blocks := blockBuffer[timestamp]
+	var selectedBlock *block.Block
+
 	if len(blocks) > 1 {
-		// randomly choose one block to add to the blockchain
-		//treat the block
-		selectedBlock := blocks[rand.Intn(len(blocks))]
-		if processBlock(selectedBlock, database) {
-			blockAnnouncedBytes, err := selectedBlock.Serialize()
-			if err != nil {
-				fmt.Println("Error serializing block announcement : ", err)
-			}
-			return blockAnnouncedBytes
-		}
-	} else if len(blocks) == 1 {
-		//treat the block normally
-		if processBlock(incomingBlock, database) {
-			blockAnnouncedBytes, err := incomingBlock.Serialize()
-			if err != nil {
-				fmt.Println("Error serializing block announcement : ", err)
-			}
-			return blockAnnouncedBytes
-		}
+		// Randomly choose one block if there are conflicts.
+		selectedBlock = blocks[rand.Intn(len(blocks))]
+	} else {
+		// Proceed normally if there is only one block.
+		selectedBlock = blocks[0]
 	}
-	// Clear the buffer
+
+	// Process the selected block.
+	if processedSuccessfully := processBlock(selectedBlock, database); processedSuccessfully {
+		blockAnnouncedBytes, err := selectedBlock.Serialize()
+		if err != nil {
+			fmt.Printf("Errior serializing block announcement: %s\n", err)
+			return nil
+		}
+		return blockAnnouncedBytes
+	}
+
+	// Clear the buffer for this timestamp after processing.
 	delete(blockBuffer, timestamp)
 	return nil
 }
 
+// processBlock validates and adds a block to the blockchain.
 func processBlock(block *block.Block, database *pebble.PebbleTransactionDB) bool {
-	// Process the block
 	if consensus.ValidateBlock(block, nil) {
-		// Block is valid
-		// Add the block to the blockchain
+		// Block is valid, attempt to add it to the blockchain.
 		added, message := AddBlockToBlockchain(database, block)
-		if added {
-			fmt.Println(message)
-			return true
-		} else {
-			fmt.Println(message)
-			return false
-		}
-	} else {
-		// Block is invalid
-		return false
+		fmt.Println(message)
+		return added
 	}
+	// Block is invalid
+	return false
 }
