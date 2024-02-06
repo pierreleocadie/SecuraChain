@@ -24,12 +24,20 @@ func getLocalIP() (string, error) {
 func getPublicIP() (string, error) {
 	ctx := context.Background()
 
-	resp, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.ipify.org", nil)
+	// Création d'une requête HTTP avec contexte
+	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.ipify.org", nil)
+	if err != nil {
+		return "", err
+	}
+
+	// Execution de la requête HTTP
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
 
+	// Lecture de la réponse
 	ip, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
