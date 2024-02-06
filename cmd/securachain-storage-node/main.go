@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"flag"
+	"time"
 
 	"os"
 	"path/filepath"
@@ -25,6 +26,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
+	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 )
 
 var (
@@ -306,7 +308,45 @@ func main() { //nolint: funlen
 	// When a file is fully downloaded without errors, into this chan
 	toTransactionChan := make(chan map[string]interface{})
 
-	node.PubsubKeepRelayConnectionAlive(ctx, ps, cfg, log, host)
+	// node.PubsubKeepRelayConnectionAlive(ctx, ps, cfg, log, host)
+	// KeepRelayConnectionAlive
+	keepRelayConnectionAliveTopic, err := ps.Join(cfg.KeepRelayConnectionAliveStringFlag)
+	if err != nil {
+		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	// Subscribe to KeepRelayConnectionAlive topic
+	subKeepRelayConnectionAlive, err := keepRelayConnectionAliveTopic.Subscribe()
+	if err != nil {
+		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	// Handle incoming KeepRelayConnectionAlive messages
+	go func() {
+		for {
+			msg, err := subKeepRelayConnectionAlive.Next(ctx)
+			if err != nil {
+				log.Errorf("Failed to get next message from KeepRelayConnectionAlive topic: %s", err)
+				continue
+			}
+			log.Debugf("Received KeepRelayConnectionAlive message from %s", msg.GetFrom().String())
+			log.Debugf("KeepRelayConnectionAlive: %s", string(msg.Data))
+		}
+	}()
+
+	// Handle outgoing KeepRelayConnectionAlive messages
+	go func() {
+		for {
+			time.Sleep(cfg.KeepRelayConnectionAliveInterval)
+			err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(host.ID()))
+			if err != nil {
+				log.Errorf("Failed to publish KeepRelayConnectionAlive message: %s", err)
+				continue
+			}
+			log.Debugf("KeepRelayConnectionAlive message sent successfully")
+		}
+	}()
+
 	pubsubClientAnnouncement(ctx, ps, cfg, log, toTransactionChan, ipfsAPI, nodeIpfs, dhtAPI)
 	pubsubStorageNodeResponse(ctx, ps, cfg, log, toTransactionChan, ecdsaKeyPair, host)
 
