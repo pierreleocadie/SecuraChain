@@ -51,7 +51,6 @@ func main() {
 	/*
 	* IPFS NODE
 	 */
-	// Spawn an IPFS node
 	ipfsApi, nodeIpfs, err := ipfs.SpawnNode(ctx)
 	if err != nil {
 		log.Fatalf("Failed to spawn IPFS node: %s", err)
@@ -91,10 +90,9 @@ func main() {
 	}
 
 	/*
-	* First step : ask for the blockchain to the other full nodes if I'm not up to date, or if I'm new
+	* Ask for the blockchain to the other full nodes if the node don't meet the requirements
 	 */
 
-	// Check if the blockchain exists
 	if fullnode.NeedToFetchBlockchain() {
 		log.Debugln("Blockchain doesn't exist or is not up to date")
 		databaseInstance = fullnode.FetchBlockchain(ctx, 2*time.Minute, ps)

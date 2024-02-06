@@ -8,14 +8,14 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 )
 
-// TransactionDatabase defines an interface for interacing with the transaction database.
-type TransactionDatabase interface {
+// BlockDatabase defines an interface for interacing with the transaction database.
+type BlockDatabase interface {
 	SaveBlock(key []byte, bx block.Block) error
 	GetBlock(key []byte) (block.Block, error)
 	Close() error
 }
 
-// PebbleTransactionDB implements the TransactionDatabase interface using the Pebble library.
+// PebbleTransactionDB implements the BlockDatabase interface using the Pebble library.
 type PebbleTransactionDB struct {
 	db *pebble.DB
 }
