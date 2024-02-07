@@ -3,14 +3,12 @@ package main
 import (
 	"context"
 	"flag"
-	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
-	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
@@ -49,21 +47,15 @@ func main() {
 	// Setup DHT discovery
 	node.SetupDHTDiscovery(ctx, cfg, host, true)
 
-	// Check if the node is behind NAT
-	behindNAT := netwrk.NATDiscovery(log)
-
-	if !behindNAT {
-		log.Debugln("Node is not behind NAT")
-		// Start the relay service
-		_, err := relay.New(host, relay.WithLimit(&relay.RelayLimit{
-			Duration: 10 * time.Minute,
-			Data:     1 << 30, // 1 GB
-		}))
-		if err != nil {
-			log.Errorln("Error instantiating relay service : ", err)
-		}
-		log.Infof("Relay service started")
+	/*
+	* PUBSUB
+	 */
+	ps, err := pubsub.NewGossipSub(ctx, host, pubsub.WithMaxMessageSize(int(cfg.MaxDataRelayed)))
+	if err != nil {
+		panic(err)
 	}
+
+	node.PubsubKeepRelayConnectionAlive(ctx, ps, cfg, log, host)
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES
