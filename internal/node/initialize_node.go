@@ -121,6 +121,35 @@ func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host { //no
 		log.Debugln("Listening on address: ", addr)
 	}
 
+	/*
+	* RELAY SERVICE
+	 */
+	// Check if the node is behind NAT
+	behindNAT := network.NATDiscovery(log)
+
+	// If the node is behind NAT, search for a node that supports relay
+	// TODO: Optimize this code
+	if !behindNAT {
+		log.Debugln("Node is not behind NAT")
+		// Start the relay service
+		_, err = relay.New(h,
+			relay.WithLimit(&relay.RelayLimit{
+				// Duration is the time limit before resetting a relayed connection; defaults to 2min.
+				Duration: cfg.MaxRelayedConnectionDuration,
+				// Data is the limit of data relayed (on each direction) before resetting the connection.
+				// Defaults to 128KB
+				// Data: 1 << 30, // 1 GB
+				Data: cfg.MaxDataRelayed,
+			}),
+		)
+		if err != nil {
+			log.Errorln("Error instantiating relay service : ", err)
+		}
+		log.Debugln("Relay service started")
+	} else {
+		log.Debugln("Node is behind NAT")
+	}
+
 	log.Infof("Host protocols are: %v", h.Mux().Protocols())
 
 	return h
