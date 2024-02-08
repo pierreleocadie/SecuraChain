@@ -50,9 +50,23 @@ func main() { //nolint: funlen
 	/*
 	* PUBSUB
 	 */
-	_, err = pubsub.NewGossipSub(ctx, host, pubsub.WithMaxMessageSize(int(cfg.MaxDataRelayed)))
+	ps, err := pubsub.NewGossipSub(ctx, host, pubsub.WithMaxMessageSize(int(cfg.MaxDataRelayed)))
 	if err != nil {
 		log.Errorf("Failed to create GossipSub: %s", err)
+	}
+
+	// Join pubsub topics
+	_, err = ps.Join(cfg.KeepRelayConnectionAliveStringFlag)
+	if err != nil {
+		log.Errorf("Failed to join topic: %s", err)
+	}
+	_, err = ps.Join(cfg.ClientAnnouncementStringFlag)
+	if err != nil {
+		log.Errorf("Failed to join topic: %s", err)
+	}
+	_, err = ps.Join(cfg.StorageNodeResponseStringFlag)
+	if err != nil {
+		log.Errorf("Failed to join topic: %s", err)
 	}
 
 	/*
