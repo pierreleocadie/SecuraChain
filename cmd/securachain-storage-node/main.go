@@ -10,21 +10,16 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
-	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
 	ipfsLog "github.com/ipfs/go-log/v2"
-	"github.com/ipfs/kubo/core"
-	iface "github.com/ipfs/kubo/core/coreiface"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
-	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 )
@@ -34,10 +29,114 @@ var (
 	generateKeys       = flag.Bool("genKeys", false, "Generate new ECDSA and AES keys to the paths specified in the config file")
 )
 
-func pubsubClientAnnouncement(ctx context.Context, //nolint: funlen
-	ps *pubsub.PubSub, cfg *config.Config, log *ipfsLog.ZapEventLogger,
-	toTransactionChan chan map[string]interface{}, ipfsAPI iface.CoreAPI,
-	nodeIpfs *core.IpfsNode, dhtAPI iface.DhtAPI) {
+func main() { //nolint: funlen
+	log := ipfsLog.Logger("storage-node")
+	err := ipfsLog.SetLogLevel("storage-node", "DEBUG")
+	if err != nil {
+		log.Errorln("Error setting log level : ", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	flag.Parse()
+
+	cfg := node.LoadConfig(yamlConfigFilePath, log)
+
+	if *generateKeys {
+		node.GenerateKeys(cfg, log)
+	}
+
+	ecdsaKeyPair, _ := node.LoadKeys(cfg, log)
+
+	/*
+	* IPFS NODE
+	 */
+	ipfsAPI, nodeIpfs := node.InitializeIPFSNode(ctx, cfg, log)
+	dhtAPI := ipfsAPI.Dht()
+
+	/*
+	* IPFS MEMORY MANAGEMENT
+	 */
+	storageMax, err := ipfs.ChangeStorageMax(nodeIpfs, cfg.MemorySpace)
+	if err != nil {
+		log.Warnf("Failed to change storage max: %s", err)
+	}
+	log.Debugf("Storage max changed: %v", storageMax)
+
+	freeMemorySpace, err := ipfs.FreeMemoryAvailable(ctx, nodeIpfs)
+	if err != nil {
+		log.Warnf("Failed to get free memory available: %s", err)
+	}
+	log.Debugf("Free memory available: %v", freeMemorySpace)
+
+	memoryUsedGB, err := ipfs.MemoryUsed(ctx, nodeIpfs)
+	if err != nil {
+		log.Warnf("Failed to get memory used: %s", err)
+	}
+	log.Debugf("Memory used: %v", memoryUsedGB)
+
+	/*
+	* NODE LIBP2P
+	 */
+	host := node.Initialize(log, *cfg)
+	defer host.Close()
+	log.Debugf("Storage node initialized with PeerID: %s", host.ID().String())
+
+	/*
+	* DHT DISCOVERY
+	 */
+	node.SetupDHTDiscovery(ctx, cfg, host, false)
+
+	/*
+	* PUBSUB
+	 */
+	ps, err := pubsub.NewGossipSub(ctx, host)
+	if err != nil {
+		log.Panicf("Failed to create new pubsub: %s", err)
+	}
+
+	// When a file is fully downloaded without errors, into this chan
+	toTransactionChan := make(chan map[string]interface{})
+
+	// KeepRelayConnectionAlive
+	keepRelayConnectionAliveTopic, err := ps.Join(cfg.KeepRelayConnectionAliveStringFlag)
+	if err != nil {
+		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	// Subscribe to KeepRelayConnectionAlive topic
+	subKeepRelayConnectionAlive, err := keepRelayConnectionAliveTopic.Subscribe()
+	if err != nil {
+		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	// Handle incoming KeepRelayConnectionAlive messages
+	go func() {
+		for {
+			msg, err := subKeepRelayConnectionAlive.Next(ctx)
+			if err != nil {
+				log.Errorf("Failed to get next message from KeepRelayConnectionAlive topic: %s", err)
+				continue
+			}
+			log.Debugf("Received KeepRelayConnectionAlive message from %s", msg.GetFrom().String())
+			log.Debugf("KeepRelayConnectionAlive: %s", string(msg.Data))
+		}
+	}()
+
+	// Handle outgoing KeepRelayConnectionAlive messages
+	go func() {
+		for {
+			time.Sleep(cfg.KeepRelayConnectionAliveInterval)
+			err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(host.ID()))
+			if err != nil {
+				log.Errorf("Failed to publish KeepRelayConnectionAlive message: %s", err)
+				continue
+			}
+			log.Debugf("KeepRelayConnectionAlive message sent successfully")
+		}
+	}()
+
 	// Join the topic clientAnnouncementStringFlag
 	clientAnnouncementTopic, err := ps.Join(cfg.ClientAnnouncementStringFlag)
 	if err != nil {
@@ -190,12 +289,7 @@ func pubsubClientAnnouncement(ctx context.Context, //nolint: funlen
 			log.Infof("File %s downloaded successfully", fileImmutablePath)
 		}
 	}()
-}
 
-func pubsubStorageNodeResponse(ctx context.Context,
-	ps *pubsub.PubSub, cfg *config.Config, log *ipfsLog.ZapEventLogger,
-	toTransactionChan chan map[string]interface{},
-	ecdsaKeyPair ecdsa.KeyPair, host host.Host) {
 	// Join the topic StorageNodeResponseStringFlag
 	storageNodeResponseTopic, err := ps.Join(cfg.StorageNodeResponseStringFlag)
 	if err != nil {
@@ -236,119 +330,6 @@ func pubsubStorageNodeResponse(ctx context.Context,
 			log.Infof("Transaction %s sent successfully", trx.TransactionID)
 		}
 	}()
-}
-
-func main() { //nolint: funlen
-	log := ipfsLog.Logger("storage-node")
-	err := ipfsLog.SetLogLevel("storage-node", "DEBUG")
-	if err != nil {
-		log.Errorln("Error setting log level : ", err)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	flag.Parse()
-
-	cfg := node.LoadConfig(yamlConfigFilePath, log)
-
-	if *generateKeys {
-		node.GenerateKeys(cfg, log)
-	}
-
-	ecdsaKeyPair, _ := node.LoadKeys(cfg, log)
-
-	/*
-	* IPFS NODE
-	 */
-	ipfsAPI, nodeIpfs := node.InitializeIPFSNode(ctx, cfg, log)
-	dhtAPI := ipfsAPI.Dht()
-
-	/*
-	* IPFS MEMORY MANAGEMENT
-	 */
-	storageMax, err := ipfs.ChangeStorageMax(nodeIpfs, cfg.MemorySpace)
-	if err != nil {
-		log.Warnf("Failed to change storage max: %s", err)
-	}
-	log.Debugf("Storage max changed: %v", storageMax)
-
-	freeMemorySpace, err := ipfs.FreeMemoryAvailable(ctx, nodeIpfs)
-	if err != nil {
-		log.Warnf("Failed to get free memory available: %s", err)
-	}
-	log.Debugf("Free memory available: %v", freeMemorySpace)
-
-	memoryUsedGB, err := ipfs.MemoryUsed(ctx, nodeIpfs)
-	if err != nil {
-		log.Warnf("Failed to get memory used: %s", err)
-	}
-	log.Debugf("Memory used: %v", memoryUsedGB)
-
-	/*
-	* NODE LIBP2P
-	 */
-	host := node.Initialize(log, *cfg)
-	defer host.Close()
-	log.Debugf("Storage node initialized with PeerID: %s", host.ID().String())
-
-	/*
-	* DHT DISCOVERY
-	 */
-	node.SetupDHTDiscovery(ctx, cfg, host, false)
-
-	/*
-	* PUBSUB
-	 */
-	ps, err := pubsub.NewGossipSub(ctx, host)
-	if err != nil {
-		log.Panicf("Failed to create new pubsub: %s", err)
-	}
-
-	// When a file is fully downloaded without errors, into this chan
-	toTransactionChan := make(chan map[string]interface{})
-
-	// node.PubsubKeepRelayConnectionAlive(ctx, ps, cfg, log, host)
-	// KeepRelayConnectionAlive
-	keepRelayConnectionAliveTopic, err := ps.Join(cfg.KeepRelayConnectionAliveStringFlag)
-	if err != nil {
-		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
-	}
-
-	// Subscribe to KeepRelayConnectionAlive topic
-	subKeepRelayConnectionAlive, err := keepRelayConnectionAliveTopic.Subscribe()
-	if err != nil {
-		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
-	}
-
-	// Handle incoming KeepRelayConnectionAlive messages
-	go func() {
-		for {
-			msg, err := subKeepRelayConnectionAlive.Next(ctx)
-			if err != nil {
-				log.Errorf("Failed to get next message from KeepRelayConnectionAlive topic: %s", err)
-				continue
-			}
-			log.Debugf("Received KeepRelayConnectionAlive message from %s", msg.GetFrom().String())
-			log.Debugf("KeepRelayConnectionAlive: %s", string(msg.Data))
-		}
-	}()
-
-	// Handle outgoing KeepRelayConnectionAlive messages
-	go func() {
-		for {
-			time.Sleep(cfg.KeepRelayConnectionAliveInterval)
-			err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(host.ID()))
-			if err != nil {
-				log.Errorf("Failed to publish KeepRelayConnectionAlive message: %s", err)
-				continue
-			}
-			log.Debugf("KeepRelayConnectionAlive message sent successfully")
-		}
-	}()
-
-	pubsubClientAnnouncement(ctx, ps, cfg, log, toTransactionChan, ipfsAPI, nodeIpfs, dhtAPI)
-	pubsubStorageNodeResponse(ctx, ps, cfg, log, toTransactionChan, ecdsaKeyPair, host)
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES

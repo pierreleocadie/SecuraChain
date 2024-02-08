@@ -12,11 +12,8 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/ipfs/boxo/path"
 	ipfsLog "github.com/ipfs/go-log/v2"
-	"github.com/ipfs/kubo/core"
-	iface "github.com/ipfs/kubo/core/coreiface"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
-	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	client "github.com/pierreleocadie/SecuraChain/internal/client"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
@@ -30,39 +27,100 @@ import (
 
 var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
 
-func pubsubStorageNodeResponse(ctx context.Context,
-	ps *pubsub.PubSub, cfg *config.Config,
-	log *ipfsLog.ZapEventLogger) {
-	// Join the topic StorageNodeResponseStringFlag
-	storageNodeResponseTopic, err := ps.Join(cfg.StorageNodeResponseStringFlag)
+func main() { //nolint: funlen
+	log := ipfsLog.Logger("user-client")
+	err := ipfsLog.SetLogLevel("user-client", "DEBUG")
+	if err != nil {
+		log.Errorln("Error setting log level : ", err)
+	}
+
+	var ecdsaKeyPair ecdsa.KeyPair
+	var aesKey aes.Key
+	var clientAnnouncementChan = make(chan *transaction.ClientAnnouncement)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	flag.Parse()
+
+	// Load the config file
+	if *yamlConfigFilePath == "" {
+		log.Panicln("Please provide a path to the yaml config file")
+	}
+
+	cfg, err := config.LoadConfig(*yamlConfigFilePath)
+	if err != nil {
+		log.Panicln("Error loading config file : ", err)
+	}
+
+	/*
+	* IPFS NODE
+	 */
+	// Spawn an IPFS node
+	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx, cfg)
+	if err != nil {
+		log.Panicf("Failed to spawn IPFS node: %s", err)
+	}
+	dhtAPI := ipfsAPI.Dht()
+
+	log.Debugf("IPFS node spawned with PeerID: %s", nodeIpfs.Identity.String())
+
+	/*
+	* NODE LIBP2P
+	 */
+	// Initialize the node
+	host := node.Initialize(log, *cfg)
+	defer host.Close()
+
+	// Setup DHT discovery
+	_ = node.SetupDHTDiscovery(ctx, cfg, host, false)
+
+	/*
+	* PUBSUB
+	 */
+	ps, err := pubsub.NewGossipSub(ctx, host, pubsub.WithMaxMessageSize(int(cfg.MaxDataRelayed)))
 	if err != nil {
 		panic(err)
 	}
 
-	// Subscribe to StorageNodeResponseStringFlag topic
-	subStorageNodeResponse, err := storageNodeResponseTopic.Subscribe()
+	// KeepRelayConnectionAlive
+	keepRelayConnectionAliveTopic, err := ps.Join(cfg.KeepRelayConnectionAliveStringFlag)
 	if err != nil {
-		panic(err)
+		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
 	}
 
-	// Handle incoming NodeResponse messages
+	// Subscribe to KeepRelayConnectionAlive topic
+	subKeepRelayConnectionAlive, err := keepRelayConnectionAliveTopic.Subscribe()
+	if err != nil {
+		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	// Handle incoming KeepRelayConnectionAlive messages
 	go func() {
 		for {
-			msg, err := subStorageNodeResponse.Next(ctx)
+			msg, err := subKeepRelayConnectionAlive.Next(ctx)
 			if err != nil {
-				panic(err)
+				log.Errorf("Failed to get next message from KeepRelayConnectionAlive topic: %s", err)
+				continue
 			}
-			log.Debugln("Received StorageNodeResponse message from ", msg.GetFrom().String())
-			log.Debugln("StorageNodeResponse: ", string(msg.Data))
+			log.Debugf("Received KeepRelayConnectionAlive message from %s", msg.GetFrom().String())
+			log.Debugf("KeepRelayConnectionAlive: %s", string(msg.Data))
 		}
 	}()
-}
 
-func pubsubClientAnnouncement(ctx context.Context, //nolint: funlen
-	ps *pubsub.PubSub, cfg *config.Config,
-	log *ipfsLog.ZapEventLogger,
-	clientAnnouncementChan chan *transaction.ClientAnnouncement,
-	nodeIpfs *core.IpfsNode, dhtAPI iface.DhtAPI, host host.Host) {
+	// Handle outgoing KeepRelayConnectionAlive messages
+	go func() {
+		for {
+			time.Sleep(cfg.KeepRelayConnectionAliveInterval)
+			err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(host.ID()))
+			if err != nil {
+				log.Errorf("Failed to publish KeepRelayConnectionAlive message: %s", err)
+				continue
+			}
+			log.Debugf("KeepRelayConnectionAlive message sent successfully")
+		}
+	}()
+
 	// Join the topic clientAnnouncementStringFlag
 	clientAnnouncementTopic, err := ps.Join(cfg.ClientAnnouncementStringFlag)
 	if err != nil {
@@ -131,106 +189,30 @@ func pubsubClientAnnouncement(ctx context.Context, //nolint: funlen
 			}
 		}
 	}()
-}
 
-func main() { //nolint: funlen
-	log := ipfsLog.Logger("user-client")
-	err := ipfsLog.SetLogLevel("user-client", "DEBUG")
-	if err != nil {
-		log.Errorln("Error setting log level : ", err)
-	}
-
-	var ecdsaKeyPair ecdsa.KeyPair
-	var aesKey aes.Key
-	var clientAnnouncementChan = make(chan *transaction.ClientAnnouncement)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	flag.Parse()
-
-	// Load the config file
-	if *yamlConfigFilePath == "" {
-		log.Panicln("Please provide a path to the yaml config file")
-	}
-
-	cfg, err := config.LoadConfig(*yamlConfigFilePath)
-	if err != nil {
-		log.Panicln("Error loading config file : ", err)
-	}
-
-	/*
-	* IPFS NODE
-	 */
-	// Spawn an IPFS node
-	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx, cfg)
-	if err != nil {
-		log.Panicf("Failed to spawn IPFS node: %s", err)
-	}
-	dhtAPI := ipfsAPI.Dht()
-
-	log.Debugf("IPFS node spawned with PeerID: %s", nodeIpfs.Identity.String())
-
-	/*
-	* NODE LIBP2P
-	 */
-	// Initialize the node
-	host := node.Initialize(log, *cfg)
-	defer host.Close()
-
-	// Setup DHT discovery
-	_ = node.SetupDHTDiscovery(ctx, cfg, host, false)
-
-	/*
-	* PUBSUB
-	 */
-	ps, err := pubsub.NewGossipSub(ctx, host)
+	// Join the topic StorageNodeResponseStringFlag
+	storageNodeResponseTopic, err := ps.Join(cfg.StorageNodeResponseStringFlag)
 	if err != nil {
 		panic(err)
 	}
 
-	// node.PubsubKeepRelayConnectionAlive(ctx, ps, cfg, log, host)
-
-	// KeepRelayConnectionAlive
-	keepRelayConnectionAliveTopic, err := ps.Join(cfg.KeepRelayConnectionAliveStringFlag)
+	// Subscribe to StorageNodeResponseStringFlag topic
+	subStorageNodeResponse, err := storageNodeResponseTopic.Subscribe()
 	if err != nil {
-		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
+		panic(err)
 	}
 
-	// Subscribe to KeepRelayConnectionAlive topic
-	subKeepRelayConnectionAlive, err := keepRelayConnectionAliveTopic.Subscribe()
-	if err != nil {
-		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
-	}
-
-	// Handle incoming KeepRelayConnectionAlive messages
+	// Handle incoming NodeResponse messages
 	go func() {
 		for {
-			msg, err := subKeepRelayConnectionAlive.Next(ctx)
+			msg, err := subStorageNodeResponse.Next(ctx)
 			if err != nil {
-				log.Errorf("Failed to get next message from KeepRelayConnectionAlive topic: %s", err)
-				continue
+				panic(err)
 			}
-			log.Debugf("Received KeepRelayConnectionAlive message from %s", msg.GetFrom().String())
-			log.Debugf("KeepRelayConnectionAlive: %s", string(msg.Data))
+			log.Debugln("Received StorageNodeResponse message from ", msg.GetFrom().String())
+			log.Debugln("StorageNodeResponse: ", string(msg.Data))
 		}
 	}()
-
-	// Handle outgoing KeepRelayConnectionAlive messages
-	go func() {
-		for {
-			time.Sleep(cfg.KeepRelayConnectionAliveInterval)
-			err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(host.ID()))
-			if err != nil {
-				log.Errorf("Failed to publish KeepRelayConnectionAlive message: %s", err)
-				continue
-			}
-			log.Debugf("KeepRelayConnectionAlive message sent successfully")
-		}
-	}()
-
-	pubsubClientAnnouncement(ctx, ps, cfg, log, clientAnnouncementChan, nodeIpfs, dhtAPI, host)
-	pubsubStorageNodeResponse(ctx, ps, cfg, log)
 
 	/*
 	* GUI FYNE
