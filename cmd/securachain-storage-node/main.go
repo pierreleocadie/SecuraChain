@@ -29,7 +29,7 @@ var (
 	generateKeys       = flag.Bool("genKeys", false, "Generate new ECDSA and AES keys to the paths specified in the config file")
 )
 
-func main() { //nolint: funlen
+func main() { //nolint: funlen, gocyclo
 	log := ipfsLog.Logger("storage-node")
 	err := ipfsLog.SetLogLevel("storage-node", "DEBUG")
 	if err != nil {
@@ -154,7 +154,7 @@ func main() { //nolint: funlen
 		for {
 			msg, err := subClientAnnouncement.Next(ctx)
 			if err != nil {
-				panic(err)
+				log.Errorf("Failed to get next message from clientAnnouncementStringFlag topic: %s", err)
 			}
 			log.Debugln("Received ClientAnnouncement message from ", msg.GetFrom().String())
 			log.Debugln("Client Announcement: ", string(msg.Data))

@@ -27,7 +27,7 @@ import (
 
 var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
 
-func main() { //nolint: funlen
+func main() { //nolint: funlen, gocyclo
 	log := ipfsLog.Logger("user-client")
 	err := ipfsLog.SetLogLevel("user-client", "DEBUG")
 	if err != nil {
@@ -80,7 +80,7 @@ func main() { //nolint: funlen
 	 */
 	ps, err := pubsub.NewGossipSub(ctx, host, pubsub.WithMaxMessageSize(int(cfg.MaxDataRelayed)))
 	if err != nil {
-		panic(err)
+		log.Panicf("Failed to create GossipSub: %s", err)
 	}
 
 	// KeepRelayConnectionAlive
@@ -124,13 +124,13 @@ func main() { //nolint: funlen
 	// Join the topic clientAnnouncementStringFlag
 	clientAnnouncementTopic, err := ps.Join(cfg.ClientAnnouncementStringFlag)
 	if err != nil {
-		log.Fatalf("Failed to join clientAnnouncement topic: %s", err)
+		log.Warnf("Failed to join clientAnnouncement topic: %s", err)
 	}
 
 	// Subscribe to clientAnnouncementStringFlag topic
 	subClientAnnouncement, err := clientAnnouncementTopic.Subscribe()
 	if err != nil {
-		log.Fatalf("Failed to subscribe to clientAnnouncement topic: %s", err)
+		log.Warnf("Failed to subscribe to clientAnnouncement topic: %s", err)
 	}
 
 	// Handle publishing ClientAnnouncement messages
@@ -193,13 +193,13 @@ func main() { //nolint: funlen
 	// Join the topic StorageNodeResponseStringFlag
 	storageNodeResponseTopic, err := ps.Join(cfg.StorageNodeResponseStringFlag)
 	if err != nil {
-		panic(err)
+		log.Errorf("Failed to join StorageNodeResponse topic: %s", err)
 	}
 
 	// Subscribe to StorageNodeResponseStringFlag topic
 	subStorageNodeResponse, err := storageNodeResponseTopic.Subscribe()
 	if err != nil {
-		panic(err)
+		log.Errorf("Failed to subscribe to StorageNodeResponse topic: %s", err)
 	}
 
 	// Handle incoming NodeResponse messages
@@ -207,7 +207,7 @@ func main() { //nolint: funlen
 		for {
 			msg, err := subStorageNodeResponse.Next(ctx)
 			if err != nil {
-				panic(err)
+				log.Errorf("Failed to get next message from StorageNodeResponse topic: %s", err)
 			}
 			log.Debugln("Received StorageNodeResponse message from ", msg.GetFrom().String())
 			log.Debugln("StorageNodeResponse: ", string(msg.Data))

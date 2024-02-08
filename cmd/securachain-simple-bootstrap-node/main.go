@@ -15,7 +15,7 @@ import (
 
 var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
 
-func main() {
+func main() { //nolint: funlen
 	log := ipfsLog.Logger("bootstrap-node")
 	err := ipfsLog.SetLogLevel("*", "DEBUG")
 	if err != nil {
@@ -52,7 +52,7 @@ func main() {
 	 */
 	_, err = pubsub.NewGossipSub(ctx, host, pubsub.WithMaxMessageSize(int(cfg.MaxDataRelayed)))
 	if err != nil {
-		panic(err)
+		log.Errorf("Failed to create GossipSub: %s", err)
 	}
 
 	/*
