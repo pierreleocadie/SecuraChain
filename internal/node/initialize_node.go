@@ -121,6 +121,8 @@ func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host { //no
 		log.Debugln("Listening on address: ", addr)
 	}
 
+	log.Infof("Host protocols are: %v", h.Mux().Protocols())
+
 	return h
 }
 
