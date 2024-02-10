@@ -52,13 +52,13 @@ func main() { //nolint: funlen, gocyclo
 	/*
 	* PUBSUB
 	 */
-	ps, err := pubsub.NewGossipSub(ctx, host, pubsub.WithMaxMessageSize(int(cfg.MaxDataRelayed)))
+	ps, err := pubsub.NewGossipSub(ctx, host)
 	if err != nil {
 		log.Panicf("Failed to create GossipSub: %s", err)
 	}
 
 	// KeepRelayConnectionAlive
-	keepRelayConnectionAliveTopic, err := ps.Join(cfg.KeepRelayConnectionAliveStringFlag)
+	keepRelayConnectionAliveTopic, err := ps.Join("KeepRelayConnectionAlive")
 	if err != nil {
 		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
 	}
