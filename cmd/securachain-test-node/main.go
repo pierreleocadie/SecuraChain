@@ -73,6 +73,27 @@ func main() { //nolint: funlen, gocyclo
 		log.Panicf("Failed to create GossipSub: %s", err)
 	}
 
+	protocolUpdatedSub, err := host.EventBus().Subscribe(new(event.EvtPeerProtocolsUpdated))
+	if err != nil {
+		log.Errorf("Failed to subscribe to EvtPeerProtocolsUpdated: %s", err)
+	}
+	go func(sub event.Subscription) {
+		for e := range sub.Out() {
+			var updated bool
+			for _, proto := range e.(event.EvtPeerProtocolsUpdated).Added {
+				if proto == pubsub.GossipSubID_v11 || proto == pubsub.GossipSubID_v10 {
+					updated = true
+					break
+				}
+			}
+			if updated {
+				for _, c := range host.Network().ConnsToPeer(e.(event.EvtPeerProtocolsUpdated).Peer) {
+					(*pubsub.PubSubNotif)(ps).Connected(host.Network(), c)
+				}
+			}
+		}
+	}(protocolUpdatedSub)
+
 	// KeepRelayConnectionAlive
 	keepRelayConnectionAliveTopic, err := ps.Join("KeepRelayConnectionAlive")
 	if err != nil {
@@ -111,6 +132,14 @@ func main() { //nolint: funlen, gocyclo
 				continue
 			}
 			log.Debugf("KeepRelayConnectionAlive message sent successfully")
+		}
+	}()
+
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			peers := ps.ListPeers("KeepRelayConnectionAlive")
+			log.Debugf("Peers in KeepRelayConnectionAlive topic: %v", peers)
 		}
 	}()
 
