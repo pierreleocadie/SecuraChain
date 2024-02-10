@@ -9,6 +9,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
@@ -49,9 +50,9 @@ func main() { //nolint: funlen, gocyclo
 	/*
 	* PUBSUB
 	 */
-	// gossipSubRt := pubsub.DefaultGossipSubRouter(host)
-	// ps, err := pubsub.NewGossipSubWithRouter(ctx, host, gossipSubRt)
-	ps, err := pubsub.NewGossipSub(ctx, host)
+	gossipSubRt := pubsub.DefaultGossipSubRouter(host)
+	ps, err := pubsub.NewGossipSubWithRouter(ctx, host, gossipSubRt)
+	// ps, err := pubsub.NewGossipSub(ctx, host)
 	if err != nil {
 		log.Panicf("Failed to create GossipSub: %s", err)
 	}
@@ -64,8 +65,9 @@ func main() { //nolint: funlen, gocyclo
 
 	go func() {
 		// Print protocols supported by peers we are connected to
+		gossipSubPeers := make(map[peer.ID]bool)
 		for {
-			time.Sleep(5 * time.Second)
+			time.Sleep(time.Second)
 			peers := host.Network().Peers()
 			for _, p := range peers {
 				protocols, err := host.Peerstore().GetProtocols(p)
@@ -73,7 +75,27 @@ func main() { //nolint: funlen, gocyclo
 					log.Errorf("Failed to get protocols for peer %s: %s", p.String(), err)
 					continue
 				}
-				log.Infof("Peer %s supports protocols: %v", p.String(), protocols)
+				log.Debug("Peer %s supports protocols: %v", p.String(), protocols)
+				// check if we are currently connected to the peer
+				if host.Network().Connectedness(p) == network.Connected && !gossipSubPeers[p] {
+					for _, proto := range protocols {
+						if proto == pubsub.GossipSubID_v11 || proto == pubsub.GossipSubID_v10 {
+							gossipSubRt.AddPeer(p, proto)
+							gossipSubPeers[p] = true
+							break
+						}
+					}
+				} else {
+					if gossipSubPeers[p] {
+						for _, proto := range protocols {
+							if proto != pubsub.GossipSubID_v11 && proto != pubsub.GossipSubID_v10 {
+								gossipSubRt.RemovePeer(p)
+								gossipSubPeers[p] = false
+								break
+							}
+						}
+					}
+				}
 			}
 		}
 	}()
