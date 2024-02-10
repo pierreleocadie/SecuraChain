@@ -78,17 +78,23 @@ func main() { //nolint: funlen, gocyclo
 		log.Errorf("Failed to subscribe to EvtPeerProtocolsUpdated: %s", err)
 	}
 	go func(sub event.Subscription) {
-		for e := range sub.Out() {
-			var updated bool
-			for _, proto := range e.(event.EvtPeerProtocolsUpdated).Added {
-				if proto == pubsub.GossipSubID_v11 || proto == pubsub.GossipSubID_v10 {
-					updated = true
-					break
+		for {
+			select {
+			case e, ok := <-sub.Out():
+				if !ok {
+					return
 				}
-			}
-			if updated {
-				for _, c := range host.Network().ConnsToPeer(e.(event.EvtPeerProtocolsUpdated).Peer) {
-					(*pubsub.PubSubNotif)(ps).Connected(host.Network(), c)
+				var updated bool
+				for _, proto := range e.(event.EvtPeerProtocolsUpdated).Added {
+					if proto == pubsub.GossipSubID_v11 || proto == pubsub.GossipSubID_v10 {
+						updated = true
+						break
+					}
+				}
+				if updated {
+					for _, c := range host.Network().ConnsToPeer(e.(event.EvtPeerProtocolsUpdated).Peer) {
+						(*pubsub.PubSubNotif)(ps).Connected(host.Network(), c)
+					}
 				}
 			}
 		}
