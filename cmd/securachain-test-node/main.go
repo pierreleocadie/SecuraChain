@@ -77,7 +77,9 @@ func main() { //nolint: funlen, gocyclo
 				}
 				log.Debug("Peer %s supports protocols: %v", p.String(), protocols)
 				// check if we are currently connected to the peer
-				if host.Network().Connectedness(p) == network.Connected && !gossipSubPeers[p] {
+				if host.Network().Connectedness(p) == network.Connected && gossipSubPeers[p] {
+					continue
+				} else if host.Network().Connectedness(p) == network.Connected && !gossipSubPeers[p] {
 					for _, proto := range protocols {
 						if proto == pubsub.GossipSubID_v11 || proto == pubsub.GossipSubID_v10 {
 							gossipSubRt.AddPeer(p, proto)
@@ -85,47 +87,13 @@ func main() { //nolint: funlen, gocyclo
 							break
 						}
 					}
-				} else {
-					if gossipSubPeers[p] {
-						for _, proto := range protocols {
-							if proto != pubsub.GossipSubID_v11 && proto != pubsub.GossipSubID_v10 {
-								gossipSubRt.RemovePeer(p)
-								gossipSubPeers[p] = false
-								break
-							}
-						}
-					}
+				} else if host.Network().Connectedness(p) == network.NotConnected && gossipSubPeers[p] {
+					gossipSubRt.RemovePeer(p)
+					delete(gossipSubPeers, p)
 				}
 			}
 		}
 	}()
-
-	// protocolUpdatedSub, err := host.EventBus().Subscribe(new(event.EvtPeerProtocolsUpdated))
-	// if err != nil {
-	// 	log.Errorf("Failed to subscribe to EvtPeerProtocolsUpdated: %s", err)
-	// }
-	// go func(sub event.Subscription) {
-	// 	for {
-	// 		select {
-	// 		case e, ok := <-sub.Out():
-	// 			if !ok {
-	// 				return
-	// 			}
-	// 			var updated bool
-	// 			for _, proto := range e.(event.EvtPeerProtocolsUpdated).Added {
-	// 				if proto == pubsub.GossipSubID_v11 || proto == pubsub.GossipSubID_v10 {
-	// 					updated = true
-	// 					break
-	// 				}
-	// 			}
-	// 			if updated {
-	// 				for _, c := range host.Network().ConnsToPeer(e.(event.EvtPeerProtocolsUpdated).Peer) {
-	// 					(*pubsub.PubSubNotif)(ps).Connected(host.Network(), c)
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }(protocolUpdatedSub)
 
 	// KeepRelayConnectionAlive
 	keepRelayConnectionAliveTopic, err := ps.Join("KeepRelayConnectionAlive")
