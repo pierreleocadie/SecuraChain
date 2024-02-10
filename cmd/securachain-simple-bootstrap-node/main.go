@@ -5,7 +5,6 @@ import (
 	"flag"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
@@ -46,49 +45,6 @@ func main() { //nolint: funlen
 
 	// Setup DHT discovery
 	node.SetupDHTDiscovery(ctx, cfg, host, true)
-
-	/*
-	* PUBSUB
-	 */
-	ps, err := pubsub.NewGossipSub(ctx, host, pubsub.WithMaxMessageSize(int(cfg.MaxDataRelayed)))
-	if err != nil {
-		log.Errorf("Failed to create GossipSub: %s", err)
-	}
-
-	// Join pubsub topics
-	_, err = ps.Join(cfg.KeepRelayConnectionAliveStringFlag)
-	if err != nil {
-		log.Errorf("Failed to join topic: %s", err)
-	}
-	_, err = ps.Join(cfg.ClientAnnouncementStringFlag)
-	if err != nil {
-		log.Errorf("Failed to join topic: %s", err)
-	}
-	_, err = ps.Join(cfg.StorageNodeResponseStringFlag)
-	if err != nil {
-		log.Errorf("Failed to join topic: %s", err)
-	}
-
-	protocolUpdatedSub, err := host.EventBus().Subscribe(new(event.EvtPeerProtocolsUpdated))
-	if err != nil {
-		log.Errorf("Failed to subscribe to EvtPeerProtocolsUpdated: %s", err)
-	}
-	go func(sub event.Subscription) {
-		for e := range sub.Out() {
-			var updated bool
-			for _, proto := range e.(event.EvtPeerProtocolsUpdated).Added {
-				if proto == pubsub.GossipSubID_v11 || proto == pubsub.GossipSubID_v10 {
-					updated = true
-					break
-				}
-			}
-			if updated {
-				for _, c := range host.Network().ConnsToPeer(e.(event.EvtPeerProtocolsUpdated).Peer) {
-					(*pubsub.PubSubNotif)(ps).Connected(host.Network(), c)
-				}
-			}
-		}
-	}(protocolUpdatedSub)
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES
