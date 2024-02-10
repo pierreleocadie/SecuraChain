@@ -23,7 +23,7 @@ run:
 	@GOLOG_FILE="../temp/`date '+%F-%H%M%S'`.log" \
 	GOLOG_OUTPUT="stdout+file" \
 	GOLOG_LOG_FMT="nocolor" \
-	go run ../cmd/$(APP)/main.go
+	go run ../cmd/$(APP)/main.go -config ../cmd/$(APP)/config.yml
 
 build-all: $(APPS)
 
