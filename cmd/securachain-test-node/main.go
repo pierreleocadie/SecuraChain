@@ -126,10 +126,10 @@ func main() { //nolint: funlen, gocyclo
 	go func() {
 		for {
 			time.Sleep(cfg.KeepRelayConnectionAliveInterval)
-			if !gossipSubRt.EnoughPeers("KeepRelayConnectionAlive", 1) {
-				log.Warnf("Not enough peers in KeepRelayConnectionAlive topic")
-				continue
-			}
+			// if !gossipSubRt.EnoughPeers("KeepRelayConnectionAlive", 1) {
+			// 	log.Warnf("Not enough peers in KeepRelayConnectionAlive topic")
+			// 	continue
+			// }
 			err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(host.ID()))
 			if err != nil {
 				log.Errorf("Failed to publish KeepRelayConnectionAlive message: %s", err)
