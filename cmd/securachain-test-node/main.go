@@ -49,6 +49,22 @@ func main() { //nolint: funlen, gocyclo
 	// Setup DHT discovery
 	_ = node.SetupDHTDiscovery(ctx, cfg, host, false)
 
+	go func() {
+		// Print protocols supported by peers we are connected to
+		for {
+			time.Sleep(5 * time.Second)
+			peers := host.Network().Peers()
+			for _, p := range peers {
+				protocols, err := host.Peerstore().GetProtocols(p)
+				if err != nil {
+					log.Errorf("Failed to get protocols for peer %s: %s", p.String(), err)
+					continue
+				}
+				log.Infof("Peer %s supports protocols: %v", p.String(), protocols)
+			}
+		}
+	}()
+
 	/*
 	* PUBSUB
 	 */
