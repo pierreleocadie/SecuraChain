@@ -46,6 +46,19 @@ func main() { //nolint: funlen, gocyclo
 	host := node.Initialize(log, *cfg)
 	defer host.Close()
 
+	/*
+	* PUBSUB
+	 */
+	// gossipSubRt := pubsub.DefaultGossipSubRouter(host)
+	// ps, err := pubsub.NewGossipSubWithRouter(ctx, host, gossipSubRt)
+	ps, err := pubsub.NewGossipSub(ctx, host)
+	if err != nil {
+		log.Panicf("Failed to create GossipSub: %s", err)
+	}
+
+	/*
+	* DHT DISCOVERY
+	 */
 	// Setup DHT discovery
 	_ = node.SetupDHTDiscovery(ctx, cfg, host, false)
 
@@ -64,15 +77,6 @@ func main() { //nolint: funlen, gocyclo
 			}
 		}
 	}()
-
-	/*
-	* PUBSUB
-	 */
-	gossipSubRt := pubsub.DefaultGossipSubRouter(host)
-	ps, err := pubsub.NewGossipSubWithRouter(ctx, host, gossipSubRt)
-	if err != nil {
-		log.Panicf("Failed to create GossipSub: %s", err)
-	}
 
 	// protocolUpdatedSub, err := host.EventBus().Subscribe(new(event.EvtPeerProtocolsUpdated))
 	// if err != nil {
@@ -133,14 +137,15 @@ func main() { //nolint: funlen, gocyclo
 	go func() {
 		for {
 			time.Sleep(cfg.KeepRelayConnectionAliveInterval)
-			if gossipSubRt.EnoughPeers("KeepRelayConnectionAlive", 1) {
-				err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(host.ID()))
-				if err != nil {
-					log.Errorf("Failed to publish KeepRelayConnectionAlive message: %s", err)
-					continue
-				}
-				log.Debugf("KeepRelayConnectionAlive message sent successfully")
+			// if !gossipSubRt.EnoughPeers("KeepRelayConnectionAlive", 1) {
+			// 	continue
+			// }
+			err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(host.ID()))
+			if err != nil {
+				log.Errorf("Failed to publish KeepRelayConnectionAlive message: %s", err)
+				continue
 			}
+			log.Debugf("KeepRelayConnectionAlive message sent successfully")
 		}
 	}()
 
