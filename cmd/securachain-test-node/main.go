@@ -110,6 +110,14 @@ func main() { //nolint: funlen, gocyclo
 						if proto == pubsub.GossipSubID_v11 || proto == pubsub.GossipSubID_v10 {
 							gossipSubRt.AddPeer(p, proto)
 							host.NewStream(ctx, p, proto)
+							for _, c := range host.Network().ConnsToPeer(p) {
+								s, err := c.NewStream(ctx)
+								if err != nil {
+									log.Errorf("Failed to create new stream to peer %s: %s", p.String(), err)
+									continue
+								}
+								host.Mux().Negotiate(s)
+							}
 							gossipSubPeers[p] = true
 							break
 						}
