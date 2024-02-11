@@ -111,12 +111,8 @@ func main() { //nolint: funlen, gocyclo
 							gossipSubRt.AddPeer(p, proto)
 							host.NewStream(ctx, p, proto)
 							for _, c := range host.Network().ConnsToPeer(p) {
-								s, err := c.NewStream(ctx)
-								if err != nil {
-									log.Errorf("Failed to create new stream to peer %s: %s", p.String(), err)
-									continue
-								}
-								host.Mux().Negotiate(s)
+								(*pubsub.PubSubNotif)(ps).Connected(host.Network(), c)
+								log.Debugf("Connected to peer %s with protocol %s", p.String(), proto)
 							}
 							gossipSubPeers[p] = true
 							break
