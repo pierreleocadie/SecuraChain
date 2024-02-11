@@ -109,7 +109,15 @@ func main() { //nolint: funlen, gocyclo
 					for _, proto := range protocols {
 						if proto == pubsub.GossipSubID_v11 || proto == pubsub.GossipSubID_v10 {
 							gossipSubRt.AddPeer(p, proto)
-							host.NewStream(ctx, p, proto)
+							log.Debugf("Added peer %s with protocol %s to gossipsub", p.String(), proto)
+							s, err := host.NewStream(ctx, p, proto)
+							log.Debugf("Creating stream to peer %s with protocol %s", p.String(), proto)
+							if err != nil {
+								log.Errorf("Failed to create stream to peer %s with protocol %s: %s", p.String(), proto, err)
+								continue
+							}
+							host.Mux().Negotiate(s)
+							log.Debugf("Negotiated stream to peer %s with protocol %s", p.String(), proto)
 							for _, c := range host.Network().ConnsToPeer(p) {
 								(*pubsub.PubSubNotif)(ps).Connected(host.Network(), c)
 								log.Debugf("Connected to peer %s with protocol %s", p.String(), proto)
