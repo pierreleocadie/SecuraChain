@@ -42,9 +42,6 @@ func main() { //nolint: funlen, gocyclo
 	/*
 	* NODE LIBP2P
 	 */
-	/*
-	* NODE LIBP2P
-	 */
 	h := node.Initialize(log, *cfg)
 	defer h.Close()
 	log.Debugf("Storage node initialized with PeerID: %s", h.ID().String())
@@ -57,6 +54,18 @@ func main() { //nolint: funlen, gocyclo
 	ps, err := pubsub.NewGossipSub(ctx, h)
 	if err != nil {
 		log.Panicf("Failed to create GossipSub: %s", err)
+	}
+
+	// KeepRelayConnectionAlive
+	keepRelayConnectionAliveTopic, err := ps.Join("KeepRelayConnectionAlive")
+	if err != nil {
+		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	// Subscribe to KeepRelayConnectionAlive topic
+	subKeepRelayConnectionAlive, err := keepRelayConnectionAliveTopic.Subscribe()
+	if err != nil {
+		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
 	}
 
 	// protocolUpdatedSub, err := host.EventBus().Subscribe(new(event.EvtPeerProtocolsUpdated))
@@ -91,18 +100,6 @@ func main() { //nolint: funlen, gocyclo
 	 */
 	// Setup DHT discovery
 	_ = node.SetupDHTDiscovery(ctx, cfg, h, false)
-
-	// KeepRelayConnectionAlive
-	keepRelayConnectionAliveTopic, err := ps.Join("KeepRelayConnectionAlive")
-	if err != nil {
-		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
-	}
-
-	// Subscribe to KeepRelayConnectionAlive topic
-	subKeepRelayConnectionAlive, err := keepRelayConnectionAliveTopic.Subscribe()
-	if err != nil {
-		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
-	}
 
 	// Handle incoming KeepRelayConnectionAlive messages
 	go func() {
