@@ -47,10 +47,14 @@ func main() { //nolint: funlen, gocyclo
 	log.Debugf("Storage node initialized with PeerID: %s", h.ID().String())
 
 	/*
+	* DHT DISCOVERY
+	 */
+	// Setup DHT discovery
+	_ = node.SetupDHTDiscovery(ctx, cfg, h, false)
+
+	/*
 	* PUBSUB
 	 */
-	// gossipSubRt := pubsub.DefaultGossipSubRouter(host)
-	// ps, err := pubsub.NewGossipSubWithRouter(ctx, host, gossipSubRt)
 	ps, err := pubsub.NewGossipSub(ctx, h)
 	if err != nil {
 		log.Panicf("Failed to create GossipSub: %s", err)
@@ -67,39 +71,6 @@ func main() { //nolint: funlen, gocyclo
 	if err != nil {
 		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
 	}
-
-	// protocolUpdatedSub, err := host.EventBus().Subscribe(new(event.EvtPeerProtocolsUpdated))
-	// if err != nil {
-	// 	log.Errorf("Failed to subscribe to EvtPeerProtocolsUpdated: %s", err)
-	// }
-	// go func(sub event.Subscription) {
-	// 	for {
-	// 		select {
-	// 		case e, ok := <-sub.Out():
-	// 			if !ok {
-	// 				return
-	// 			}
-	// 			var updated bool
-	// 			for _, proto := range e.(event.EvtPeerProtocolsUpdated).Added {
-	// 				if proto == pubsub.GossipSubID_v11 || proto == pubsub.GossipSubID_v10 {
-	// 					updated = true
-	// 					break
-	// 				}
-	// 			}
-	// 			if updated {
-	// 				for _, c := range host.Network().ConnsToPeer(e.(event.EvtPeerProtocolsUpdated).Peer) {
-	// 					(*pubsub.PubSubNotif)(ps).Connected(host.Network(), c)
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }(protocolUpdatedSub)
-
-	/*
-	* DHT DISCOVERY
-	 */
-	// Setup DHT discovery
-	_ = node.SetupDHTDiscovery(ctx, cfg, h, false)
 
 	// Handle incoming KeepRelayConnectionAlive messages
 	go func() {

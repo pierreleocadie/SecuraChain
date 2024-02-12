@@ -5,6 +5,7 @@ import (
 	"flag"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
@@ -45,6 +46,50 @@ func main() { //nolint: funlen
 
 	// Setup DHT discovery
 	node.SetupDHTDiscovery(ctx, cfg, host, true)
+
+	/*
+	* PUBSUB
+	 */
+	ps, err := pubsub.NewGossipSub(ctx, host)
+	if err != nil {
+		log.Panicf("Failed to create GossipSub: %s", err)
+	}
+
+	// KeepRelayConnectionAlive
+	keepRelayConnectionAliveTopic, err := ps.Join("KeepRelayConnectionAlive")
+	if err != nil {
+		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	// Subscribe to KeepRelayConnectionAlive topic
+	_, err = keepRelayConnectionAliveTopic.Subscribe()
+	if err != nil {
+		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	// Join the topic clientAnnouncementStringFlag
+	clientAnnouncementTopic, err := ps.Join(cfg.ClientAnnouncementStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join clientAnnouncementStringFlag topic: %s", err)
+	}
+
+	// Subscribe to clientAnnouncementStringFlag topic
+	_, err = clientAnnouncementTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to clientAnnouncementStringFlag topic: %s", err)
+	}
+
+	// Join the topic StorageNodeResponseStringFlag
+	storageNodeResponseTopic, err := ps.Join(cfg.StorageNodeResponseStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join StorageNodeResponseStringFlag topic: %s", err)
+	}
+
+	// Subscribe to StorageNodeResponseStringFlag topic
+	_, err = storageNodeResponseTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to StorageNodeResponseStringFlag topic: %s", err)
+	}
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES
