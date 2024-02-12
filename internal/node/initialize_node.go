@@ -100,38 +100,37 @@ func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host { //no
 	if !behindNAT {
 		log.Debugln("Node is not behind NAT")
 		// Start the relay service
-		_, err = relay.New(h,
-			relay.WithResources(relay.Resources{
-				Limit: &relay.RelayLimit{
-					// Duration is the time limit before resetting a relayed connection; defaults to 2min.
-					Duration: cfg.MaxRelayedConnectionDuration,
-					// Data is the limit of data relayed (on each direction) before resetting the connection.
-					// Defaults to 128KB
-					// Data: 1 << 30, // 1 GB
-					Data: cfg.MaxDataRelayed,
-				},
-				// Default values
-				// ReservationTTL is the duration of a new (or refreshed reservation).
-				// Defaults to 1hr.
-				ReservationTTL: cfg.RelayReservationTTL,
-				// MaxReservations is the maximum number of active relay slots; defaults to 128.
-				MaxReservations: cfg.MaxRelayReservations,
-				// MaxCircuits is the maximum number of open relay connections for each peer; defaults to 16.
-				MaxCircuits: cfg.MaxRelayCircuits,
-				// BufferSize is the size of the relayed connection buffers; defaults to 2048.
-				BufferSize: cfg.MaxRelayedConnectionBufferSize,
+		_, err = relay.New(h) // relay.WithResources(relay.Resources{
+		// 	Limit: &relay.RelayLimit{
+		// 		// Duration is the time limit before resetting a relayed connection; defaults to 2min.
+		// 		Duration: cfg.MaxRelayedConnectionDuration,
+		// 		// Data is the limit of data relayed (on each direction) before resetting the connection.
+		// 		// Defaults to 128KB
+		// 		// Data: 1 << 30, // 1 GB
+		// 		Data: cfg.MaxDataRelayed,
+		// 	},
+		// 	// Default values
+		// 	// ReservationTTL is the duration of a new (or refreshed reservation).
+		// 	// Defaults to 1hr.
+		// 	ReservationTTL: cfg.RelayReservationTTL,
+		// 	// MaxReservations is the maximum number of active relay slots; defaults to 128.
+		// 	MaxReservations: cfg.MaxRelayReservations,
+		// 	// MaxCircuits is the maximum number of open relay connections for each peer; defaults to 16.
+		// 	MaxCircuits: cfg.MaxRelayCircuits,
+		// 	// BufferSize is the size of the relayed connection buffers; defaults to 2048.
+		// 	BufferSize: cfg.MaxRelayedConnectionBufferSize,
 
-				// MaxReservationsPerPeer is the maximum number of reservations originating from the same
-				// peer; default is 4.
-				MaxReservationsPerPeer: cfg.MaxRelayReservationsPerPeer,
-				// MaxReservationsPerIP is the maximum number of reservations originating from the same
-				// IP address; default is 8.
-				MaxReservationsPerIP: cfg.MaxRelayReservationsPerIP,
-				// MaxReservationsPerASN is the maximum number of reservations origination from the same
-				// ASN; default is 32
-				MaxReservationsPerASN: cfg.MaxRelayReservationsPerASN,
-			}),
-		)
+		// 	// MaxReservationsPerPeer is the maximum number of reservations originating from the same
+		// 	// peer; default is 4.
+		// 	MaxReservationsPerPeer: cfg.MaxRelayReservationsPerPeer,
+		// 	// MaxReservationsPerIP is the maximum number of reservations originating from the same
+		// 	// IP address; default is 8.
+		// 	MaxReservationsPerIP: cfg.MaxRelayReservationsPerIP,
+		// 	// MaxReservationsPerASN is the maximum number of reservations origination from the same
+		// 	// ASN; default is 32
+		// 	MaxReservationsPerASN: cfg.MaxRelayReservationsPerASN,
+		// }),
+
 		if err != nil {
 			log.Errorln("Error instantiating relay service : ", err)
 		}
