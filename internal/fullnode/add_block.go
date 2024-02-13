@@ -11,7 +11,7 @@ import (
 // It returns a boolean indicating whether the block was added, and a message.
 func AddBlockToBlockchain(database *pebble.PebbleTransactionDB, blockAnnounced *block.Block) (bool, string) {
 	// Use the block's signature as a unique key for storage.
-	key := blockAnnounced.Signature
+	key := block.ComputeHash(blockAnnounced)
 
 	// Attempt to retrieve the block by its signature to checj for its existence in the database.
 	existingBlock, err := database.GetBlock(key)

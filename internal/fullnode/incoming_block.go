@@ -13,6 +13,8 @@ import (
 func HandleIncomingBlock(incomingBlock *block.Block, blockBuffer map[int64][]*block.Block, database *pebble.PebbleTransactionDB) ([]*block.Block, error) {
 	var timeToWait = 2 * time.Second
 
+	// verify that the blocks got's the same hash before adding it to the buffer
+
 	// Add the block to the buffer based on its timestamp.
 	timestamp := incomingBlock.Timestamp
 	blockBuffer[timestamp] = append(blockBuffer[timestamp], incomingBlock)
