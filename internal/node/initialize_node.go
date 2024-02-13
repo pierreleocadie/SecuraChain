@@ -10,7 +10,9 @@ import (
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/p2p/host/autorelay"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
+	"github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
@@ -30,11 +32,11 @@ func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host { //no
 		log.Panicf("Failed to create new connection manager: %s", err)
 	}
 
-	/* hostReady := make(chan struct{})
+	hostReady := make(chan struct{})
 	hostGetter := func() host.Host {
 		<-hostReady // closed when we finish setting up the host
 		return h
-	} */
+	}
 
 	// Create a new libp2p Host
 	h, err = libp2p.New(
@@ -42,8 +44,8 @@ func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host { //no
 		libp2p.ProtocolVersion(cfg.ProtocolVersion),
 		libp2p.AddrsFactory(network.FilterOutPrivateAddrs), // Comment this line to build bootstrap node
 		libp2p.EnableNATService(),
-		libp2p.NATPortMap(),
-		libp2p.EnableHolePunching(),
+		// libp2p.NATPortMap(),
+		// libp2p.EnableHolePunching(),
 		libp2p.ListenAddrStrings(cfg.IP4tcp, cfg.IP6tcp, cfg.IP4quic, cfg.IP6quic),
 		libp2p.ConnectionManager(connManager),
 		libp2p.Transport(tcp.NewTCPTransport),
@@ -52,14 +54,14 @@ func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host { //no
 		libp2p.DefaultSecurity,
 		libp2p.DefaultMuxers,
 		libp2p.DefaultEnableRelay,
-		// libp2p.EnableRelayService(),
-		// libp2p.EnableAutoRelayWithPeerSource(
-		// 	network.NewPeerSource(log, hostGetter),
-		// 	autorelay.WithBackoff(cfg.DiscoveryRefreshInterval),
-		// 	autorelay.WithMinInterval(cfg.DiscoveryRefreshInterval),
-		// 	autorelay.WithNumRelays(1),
-		// 	autorelay.WithMinCandidates(1),
-		// ),
+		libp2p.EnableRelayService(),
+		libp2p.EnableAutoRelayWithPeerSource(
+			network.NewPeerSource(log, hostGetter),
+			autorelay.WithBackoff(cfg.DiscoveryRefreshInterval),
+			autorelay.WithMinInterval(cfg.DiscoveryRefreshInterval),
+			autorelay.WithNumRelays(1),
+			autorelay.WithMinCandidates(1),
+		),
 	)
 	if err != nil {
 		log.Panicf("Failed to create new libp2p Host: %s", err)
@@ -67,7 +69,7 @@ func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host { //no
 	log.Debugf("Our node ID: %s\n", h.ID())
 
 	// Close the hostReady channel to signal that the host is ready
-	// close(hostReady)
+	close(hostReady)
 
 	// Node info
 	hostInfo := peer.AddrInfo{
@@ -92,11 +94,11 @@ func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host { //no
 	* RELAY SERVICE
 	 */
 	// Check if the node is behind NAT
-	// behindNAT := network.NATDiscovery(log)
+	behindNAT := network.NATDiscovery(log)
 
 	// If the node is behind NAT, search for a node that supports relay
 	// TODO: Optimize this code
-	/* if !behindNAT {
+	if !behindNAT {
 		log.Debugln("Node is not behind NAT")
 		// Start the relay service
 		_, err = relay.New(h,
@@ -137,7 +139,7 @@ func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host { //no
 		log.Debugln("Relay service started")
 	} else {
 		log.Debugln("Node is behind NAT")
-	} */
+	}
 
 	log.Infof("Host protocols are: %v", h.Mux().Protocols())
 
