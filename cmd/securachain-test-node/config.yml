@@ -13,10 +13,14 @@ bootstrapPeers: [
 	# "/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWMX4fAauTifC6fuDTWymjPTVkAuYsw3Ksc2DUoQdtwsEd",
 	# "/ip4/154.56.63.167/tcp/1211/p2p/12D3KooWLRxRgyy5KAHWbU5LSPdYsMnZz5ArbtkLG72bdanEgFsK",
 	# "/ip4/154.56.63.167/udp/1211/quic-v1/p2p/12D3KooWLRxRgyy5KAHWbU5LSPdYsMnZz5ArbtkLG72bdanEgFsK",
-  "/ip4/172.232.44.124/tcp/1211/p2p/12D3KooWCb1oWiK7WC9zctLXBCvhZhhNq1Jn8UjKU5tBxUHMS6XV",
-  "/ip4/172.232.44.124/udp/1211/quic-v1/p2p/12D3KooWCb1oWiK7WC9zctLXBCvhZhhNq1Jn8UjKU5tBxUHMS6XV",
-  "/ip6/2600:3c07::f03c:94ff:fecc:aee6/tcp/1211/p2p/12D3KooWCb1oWiK7WC9zctLXBCvhZhhNq1Jn8UjKU5tBxUHMS6XV",
-  "/ip6/2600:3c07::f03c:94ff:fecc:aee6/udp/1211/quic-v1/p2p/12D3KooWCb1oWiK7WC9zctLXBCvhZhhNq1Jn8UjKU5tBxUHMS6XV",
+  "/ip4/139.162.254.176/tcp/1211/p2p/12D3KooWKSsNkhEScdndCJNvQZfeNQ3wgGfqthKrWrFBNvWAXzag",
+  "/ip4/139.162.254.176/udp/1211/quic-v1/p2p/12D3KooWKSsNkhEScdndCJNvQZfeNQ3wgGfqthKrWrFBNvWAXzag",
+  "/ip6/2a01:7e00::f03c:94ff:fe1c:f43b/tcp/1211/p2p/12D3KooWKSsNkhEScdndCJNvQZfeNQ3wgGfqthKrWrFBNvWAXzag",
+  "/ip6/2a01:7e00::f03c:94ff:fe1c:f43b/udp/1211/quic-v1/p2p/12D3KooWKSsNkhEScdndCJNvQZfeNQ3wgGfqthKrWrFBNvWAXzag",
+  "/ip4/139.162.19.215/tcp/1211/p2p/12D3KooWSaKUNiCBs8y7edz8nu88LBcmT5Ri7Aj85G96c2F4AJ7S",
+  "/ip4/139.162.19.215/udp/1211/quic-v1/p2p/12D3KooWSaKUNiCBs8y7edz8nu88LBcmT5Ri7Aj85G96c2F4AJ7S",
+  "/ip6/2400:8901::f03c:94ff:fe1c:f45b/tcp/1211/p2p/12D3KooWSaKUNiCBs8y7edz8nu88LBcmT5Ri7Aj85G96c2F4AJ7S",
+  "/ip6/2400:8901::f03c:94ff:fe1c:f45b/udp/1211/quic-v1/p2p/12D3KooWSaKUNiCBs8y7edz8nu88LBcmT5Ri7Aj85G96c2F4AJ7S",
 ]
 listeningPort: 0
 discoveryRefreshInterval: 10s
