@@ -45,7 +45,7 @@ func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host { //no
 		libp2p.AddrsFactory(network.FilterOutPrivateAddrs), // Comment this line to build bootstrap node
 		libp2p.EnableNATService(),
 		// libp2p.NATPortMap(),
-		// libp2p.EnableHolePunching(),
+		libp2p.EnableHolePunching(),
 		libp2p.ListenAddrStrings(cfg.IP4tcp, cfg.IP6tcp, cfg.IP4quic, cfg.IP6quic),
 		libp2p.ConnectionManager(connManager),
 		libp2p.Transport(tcp.NewTCPTransport),
