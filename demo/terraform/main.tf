@@ -17,12 +17,17 @@ variable "linode_token" {
     type        = string
 }
 
+variable "root_pass" {
+    description = "Root password for the instances"
+    type        = string
+}
+
 provider "linode" {
     token = var.linode_token
 }
 
 locals {
-    regions =  ["se-sto", "nl-ams", "it-mil", "eu-west", "fr-par", "eu-central"]
+    regions =  ["us-east", "nl-ams", "eu-west", "ap-south"]
 }
 
 resource "linode_instance" "nanode" {
@@ -31,7 +36,7 @@ resource "linode_instance" "nanode" {
     label      = "nanode-${count.index}"
     region     = element(local.regions, count.index % length(local.regions))
     type       = "g6-nanode-1"
-    root_pass  = "YOUR_PASSWORD_HERE"
+    root_pass  = var.root_pass
     authorized_keys = ["${trimspace(file("~/.ssh/id_rsa.pub"))}"]
 
     provisioner "remote-exec" {
@@ -54,7 +59,12 @@ resource "linode_instance" "nanode" {
             "sudo apt-get install -y docker-ce docker-ce-cli containerd.io",
             "sudo systemctl start docker",
             "sudo systemctl enable docker",
-            "sudo systemctl enable containerd"
+            "sudo systemctl enable containerd",
+            "sudo apt install -y git",
+            "wget https://go.dev/dl/go1.22.0.linux-amd64.tar.gz",
+            "rm -rf /usr/local/go && tar -C /usr/local -xzf go1.22.0.linux-amd64.tar.gz",
+            "export PATH=$PATH:/usr/local/go/bin",
+            "git clone https://github.com/pierreleocadie/SecuraChain.git"
         ]
     }
 }
