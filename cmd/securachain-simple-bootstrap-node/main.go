@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
+	"net/http"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/event"
@@ -43,6 +45,27 @@ func main() { //nolint: funlen
 	host := node.Initialize(log, *cfg)
 	defer host.Close()
 
+	/*
+	* WEBPAGE
+	 */
+	// Web server with a page that displays the host addresses
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		addrs := host.Addrs()
+		for _, addr := range addrs {
+			fmt.Fprintln(w, addr)
+		}
+	})
+
+	go func() {
+		err := http.ListenAndServe(":8080", nil)
+		if err != nil {
+			log.Errorln("Error starting web server: ", err)
+		}
+	}()
+
+	/*
+	* DHT DISCOVERY
+	 */
 	// Setup DHT discovery
 	node.SetupDHTDiscovery(ctx, cfg, host, true)
 
