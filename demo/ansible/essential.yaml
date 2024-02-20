@@ -1,0 +1,58 @@
+- name: Install the essential tools
+  hosts: all
+  become: yes
+  vars:
+    go_version: "1.22.0"  # Mettez à jour avec la version de Go souhaitée
+    go_install_dir: "/usr/local"  # Chemin d'installation souhaité pour Go
+  tasks:
+    - name: Install Docker
+      ansible.builtin.apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+
+    - name: Install Docker Compose
+      ansible.builtin.apt:
+        name: docker-compose
+        state: present
+        update_cache: yes
+
+    - name: Install curl
+      ansible.builtin.apt:
+        name: curl
+        state: present
+        update_cache: yes
+    
+    - name: Download Go binary
+      ansible.builtin.get_url:
+        url: "https://go.dev/dl/go{{ go_version }}.linux-amd64.tar.gz" # https://go.dev/dl/go1.22.0.linux-amd64.tar.gz
+        dest: "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
+        timeout: 60
+        validate_certs: yes
+    
+    - name: Remove any previous Go installation
+      ansible.builtin.file:
+        path: "{{ go_install_dir }}/go"
+        state: absent
+    
+    - name: Extract Go tarball
+      ansible.builtin.unarchive:
+        src: "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
+        dest: "{{ go_install_dir }}"
+        # creates: "{{ go_install_dir }}"
+        remote_src: yes
+    
+    - name: Set Go environment variables
+      ansible.builtin.lineinfile:
+        path: /etc/profile
+        line: "{{ item }}"
+        state: present
+        create: yes
+      loop:
+        - 'export PATH=$PATH:{{ go_install_dir }}/go/bin' # $PATH:/usr/local/go/bin
+    
+    - name: Clone SecuraChain repository
+      ansible.builtin.git:
+        repo: "https://github.com/pierreleocadie/SecuraChain.git"
+        dest: "~/SecuraChain"
+        version: "storage-node"  # Directement cloner la branche souhaitée
