@@ -51,20 +51,7 @@ resource "linode_instance" "nanode" {
             "sudo apt-get update",
             "sudo apt-get install -y python3 python3-pip",
             "pip3 install ansible",
-            "sudo apt-get remove -y docker docker-engine docker.io",
-            "sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release",
-            "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg",
-            "echo \"deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
-            "sudo apt-get update -y",
-            "sudo apt-get install -y docker-ce docker-ce-cli containerd.io",
-            "sudo systemctl start docker",
-            "sudo systemctl enable docker",
-            "sudo systemctl enable containerd",
             "sudo apt install -y git",
-            # "wget https://go.dev/dl/go1.22.0.linux-amd64.tar.gz",
-            # "rm -rf /usr/local/go && tar -C /usr/local -xzf go1.22.0.linux-amd64.tar.gz",
-            # "export PATH=$PATH:/usr/local/go/bin",
-            # "git clone https://github.com/pierreleocadie/SecuraChain.git"
         ]
     }
 }
