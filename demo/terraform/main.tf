@@ -37,13 +37,13 @@ resource "linode_instance" "nanode" {
     region     = element(local.regions, count.index % length(local.regions))
     type       = "g6-nanode-1"
     root_pass  = var.root_pass
-    authorized_keys = ["${trimspace(file("~/.ssh/id_rsa.pub"))}"]
+    authorized_keys = ["${trimspace(file("../ssh-keys/demo-ssh-keys.pub"))}"]
 
     provisioner "remote-exec" {
         connection {
             type        = "ssh"
             user        = "root"
-            private_key = file("~/.ssh/id_rsa")
+            private_key = file("../ssh-keys/demo-ssh-keys")
             host     = self.ip_address
             timeout = "30m"
         }
@@ -61,10 +61,15 @@ resource "linode_instance" "nanode" {
             "sudo systemctl enable docker",
             "sudo systemctl enable containerd",
             "sudo apt install -y git",
-            "wget https://go.dev/dl/go1.22.0.linux-amd64.tar.gz",
-            "rm -rf /usr/local/go && tar -C /usr/local -xzf go1.22.0.linux-amd64.tar.gz",
-            "export PATH=$PATH:/usr/local/go/bin",
-            "git clone https://github.com/pierreleocadie/SecuraChain.git"
+            # "wget https://go.dev/dl/go1.22.0.linux-amd64.tar.gz",
+            # "rm -rf /usr/local/go && tar -C /usr/local -xzf go1.22.0.linux-amd64.tar.gz",
+            # "export PATH=$PATH:/usr/local/go/bin",
+            # "git clone https://github.com/pierreleocadie/SecuraChain.git"
         ]
     }
+}
+
+output "instance_details" {
+    value = { for instance in linode_instance.nanode : instance.label => instance.ip_address }
+    description = "Details of Linode instances (name and IP address)"
 }

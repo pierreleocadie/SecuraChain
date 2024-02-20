@@ -4,6 +4,10 @@
 bin/
 *.pem
 
+ssh-keys/
+hosts.ini
+instance_details.json
+
 ### Ansible ###
 *.retry
 
