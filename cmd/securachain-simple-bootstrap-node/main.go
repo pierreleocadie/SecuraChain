@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/event"
@@ -13,6 +14,8 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
+
+const readTimeout = 10 * time.Second
 
 var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
 
@@ -50,14 +53,19 @@ func main() { //nolint: funlen
 	 */
 	// Web server with a page that displays the host addresses
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		addrs := host.Addrs()
+		addrs := host.Peerstore().Addrs(host.ID())
 		for _, addr := range addrs {
-			fmt.Fprintln(w, addr)
+			fmt.Fprintln(w, addr, "/", host.ID())
 		}
 	})
 
+	webserver := &http.Server{
+		Addr:        ":8080",
+		ReadTimeout: readTimeout,
+	}
+
 	go func() {
-		err := http.ListenAndServe(":8080", nil)
+		err := webserver.ListenAndServe()
 		if err != nil {
 			log.Errorln("Error starting web server: ", err)
 		}

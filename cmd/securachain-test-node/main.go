@@ -17,7 +17,7 @@ import (
 
 var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
 
-func main() { //nolint: funlen, gocyclo
+func main() { //nolint: funlen
 	log := ipfsLog.Logger("test-node")
 	err := ipfsLog.SetLogLevel("*", "DEBUG")
 	if err != nil {
@@ -98,14 +98,6 @@ func main() { //nolint: funlen, gocyclo
 				continue
 			}
 			log.Debugf("KeepRelayConnectionAlive message sent successfully")
-		}
-	}()
-
-	go func() {
-		for {
-			time.Sleep(5 * time.Second)
-			peers := ps.ListPeers("KeepRelayConnectionAlive")
-			log.Debugf("Peers in KeepRelayConnectionAlive topic: %v", peers)
 		}
 	}()
 
