@@ -2,7 +2,7 @@
   hosts: bootstrap_node_servers
   become: yes
   vars:
-    repo_server_ip: "{{ hostvars['nanode-0']['ansible_host'] }}"
+    repo_server_ip: "{{ hostvars[groups['repo_server'][0]]['ansible_host'] }}"
   tasks:
     - name: Download the bootstrap node script
       ansible.builtin.shell: |
