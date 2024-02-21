@@ -39,14 +39,15 @@ app.get('/files', function(req, res) {
     });
 });
 
-app.delete('/delete/:fileName', function(req, res) {
-    const fileName = req.params.fileName;
-    fs.unlink(path.join(uploadDirectory, fileName), (err) => {
+app.delete('/delete', function(req, res) {
+    const filePath = path.join(__dirname, req.query.filePath);
+    fs.unlink(filePath, function(err) {
         if (err) {
             console.error(err);
-            return res.sendStatus(500);
+            res.status(500).json({success: false});
+        } else {
+            res.json({success: true});
         }
-        res.sendStatus(200);
     });
 });
 

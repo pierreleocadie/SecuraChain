@@ -7,7 +7,7 @@ function uploadFile() {
     .then(response => response.json())
     .then(data => {
         if(data.filePath) {
-            addFileToList(data.filePath, data.fileName);
+            addFileToList(data.filePath);
         }
     })
     .catch(error => {
@@ -15,44 +15,46 @@ function uploadFile() {
     });
 }
 
-function addFileToList(filePath, fileName) {
+function addFileToList(filePath) {
     var fileList = document.getElementById('fileList');
-    var fileElement = document.createElement('div');
+    var fileRow = document.createElement('div');
     
-    var link = document.createElement('a');
-    link.href = filePath;
-    link.textContent = fileName;
-    fileElement.appendChild(link);
+    var fileLink = document.createElement('a');
+    fileLink.href = filePath;
+    fileLink.textContent = filePath.split('/').pop();
+    fileRow.appendChild(fileLink);
 
     var deleteButton = document.createElement('button');
     deleteButton.textContent = 'Supprimer';
-    deleteButton.onclick = function() {
-        deleteFile(fileName);
-    };
-    fileElement.appendChild(deleteButton);
+    deleteButton.onclick = function() { deleteFile(filePath); };
+    fileRow.appendChild(deleteButton);
 
-    fileList.appendChild(fileElement);
+    fileList.appendChild(fileRow);
 }
 
-function deleteFile(fileName) {
-    fetch(`/delete/${fileName}`, {
-        method: 'DELETE',
-    })
-    .then(response => {
-        if(response.ok) {
-            window.location.reload(); // Recharger la page pour mettre à jour la liste des fichiers
+function deleteFile(filePath) {
+    fetch(`/delete?filePath=${encodeURIComponent(filePath)}`, { method: 'DELETE' })
+    .then(response => response.json())
+    .then(data => {
+        if(data.success) {
+            // Recharger la liste des fichiers après la suppression
+            document.getElementById('fileList').innerHTML = ''; // Effacer la liste actuelle
+            fetch('/files') // Recharger la liste
+                .then(response => response.json())
+                .then(filePaths => {
+                    filePaths.forEach(filePath => addFileToList(filePath));
+                })
+                .catch(error => console.error('Error:', error));
         }
     })
-    .catch(error => {
-        console.error('Error:', error);
-    });
+    .catch(error => console.error('Error:', error));
 }
 
 window.onload = function() {
     fetch('/files')
         .then(response => response.json())
-        .then(fileInfos => {
-            fileInfos.forEach(fileInfo => addFileToList(fileInfo.filePath, fileInfo.fileName));
+        .then(filePaths => {
+            filePaths.forEach(filePath => addFileToList(filePath));
         })
         .catch(error => console.error('Error:', error));
 };
