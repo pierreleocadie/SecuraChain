@@ -1,0 +1,60 @@
+windowWidth: 800
+windowHeight: 600
+userAgent: "SecuraChain"
+protocolVersion: "0.0.1"
+ecdsaKeyPairPath: ""
+aesKeyPath: ""
+lowWater: 160
+highWater: 192
+bootstrapPeers: [
+  # "/ip4/13.37.148.174/tcp/1212/p2p/12D3KooWRWobba8bZYeUX2cCKMzvWzkRBG2h5yTZaGzutAH8Sjrx", # bootstrap node test
+  # "/ip4/13.37.148.174/udp/1212/quic-v1/p2p/12D3KooWRWobba8bZYeUX2cCKMzvWzkRBG2h5yTZaGzutAH8Sjrx", # bootstrap node test
+  # "/ip4/13.37.148.174/tcp/1211/p2p/12D3KooWMX4fAauTifC6fuDTWymjPTVkAuYsw3Ksc2DUoQdtwsEd",
+	# "/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWMX4fAauTifC6fuDTWymjPTVkAuYsw3Ksc2DUoQdtwsEd",
+	# "/ip4/154.56.63.167/tcp/1211/p2p/12D3KooWLRxRgyy5KAHWbU5LSPdYsMnZz5ArbtkLG72bdanEgFsK",
+	# "/ip4/154.56.63.167/udp/1211/quic-v1/p2p/12D3KooWLRxRgyy5KAHWbU5LSPdYsMnZz5ArbtkLG72bdanEgFsK",
+  "/ip4/139.162.254.176/tcp/1211/p2p/12D3KooWKSsNkhEScdndCJNvQZfeNQ3wgGfqthKrWrFBNvWAXzag",
+  "/ip4/139.162.254.176/udp/1211/quic-v1/p2p/12D3KooWKSsNkhEScdndCJNvQZfeNQ3wgGfqthKrWrFBNvWAXzag",
+  "/ip6/2a01:7e00::f03c:94ff:fe1c:f43b/tcp/1211/p2p/12D3KooWKSsNkhEScdndCJNvQZfeNQ3wgGfqthKrWrFBNvWAXzag",
+  "/ip6/2a01:7e00::f03c:94ff:fe1c:f43b/udp/1211/quic-v1/p2p/12D3KooWKSsNkhEScdndCJNvQZfeNQ3wgGfqthKrWrFBNvWAXzag",
+  "/ip4/139.162.19.215/tcp/1211/p2p/12D3KooWSaKUNiCBs8y7edz8nu88LBcmT5Ri7Aj85G96c2F4AJ7S",
+  "/ip4/139.162.19.215/udp/1211/quic-v1/p2p/12D3KooWSaKUNiCBs8y7edz8nu88LBcmT5Ri7Aj85G96c2F4AJ7S",
+  "/ip6/2400:8901::f03c:94ff:fe1c:f45b/tcp/1211/p2p/12D3KooWSaKUNiCBs8y7edz8nu88LBcmT5Ri7Aj85G96c2F4AJ7S",
+  "/ip6/2400:8901::f03c:94ff:fe1c:f45b/udp/1211/quic-v1/p2p/12D3KooWSaKUNiCBs8y7edz8nu88LBcmT5Ri7Aj85G96c2F4AJ7S",
+
+  "/ip4/96.126.107.152/tcp/1211/p2p/12D3KooWCumRAvRTrTcokRPbTjVCJKxJQzvfv8LD5pBaUH5QkDC6",
+  "/ip4/96.126.107.152/udp/1211/quic-v1/p2p/12D3KooWCumRAvRTrTcokRPbTjVCJKxJQzvfv8LD5pBaUH5QkDC6",
+  "/ip6/2600:3c03::f03c:94ff:fe1c:f426/tcp/1211/p2p/12D3KooWCumRAvRTrTcokRPbTjVCJKxJQzvfv8LD5pBaUH5QkDC6",
+  "/ip6/2600:3c03::f03c:94ff:fe1c:f426/udp/1211/quic-v1/p2p/12D3KooWCumRAvRTrTcokRPbTjVCJKxJQzvfv8LD5pBaUH5QkDC6",
+
+  "/ip4/172.233.60.40/tcp/1211/p2p/12D3KooWFSPJzxWxz5hbeFNbixZfbJh63PmoKaHEGeAt3VeRw1RM",
+  "/ip4/172.233.60.40/udp/1211/quic-v1/p2p/12D3KooWFSPJzxWxz5hbeFNbixZfbJh63PmoKaHEGeAt3VeRw1RM",
+  "/ip6/2600:3c0e::f03c:94ff:fe1c:f475/tcp/1211/p2p/12D3KooWFSPJzxWxz5hbeFNbixZfbJh63PmoKaHEGeAt3VeRw1RM",
+  "/ip6/2600:3c0e::f03c:94ff:fe1c:f475/udp/1211/quic-v1/p2p/12D3KooWFSPJzxWxz5hbeFNbixZfbJh63PmoKaHEGeAt3VeRw1RM",
+]
+listeningPort: 0
+discoveryRefreshInterval: 10s
+autorelayWithBackoffInterval: 10s
+autorelayWithMinCallbackInterval: 10s
+keepRelayConnectionAliveInterval: 15s
+maxRelayedConnectionDuration: 1h
+maxDataRelayed: 1073741824 # 1GB
+relayReservationTTL: 1h
+maxRelayReservations: 128
+maxRelayCircuits: 16
+maxRelayedConnectionBufferSize: 2048
+maxRelayReservationsPerPeer: 4
+maxRelayReservationsPerIP: 8
+maxRelayReservationsPerASN: 32
+ipfsProvidersDiscoveryRefreshInterval: 10s
+ip4tcp: "/ip4/0.0.0.0/tcp/0"
+ip6tcp: "/ip6/::/tcp/0"
+ip4quic: "/ip4/0.0.0.0/udp/0/quic-v1"
+ip6quic: "/ip6/::/udp/0/quic-v1"
+rendezvousStringFlag: "SecuraChainNetwork"
+clientAnnouncementStringFlag: "ClientAnnouncement"
+storageNodeResponseStringFlag: "StorageNodeResponse"
+keepRelayConnectionAliveStringFlag: "KeepRelayConnectionAlive"
+fileRights: 0700
+fileMetadataRegistryJson: "fileMetadataRegistry.json"
+memorySpace: 10 # in GB

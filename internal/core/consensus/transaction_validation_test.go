@@ -38,7 +38,7 @@ func TestAddFileTransactionValidator_ValidTransaction(t *testing.T) {
 		t.Errorf("Failed to create peer.ID: %s", err)
 	}
 
-	randomeFileCID := merkledag.NodeWithData(unixfs.FilePBData([]byte("fileCID"), uint64(len([]byte("fileCID"))))).Cid() // Random CIDv0
+	randomFileCid := merkledag.NodeWithData(unixfs.FilePBData([]byte("fileCID"), uint64(len([]byte("fileCID"))))).Cid() // Random CIDv0
 
 	checksum := sha256.Sum256([]byte("checksum"))
 	encryptedFilename, err := ownerAesKey.EncryptData([]byte("filename"))
@@ -51,13 +51,13 @@ func TestAddFileTransactionValidator_ValidTransaction(t *testing.T) {
 		t.Errorf("Failed to encrypt extension: %s", err)
 	}
 
-	announcement := transaction.NewClientAnnouncement(ownerECDSAKeyPair, encryptedFilename, encryptedExtension, 1234, checksum[:])
+	announcement := transaction.NewClientAnnouncement(ownerECDSAKeyPair, randomFileCid, encryptedFilename, encryptedExtension, 1234, checksum[:])
 	time.Sleep(1 * time.Second)
-	response := transaction.NewStorageNodeResponse(nodeECDSAKeyPair, randomeNodeID, "", announcement)
-	time.Sleep(1 * time.Second)
-	fileTransfer := transaction.NewFileTransferHTTPRequest(announcement, response, nil, ownerECDSAKeyPair)
-	time.Sleep(1 * time.Second)
-	addFileTransaction := transaction.NewAddFileTransaction(announcement, response, fileTransfer, randomeFileCID, false, ownerECDSAKeyPair)
+	addFileTransaction := transaction.NewAddFileTransaction(announcement, randomFileCid, false, nodeECDSAKeyPair, randomeNodeID)
+	ba, _ := announcement.Serialize()
+	t.Log(string(ba))
+	bd, _ := addFileTransaction.Serialize()
+	t.Log(string(bd))
 
 	if !ValidateTransaction(addFileTransaction) {
 		t.Errorf("ValidateTransaction failed for a valid AddFileTransaction")

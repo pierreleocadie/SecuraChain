@@ -15,7 +15,15 @@ TARGETS = $(APP) $(APPS)
 endif
 
 # Build targets
-.PHONY: build-all build lint secure tests all-check clean all
+.PHONY: run build-all build lint secure tests all-check clean all
+
+run:
+	mkdir -p ../temp
+	@echo "Running $(APP)..."
+	@GOLOG_FILE="../temp/`date '+%F-%H%M%S'`.log" \
+	GOLOG_OUTPUT="stdout+file" \
+	GOLOG_LOG_FMT="nocolor" \
+	go run ../cmd/$(APP)/main.go -config ../cmd/$(APP)/config.yml
 
 build-all: $(APPS)
 

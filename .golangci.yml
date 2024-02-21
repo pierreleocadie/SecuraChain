@@ -65,6 +65,7 @@ linters-settings:
           - github.com/multiformats
           - github.com/libp2p
           - github.com/ipfs
+          - fyne.io/
   lll:
     line-length: 150
 

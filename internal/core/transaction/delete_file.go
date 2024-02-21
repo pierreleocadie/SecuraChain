@@ -20,7 +20,7 @@ func (f *DeleteFileTransactionFactory) CreateTransaction(data []byte) (Transacti
 type DeleteFileTransaction struct {
 	TransactionID        uuid.UUID `json:"transactionID"`        // Transaction ID - UUID
 	OwnerAddress         []byte    `json:"ownerAddress"`         // Owner address - ECDSA public key
-	FileCID              cid.Cid   `json:"fileCID"`              // File CID - SHA256
+	FileCid              cid.Cid   `json:"fileCID"`              // File CID
 	TransactionSignature []byte    `json:"transactionSignature"` // Transaction signature - ECDSA signature
 	TransactionTimestamp int64     `json:"transactionTimestamp"` // Transaction timestamp - Unix timestamp
 	Verifier                       // embed TransactionVerifier struct to inherit VerifyTransaction method
@@ -41,7 +41,7 @@ func (t *DeleteFileTransaction) SpecificData() ([]byte, error) {
 	return json.Marshal(t)
 }
 
-func NewDeleteFileTransaction(keyPair ecdsa.KeyPair, fileCID cid.Cid) *DeleteFileTransaction {
+func NewDeleteFileTransaction(keyPair ecdsa.KeyPair, fileCid cid.Cid) *DeleteFileTransaction {
 	ownerAddressBytes, err := keyPair.PublicKeyToBytes()
 	if err != nil {
 		return nil
@@ -50,7 +50,7 @@ func NewDeleteFileTransaction(keyPair ecdsa.KeyPair, fileCID cid.Cid) *DeleteFil
 	transaction := &DeleteFileTransaction{
 		TransactionID:        uuid.New(),
 		OwnerAddress:         ownerAddressBytes,
-		FileCID:              fileCID,
+		FileCid:              fileCid,
 		TransactionTimestamp: time.Now().Unix(),
 	}
 
