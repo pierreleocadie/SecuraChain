@@ -10,17 +10,22 @@ const storage = multer.diskStorage({
         cb(null, 'uploads/');
     },
     filename: function(req, file, cb) {
-        cb(null, file.originalname); // Utiliser le nom original du fichier
+        cb(null, file.originalname);
     }
 });
 
 const upload = multer({ storage: storage });
 const uploadDirectory = path.join(__dirname, 'uploads');
 
+// Assurer que le dossier d'upload existe
+if (!fs.existsSync(uploadDirectory)){
+    fs.mkdirSync(uploadDirectory);
+}
+
 app.use(express.static('.'));
 
 app.post('/upload', upload.single('file'), function(req, res) {
-    res.json({ filePath: `/uploads/${req.file.originalname}`, fileName: req.file.originalname });
+    res.json({ filePath: `/uploads/${req.file.originalname}` });
 });
 
 app.get('/files', function(req, res) {
@@ -28,10 +33,8 @@ app.get('/files', function(req, res) {
         if (err) {
             res.sendStatus(500);
         } else {
-            const fileInfos = files.map(file => {
-                return { filePath: `/uploads/${file}`, fileName: file };
-            });
-            res.json(fileInfos);
+            const filePaths = files.map(file => `/uploads/${file}`);
+            res.json(filePaths);
         }
     });
 });
