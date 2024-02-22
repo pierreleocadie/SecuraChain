@@ -1,4 +1,4 @@
-package discovery
+package network
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 )
 
 // FIXME: This function does not work as intended. It should remove peers from the peerstore if they are unreachable.
-func CleanUpPeers(host host.Host, ctx context.Context) {
-	ticker := time.NewTicker(config.PeerstoreCleanupInterval) // adjust interval to your needs
+func CleanUpPeers(ctx context.Context, host host.Host, cfg *config.Config) {
+	ticker := time.NewTicker(cfg.DiscoveryRefreshInterval) // adjust interval to your needs
 	defer ticker.Stop()
 
 	for {
@@ -37,7 +37,10 @@ func CleanUpPeers(host host.Host, ctx context.Context) {
 					log.Printf("Peer %s removed from peerstore", p)
 					continue
 				}
-				s.Close()
+				err = s.Close()
+				if err != nil {
+					log.Printf("Error closing stream: %v", err)
+				}
 			}
 		case <-ctx.Done():
 			return

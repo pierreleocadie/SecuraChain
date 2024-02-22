@@ -8,8 +8,8 @@ import (
 
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
-	"github.com/ipfs/kubo/core"
 	icore "github.com/ipfs/kubo/core/coreiface"
+	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
 
@@ -36,13 +36,13 @@ func prepareFileForIPFS(path string) (files.Node, error) {
 
 // AddFileToIPFS adds a file to IPFS and returns its CID. It also collects and saves file metadata.
 // The function handles the file addition process and records metadata such as file size, type, name, and user public key.
-func AddFile(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI, filePath string) (path.ImmutablePath, error) {
+func AddFile(ctx context.Context, config *config.Config, ipfsAPI icore.CoreAPI, filePath string) (path.ImmutablePath, error) {
 	file, err := prepareFileForIPFS(filePath)
 	if err != nil {
 		log.Println("could not get File:", err)
 	}
 
-	fileCid, err := ipfsApi.Unixfs().Add(ctx, file)
+	fileCid, err := ipfsAPI.Unixfs().Add(ctx, file)
 	if err != nil {
 		log.Printf("Could not add file to IPFS %v", err)
 		return path.ImmutablePath{}, err
@@ -55,17 +55,22 @@ func AddFile(ctx context.Context, node *core.IpfsNode, ipfsApi icore.CoreAPI, fi
 	// 	return path.ImmutablePath{}, err
 	// }
 
-	// localStoragePath := filepath.Join(home, ".IPFS_Local_Storage/")
-	// if err := os.MkdirAll(localStoragePath, config.FileRights); err != nil {
-	// 	return path.ImmutablePath{}, fmt.Errorf("error creating output directory : %v", err)
-	// }
+	localStoragePath := filepath.Join(home, ".IPFS_Local_Storage/")
+	if err := os.MkdirAll(localStoragePath, os.FileMode(config.FileRights)); err != nil {
+		return path.ImmutablePath{}, fmt.Errorf("error creating output directory : %v", err)
+	}
 
 	// outputFilePath := filepath.Join(localStoragePath, filepath.Base(filePath))
 
-	// err = util.CopyFile(filePath, outputFilePath)
-	// if err != nil {
-	// 	return path.ImmutablePath{}, fmt.Errorf("error copying file to output directory: %v", err)
-	// }
+	err = MoveFile(filePath, outputFilePath)
+	if err != nil {
+		return path.ImmutablePath{}, fmt.Errorf("error copying file to output directory: %v", err)
+	}
+
+	// restore file permissions
+	if err := os.Chmod(outputFilePath, os.FileMode(config.FileRights)); err != nil {
+		return path.ImmutablePath{}, fmt.Errorf("error restoring file permissions: %v", err)
+	}
 
 	return fileCid, nil
 }

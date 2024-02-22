@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload et Téléchargement de Fichiers</title>
+</head>
+<body>
+    <h2>Upload de Fichier</h2>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="file" id="fileInput">
+        <input type="button" value="Upload" onclick="uploadFile()">
+    </form>
+    <div id="fileList"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

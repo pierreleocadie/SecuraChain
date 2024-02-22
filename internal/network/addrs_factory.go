@@ -1,4 +1,4 @@
-package discovery
+package network
 
 import (
 	ma "github.com/multiformats/go-multiaddr"

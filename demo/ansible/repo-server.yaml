@@ -1,0 +1,20 @@
+- name: Configure the repository server
+  hosts: repo_server
+  become: yes
+  tasks:
+    - name: Install Node.js
+      ansible.builtin.shell: |
+        curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+
+    - name: Install dependencies for repo server application
+      ansible.builtin.shell: |
+        cd ~/SecuraChain/demo/repo-server-app && npm init -y && npm install express multer
+      args:
+        executable: /bin/bash
+
+    - name: Docker compose up
+      ansible.builtin.shell: |
+        cd ~/SecuraChain/demo/repo-server-app && docker-compose up -d --build
+      args:
+        executable: /bin/bash

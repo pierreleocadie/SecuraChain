@@ -1,0 +1,20 @@
+- name: Configure the bootstrap node servers
+  hosts: bootstrap_node_servers
+  become: yes
+  vars:
+    repo_server_ip: "{{ hostvars[groups['repo_server'][0]]['ansible_host'] }}"
+  tasks:
+    - name: Download the bootstrap node script
+      ansible.builtin.shell: |
+        curl -o ~/securachain-simple-bootstrap-node http://{{ repo_server_ip }}:3000/uploads/securachain-simple-bootstrap-node && chmod +x ~/securachain-simple-bootstrap-node
+    
+    - name: Download the configuration file
+      ansible.builtin.shell: |
+        curl -o ~/config.yml http://{{ repo_server_ip }}:3000/uploads/config.yml
+    
+    - name: Run the bootstrap node script in the background
+      ansible.builtin.shell: |
+        nohup ~/securachain-simple-bootstrap-node -config ~/config.yml > ~/bootstrap_node.log 2>&1 &
+      args:
+        executable: /bin/bash
+        chdir: ~/

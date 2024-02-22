@@ -9,34 +9,54 @@ import (
 )
 
 type Config struct {
+	// GUI
+	WindowWidth  float32 `yaml:"windowWidth"`
+	WindowHeight float32 `yaml:"windowHeight"`
+
 	// SecuraChain node
 	UserAgent       string `yaml:"userAgent"`
 	ProtocolVersion string `yaml:"protocolVersion"`
+
+	// ECDSA and AES keys path
+	ECDSAKeyPairPath string `yaml:"ecdsaKeyPairPath"`
+	AESKeyPath       string `yaml:"aesKeyPath"`
 
 	// Connection manager
 	LowWater  int `yaml:"lowWater"`
 	HighWater int `yaml:"highWater"`
 
 	// Network
-	BootstrapPeers           []string      `yaml:"bootstrapPeers"`
-	ListeningPort            uint          `yaml:"listeningPort"`
-	DiscoveryRefreshInterval time.Duration `yaml:"discoveryRefreshInterval"`
-	Ip4tcp                   string        `yaml:"ip4tcp"`
-	Ip6tcp                   string        `yaml:"ip6tcp"`
-	Ip4quic                  string        `yaml:"ip4quic"`
-	Ip6quic                  string        `yaml:"ip6quic"`
+	BootstrapPeers                        []string      `yaml:"bootstrapPeers"`
+	ListeningPort                         uint          `yaml:"listeningPort"`
+	DiscoveryRefreshInterval              time.Duration `yaml:"discoveryRefreshInterval"`
+	AutorelayWithBackoffInterval          time.Duration `yaml:"autorelayWithBackoffInterval"`
+	AutorelayWithMinCallbackInterval      time.Duration `yaml:"autorelayWithMinCallbackInterval"`
+	KeepRelayConnectionAliveInterval      time.Duration `yaml:"keepRelayConnectionAliveInterval"`
+	MaxRelayedConnectionDuration          time.Duration `yaml:"maxRelayedConnectionDuration"`
+	MaxDataRelayed                        int64         `yaml:"maxDataRelayed"`
+	RelayReservationTTL                   time.Duration `yaml:"relayReservationTTL"`
+	MaxRelayReservations                  int           `yaml:"maxRelayReservations"`
+	MaxRelayCircuits                      int           `yaml:"maxRelayCircuits"`
+	MaxRelayedConnectionBufferSize        int           `yaml:"maxRelayedConnectionBufferSize"`
+	MaxRelayReservationsPerPeer           int           `yaml:"maxRelayReservationsPerPeer"`
+	MaxRelayReservationsPerIP             int           `yaml:"maxRelayReservationsPerIP"`
+	MaxRelayReservationsPerASN            int           `yaml:"maxRelayReservationsPerASN"`
+	IpfsProvidersDiscoveryRefreshInterval time.Duration `yaml:"ipfsProvidersDiscoveryRefreshInterval"`
+	IP4tcp                                string        `yaml:"ip4tcp"`
+	IP6tcp                                string        `yaml:"ip6tcp"`
+	IP4quic                               string        `yaml:"ip4quic"`
+	IP6quic                               string        `yaml:"ip6quic"`
 
 	// PubSub
-	RendezvousStringFlag                  string `yaml:"rendezvousStringFlag"`
-	ClientAnnouncementStringFlag          string `yaml:"clientAnnouncementStringFlag"`
-	StorageNodeResponseStringFlag         string `yaml:"storageNodeResponseStringFlag"`
-	BlockAnnouncementStringFlag           string `yaml:"blockAnnouncementStringFlag"`
-	FullNodeAnnouncementStringFlag        string `yaml:"fullNodeAnnouncementStringFlag"`
-	FullNodeAskingForBlockchainStringFlag string `yaml:"fullNodeAskingForBlockchainStringFlag"`
+	RendezvousStringFlag               string `yaml:"rendezvousStringFlag"`
+	ClientAnnouncementStringFlag       string `yaml:"clientAnnouncementStringFlag"`
+	StorageNodeResponseStringFlag      string `yaml:"storageNodeResponseStringFlag"`
+	KeepRelayConnectionAliveStringFlag string `yaml:"keepRelayConnectionAliveStringFlag"`
 
-	// Embeded IPFS node
+	// Embedded IPFS node
 	FileRights               int    `yaml:"fileRights"`
-	FileMetadataRegistryJson string `yaml:"fileMetadataRegistryJson"`
+	FileMetadataRegistryJSON string `yaml:"fileMetadataRegistryJson"`
+	MemorySpace              uint   `yaml:"memorySpace"`
 }
 
 // Function to load the yaml config file
@@ -47,7 +67,8 @@ func LoadConfig(yamlConfigFilePath string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	configBytes, err := os.ReadFile(sanitizedPath)
+
+	configBytes, err := os.ReadFile(sanitizedPath) // #nosec G304
 	if err != nil {
 		return nil, err
 	}

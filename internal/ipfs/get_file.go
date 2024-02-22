@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sync"
 
 	files "github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
@@ -17,7 +16,7 @@ import (
 
 // GetFile download a file using its CID (Content Identifier).
 // It creates the necessary directory if it doesn't exist and writes the file to a specified path.
-func GetFile(ctx context.Context, ipfsAPI icore.CoreAPI, cidFile path.ImmutablePath) error {
+func GetFile(ctx context.Context, config *config.Config, ipfsAPI icore.CoreAPI, cidFile path.ImmutablePath) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -25,7 +24,7 @@ func GetFile(ctx context.Context, ipfsAPI icore.CoreAPI, cidFile path.ImmutableP
 
 	downloadsStoragePath := filepath.Join(home, ".IPFS_Downloads/")
 	// Ensure the output directory exists or create it.
-	if err := os.MkdirAll(downloadsStoragePath, config.FileRights); err != nil {
+	if err := os.MkdirAll(downloadsStoragePath, os.FileMode(config.FileRights)); err != nil {
 		return fmt.Errorf("error creating output directory: %v", err)
 	}
 
@@ -39,26 +38,10 @@ func GetFile(ctx context.Context, ipfsAPI icore.CoreAPI, cidFile path.ImmutableP
 
 	downloadedFilePath := filepath.Join(downloadsStoragePath, filepath.Base(cidFile.String()))
 
-	var wg sync.WaitGroup
-	errCh := make(chan error, 1) // create an error channel
 	log.Printf("Writing file to %s\n", downloadedFilePath)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err = files.WriteTo(rootNodeFile, downloadedFilePath)
-		if err != nil {
-			errCh <- fmt.Errorf("could not write out the fetched CID: %v", err) // send error to channel
-			return
-		}
-	}()
-
-	wg.Wait()
-
-	close(errCh) // close the channel
-
-	// check if there was an error
-	if err := <-errCh; err != nil {
-		fmt.Println(err)
+	err = files.WriteTo(rootNodeFile, downloadedFilePath)
+	if err != nil {
+		return fmt.Errorf("could not write out the fetched CID: %v", err) // send error to channel
 	}
 
 	// Print confirmation message indicating the file has been fetched and saved.

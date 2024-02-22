@@ -1,0 +1,43 @@
+- name: Fetch bootstrap node multi-addresses and generate config.yml
+  hosts: localhost
+  gather_facts: no
+  vars:
+    project_path: "{{ playbook_dir }}/../../cmd"
+    exclude_folders: ['securachain-simple-bootstrap-node']
+    bootstrap_node_servers: "{{ groups['bootstrap_node_servers'] }}"
+    bootstrap_peers: []
+
+  tasks:
+    - name: Fetch multi-addresses from each bootstrap node server
+      uri:
+        url: "http://{{ hostvars[item]['ansible_host'] }}:8080"
+        method: GET
+        return_content: yes
+      loop: "{{ bootstrap_node_servers }}"
+      register: fetched_data
+      delegate_to: localhost
+      ignore_errors: yes
+
+    - name: Set bootstrap peers from fetched data
+      set_fact:
+        bootstrap_peers: "{{ bootstrap_peers + [item.content | regex_findall('/ip[46]/[^\\s]+')] | flatten }}"
+      loop: "{{ fetched_data.results }}"
+      when: item.status == 200
+    
+    - name: Find cmd subdirectories
+      find:
+        paths: "{{ project_path }}"
+        file_type: directory
+      register: cmd_subdirectories
+    
+    - name: Filter out excluded directories
+      set_fact:
+        filtered_dirs: "{{ cmd_subdirectories.files | map(attribute='path') | select('match', '^((?!' + exclude_folders | join('|') + ').)*$') | list }}"
+
+    - name: Generate config.yml in each subfolder
+      template:
+        src: templates/config.yml.j2
+        dest: "{{ item }}/config.yml"
+      loop: "{{ filtered_dirs }}"
+      vars:
+        bootstrap_peers: "{{ bootstrap_peers | flatten }}"
