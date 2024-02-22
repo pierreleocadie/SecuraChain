@@ -55,7 +55,8 @@ func main() { //nolint: funlen
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		addrs := host.Peerstore().Addrs(host.ID())
 		for _, addr := range addrs {
-			fmt.Fprintln(w, addr, "/", host.ID())
+			address := fmt.Sprintf("%s/p2p/%s", addr, host.ID())
+			fmt.Fprintln(w, address)
 		}
 	})
 

@@ -7,31 +7,19 @@ aesKeyPath: ""
 lowWater: 160
 highWater: 192
 bootstrapPeers: [
-  # "/ip4/13.37.148.174/tcp/1212/p2p/12D3KooWRWobba8bZYeUX2cCKMzvWzkRBG2h5yTZaGzutAH8Sjrx", # bootstrap node test
-  # "/ip4/13.37.148.174/udp/1212/quic-v1/p2p/12D3KooWRWobba8bZYeUX2cCKMzvWzkRBG2h5yTZaGzutAH8Sjrx", # bootstrap node test
-  # "/ip4/13.37.148.174/tcp/1211/p2p/12D3KooWMX4fAauTifC6fuDTWymjPTVkAuYsw3Ksc2DUoQdtwsEd",
-	# "/ip4/13.37.148.174/udp/1211/quic-v1/p2p/12D3KooWMX4fAauTifC6fuDTWymjPTVkAuYsw3Ksc2DUoQdtwsEd",
-	# "/ip4/154.56.63.167/tcp/1211/p2p/12D3KooWLRxRgyy5KAHWbU5LSPdYsMnZz5ArbtkLG72bdanEgFsK",
-	# "/ip4/154.56.63.167/udp/1211/quic-v1/p2p/12D3KooWLRxRgyy5KAHWbU5LSPdYsMnZz5ArbtkLG72bdanEgFsK",
-  "/ip4/139.162.254.176/tcp/1211/p2p/12D3KooWKSsNkhEScdndCJNvQZfeNQ3wgGfqthKrWrFBNvWAXzag",
-  "/ip4/139.162.254.176/udp/1211/quic-v1/p2p/12D3KooWKSsNkhEScdndCJNvQZfeNQ3wgGfqthKrWrFBNvWAXzag",
-  "/ip6/2a01:7e00::f03c:94ff:fe1c:f43b/tcp/1211/p2p/12D3KooWKSsNkhEScdndCJNvQZfeNQ3wgGfqthKrWrFBNvWAXzag",
-  "/ip6/2a01:7e00::f03c:94ff:fe1c:f43b/udp/1211/quic-v1/p2p/12D3KooWKSsNkhEScdndCJNvQZfeNQ3wgGfqthKrWrFBNvWAXzag",
-  "/ip4/139.162.19.215/tcp/1211/p2p/12D3KooWSaKUNiCBs8y7edz8nu88LBcmT5Ri7Aj85G96c2F4AJ7S",
-  "/ip4/139.162.19.215/udp/1211/quic-v1/p2p/12D3KooWSaKUNiCBs8y7edz8nu88LBcmT5Ri7Aj85G96c2F4AJ7S",
-  "/ip6/2400:8901::f03c:94ff:fe1c:f45b/tcp/1211/p2p/12D3KooWSaKUNiCBs8y7edz8nu88LBcmT5Ri7Aj85G96c2F4AJ7S",
-  "/ip6/2400:8901::f03c:94ff:fe1c:f45b/udp/1211/quic-v1/p2p/12D3KooWSaKUNiCBs8y7edz8nu88LBcmT5Ri7Aj85G96c2F4AJ7S",
-
-  "/ip4/96.126.107.152/tcp/1211/p2p/12D3KooWCumRAvRTrTcokRPbTjVCJKxJQzvfv8LD5pBaUH5QkDC6",
-  "/ip4/96.126.107.152/udp/1211/quic-v1/p2p/12D3KooWCumRAvRTrTcokRPbTjVCJKxJQzvfv8LD5pBaUH5QkDC6",
-  "/ip6/2600:3c03::f03c:94ff:fe1c:f426/tcp/1211/p2p/12D3KooWCumRAvRTrTcokRPbTjVCJKxJQzvfv8LD5pBaUH5QkDC6",
-  "/ip6/2600:3c03::f03c:94ff:fe1c:f426/udp/1211/quic-v1/p2p/12D3KooWCumRAvRTrTcokRPbTjVCJKxJQzvfv8LD5pBaUH5QkDC6",
-
-  "/ip4/172.233.60.40/tcp/1211/p2p/12D3KooWFSPJzxWxz5hbeFNbixZfbJh63PmoKaHEGeAt3VeRw1RM",
-  "/ip4/172.233.60.40/udp/1211/quic-v1/p2p/12D3KooWFSPJzxWxz5hbeFNbixZfbJh63PmoKaHEGeAt3VeRw1RM",
-  "/ip6/2600:3c0e::f03c:94ff:fe1c:f475/tcp/1211/p2p/12D3KooWFSPJzxWxz5hbeFNbixZfbJh63PmoKaHEGeAt3VeRw1RM",
-  "/ip6/2600:3c0e::f03c:94ff:fe1c:f475/udp/1211/quic-v1/p2p/12D3KooWFSPJzxWxz5hbeFNbixZfbJh63PmoKaHEGeAt3VeRw1RM",
-]
+        "/ip4/172.233.51.143/tcp/1211/p2p/12D3KooWSwvEJiTEEqGg1ZhN4bBkqhYU7z7ZFv5Nj8Waxa6ivZ1i",
+        "/ip4/172.233.51.143/udp/1211/quic-v1/p2p/12D3KooWSwvEJiTEEqGg1ZhN4bBkqhYU7z7ZFv5Nj8Waxa6ivZ1i",
+        "/ip6/2600:3c0e::f03c:94ff:fef9:1b00/tcp/1211/p2p/12D3KooWSwvEJiTEEqGg1ZhN4bBkqhYU7z7ZFv5Nj8Waxa6ivZ1i",
+        "/ip6/2600:3c0e::f03c:94ff:fef9:1b00/udp/1211/quic-v1/p2p/12D3KooWSwvEJiTEEqGg1ZhN4bBkqhYU7z7ZFv5Nj8Waxa6ivZ1i",
+        "/ip4/45.33.76.49/tcp/1211/p2p/12D3KooWFAihBcbMLyVKrN9PMTHg1MHY4ign9DnLKWagn293nhNQ",
+        "/ip4/45.33.76.49/udp/1211/quic-v1/p2p/12D3KooWFAihBcbMLyVKrN9PMTHg1MHY4ign9DnLKWagn293nhNQ",
+        "/ip6/2600:3c03::f03c:94ff:fef9:1b02/tcp/1211/p2p/12D3KooWFAihBcbMLyVKrN9PMTHg1MHY4ign9DnLKWagn293nhNQ",
+        "/ip6/2600:3c03::f03c:94ff:fef9:1b02/udp/1211/quic-v1/p2p/12D3KooWFAihBcbMLyVKrN9PMTHg1MHY4ign9DnLKWagn293nhNQ",
+        "/ip4/178.79.133.23/tcp/1211/p2p/12D3KooWBb2xJU2SxsGrxq878mD1U8nqDpA8mRcPd7YA4vkgRHtB",
+        "/ip4/178.79.133.23/udp/1211/quic-v1/p2p/12D3KooWBb2xJU2SxsGrxq878mD1U8nqDpA8mRcPd7YA4vkgRHtB",
+        "/ip6/2a01:7e00::f03c:94ff:fef9:1b44/tcp/1211/p2p/12D3KooWBb2xJU2SxsGrxq878mD1U8nqDpA8mRcPd7YA4vkgRHtB",
+        "/ip6/2a01:7e00::f03c:94ff:fef9:1b44/udp/1211/quic-v1/p2p/12D3KooWBb2xJU2SxsGrxq878mD1U8nqDpA8mRcPd7YA4vkgRHtB",
+    ]
 listeningPort: 0
 discoveryRefreshInterval: 10s
 autorelayWithBackoffInterval: 10s

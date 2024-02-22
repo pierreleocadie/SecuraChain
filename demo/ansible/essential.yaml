@@ -55,7 +55,7 @@
       ansible.builtin.git:
         repo: "https://github.com/pierreleocadie/SecuraChain.git"
         dest: "~/SecuraChain"
-        version: "storage-node"  # Directement cloner la branche souhaitée
+        version: "main"  # Directement cloner la branche souhaitée
     
     - name: QUIC UDP Buffer size
       ansible.builtin.sysctl:
