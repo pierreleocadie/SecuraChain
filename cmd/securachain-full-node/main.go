@@ -141,6 +141,37 @@ func main() {
 			}
 
 			/*
+			* Validate blocks coming from minors
+			* Manage conflicts
+			*/
+
+			blockBuff := make(map[int64][]*block.Block)
+
+			listOfBlocks, err := fullnode.HandleIncomingBlock(blockAnnounced, blockBuff, databaseInstance)
+			if err != nil {
+				log.Debugf("error handling incoming block : %s\n", err)
+				continue
+			}
+
+			if len(listOfBlocks) > 1 {
+				// Serialize the list of blocks
+				listOfBlocksBytes, err := json.Marshal(listOfBlocks)
+				if err != nil {
+					log.Debugf("error serializing list of blocks : %s\n", err)
+					continue
+				}
+
+				// Return all blocks with the same timestamp for the minor node to select based on the longest chain
+				if err := MinorConflictsTopic.Publish(ctx, listOfBlocksBytes); err != nil {
+					log.Debugf("error publishing blocks with the same timestamp to the minor : %s\n", err)
+					continue
+				}
+			}
+
+			blockAnnounced = listOfBlocks[0]
+
+
+			/*
 			* Is the node has a blockchain ?
 			 */
 
