@@ -255,7 +255,7 @@ func main() {
 				blockReceive[blockAnnounced.Timestamp] = append(blockReceive[blockAnnounced.Timestamp], blockAnnounced)
 
 				// Download the blockchain from the network
-				blockchainDownloaded, err := fullnode.DownloadBlockchain(ctx, ipfsAPI, ps)
+				blockchainDownloaded, err, sender := fullnode.DownloadBlockchain(ctx, ipfsAPI, ps)
 				if err != nil {
 					log.Debugf("error downloading the blockchain : %s\n", err)
 					continue
@@ -273,8 +273,12 @@ func main() {
 
 					if !blockchainIntegrity {
 						// Announce the cid and the sender of the blockchain to the network to blacklist the sender
-						continue // to re download the blockchain
+						blacklistMessage := []byte(sender + " " + cidBlockChain.String())
+						if err = blacklistTopic.Publish(ctx, blacklistMessage); err != nil {
+							log.Debugln("Error publishing blacklist message to the network : ", err)
 					}
+					continue // to re download the blockchain
+
 				}
 
 				// Comparer la blockchain avec la liste des blocks en attentes
