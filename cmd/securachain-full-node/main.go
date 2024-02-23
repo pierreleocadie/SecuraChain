@@ -122,6 +122,8 @@ func main() {
 	 */
 
 	if fullnode.HasABlockchain() {
+		log.Debugln("Blockchain exist")
+
 		// Waiting for the next block
 		go func() {
 			for {
@@ -140,63 +142,34 @@ func main() {
 					continue
 				}
 
-				/*
-				* Validate blocks coming from minors
-				* Manage conflicts
-				* Add the block to the blockchain
-				* Publish the block to the network
-				* Add the blockchain to IPFS
-				 */
-
-				blockBuff := make(map[int64][]*block.Block)
-				listOfBlocks, err := fullnode.HandleIncomingBlock(blockAnnounced, blockBuff, databaseInstance)
+				// Deserialize the previous block
+				prevBlock, err := block.DeserializeBlock(blockAnnounced.PrevBlock)
 				if err != nil {
-					log.Debugf("error handling incoming block : %s\n", err)
+					log.Debugf("error deserializing previous block : %s\n", err)
 					continue
 				}
 
-				if len(listOfBlocks) > 1 {
-					// Serialize the list of blocks
-					listOfBlocksBytes, err := json.Marshal(listOfBlocks)
-					if err != nil {
-						log.Debugf("error serializing list of blocks : %s\n", err)
-						continue
+				blockchain := databaseInstance
+
+				prevBlockStored, err := blockchain.GetBlock(block.ComputeHash(prevBlock))
+				if err != nil {
+					log.Debugf("error getting previous block from the database : %s\n", err)
+					continue
+				}
+
+				if prevBlockStored != nil {
+					log.Debugln("Previous block found in the database")
+
+					// Add the block to the blockchain
+					action, message := fullnode.AddBlockToBlockchain(blockchain, blockAnnounced)
+					if !action {
+						log.Debugln(message)
 					}
-
-					// Return all blocks with the same timestamp for the minor node to select based on the longest chain
-					if err := MinorConflictsTopic.Publish(ctx, listOfBlocksBytes); err != nil {
-						log.Debugf("error publishing blocks with the same timestamp to the minor : %s\n", err)
-						continue
-					}
-
-				}
-
-				// Serialize the block
-				blockBytes, err := listOfBlocks[0].Serialize()
-				if err != nil {
-					log.Debugf("error serializing block : %s\n", err)
-					continue
-				}
-
-				// Publish the block to the network (for minors and indexing and searching nodes)
-				log.Debugln("Publishing block announcement to the network :", string(blockBytes))
-
-				err = fullNodeAnnouncementTopic.Publish(ctx, blockBytes)
-				if err != nil {
-					log.Debugln("Error publishing block announcement to the network : ", err)
-
-				}
-
-				// Send the blockchain to IPFS
-				cidBlockChain, err = fullnode.AddBlockchainToIPFS(ctx, nodeIpfs, ipfsAPI, cidBlockChain)
-				if err != nil {
-					log.Debugf("error adding the blockchain to IPFS : %s\n", err)
-					continue
+				} else {
+					log.Debugln("Previous block not found in the database")
 				}
 			}
 		}()
-		// log.Debugln("Blockchain doesn't exist or is not up to date")
-		// databaseInstance = fullnode.FetchBlockchain(ctx, ipfsAPI, 10*time.Minute, ps)
 	} else {
 		log.Debugln("Blockchain doesn't exist")
 		// Waiting for the next block
@@ -222,13 +195,13 @@ func main() {
 					log.Debugln("Received genesis block")
 
 					// Start a new blockchain
-					pebbleDB, err := pebble.NewPebbleTransactionDB("blockchain")
+					blockchain, err := pebble.NewPebbleTransactionDB("blockchain")
 					if err != nil {
 						log.Panicf("Error creating a new blockchain database : %s\n", err)
 					}
 
 					// Add the block to the blockchain
-					action, message := fullnode.AddBlockToBlockchain(pebbleDB, blockAnnounced)
+					action, message := fullnode.AddBlockToBlockchain(blockchain, blockAnnounced)
 					if !action {
 						log.Debugln(message)
 					}
