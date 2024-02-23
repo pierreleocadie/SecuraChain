@@ -249,11 +249,34 @@ func main() {
 				blockchain := fullnode.DownloadBlockchain(ctx, ipfsAPI, ps)
 
 				// Check the integrity of the blockchain downloaded
+				blockchainIntegrity, err := blockchain.VerifyBlockchainIntegrity(blockAnnounced)
+				if err != nil {
+					log.Debugf("error verifying blockchain integrity : %s\n", err)
+					continue
+				}
 
-				// if the blockchain is valid, add the block to the blockchain else blacklist the cid of the blockchain and his peer
-				// Comparer la blockchain avec la liste des blocks en attententes
+				if !blockchainIntegrity {
+					//  blacklist the cid of the blockchain and his peer
+				}
+				// Comparer la blockchain avec la liste des blocks en attentes
+				for counter, blocks := range blockReceive {
+					isInBlockchain, err := blockchain.IsIn(blocks[counter])
+					if err != nil {
+						log.Debugf("error checking if block is in the blockchain : %s\n", err)
+						continue
+					}
+					if !isInBlockchain {
+						// Add the block to the blockchain
+						action, message := fullnode.AddBlockToBlockchain(blockchain, blocks[counter])
+						if !action {
+							log.Debugln(message)
+						}
+					}
+				}
+
 				// verify the valiidty of blocks
-				// add in order blocks missing in the blockchain
+
+				// Add in order block missing in the blockchain
 				// verify the integrity of the blockchain, if no delete the blockchain and wait to receive another block, if yes wait to receive another block
 				// verify the integrity
 				// add it to the blockchain
