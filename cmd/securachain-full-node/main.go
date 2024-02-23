@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"os"
+	"sort"
 
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
@@ -259,7 +260,12 @@ func main() {
 					//  blacklist the cid of the blockchain and his peer
 				}
 				// Comparer la blockchain avec la liste des blocks en attentes
-				for counter, blocks := range blockReceive {
+				sort.Slice(blockReceive[blockAnnounced.Timestamp], func(i, j int) bool {
+					return blockReceive[blockAnnounced.Timestamp][i].Nonce < blockReceive[blockAnnounced.Timestamp][j].Nonce
+				})
+
+				for _, blocks := range blockReceive {
+					counter := len(blocks) - 1
 					isInBlockchain, err := blockchain.IsIn(blocks[counter])
 					if err != nil {
 						log.Debugf("error checking if block is in the blockchain : %s\n", err)
@@ -271,6 +277,83 @@ func main() {
 						if !action {
 							log.Debugln(message)
 						}
+
+						// Verify the integrity of the blockchain
+						blockchainIntegrity, err := blockchain.VerifyBlockchainIntegrity(blocks[counter])
+						if err != nil {
+							log.Debugf("error verifying blockchain integrity : %s\n", err)
+							continue
+						}
+
+						if !blockchainIntegrity {
+							//  blacklist the cid of the blockchain and his peer
+						}
+
+						// wait for the next block
+						chanBlock := make(chan *block.Block)
+						go func() {
+							for {
+								msg, err := subBlockAnnouncement.Next(ctx)
+								if err != nil {
+									log.Panic("Error getting block announcement message : ", err)
+								}
+
+								log.Debugln("Received block announcement message from ", msg.GetFrom().String())
+								log.Debugln("Received block announcement message : ", msg.Data)
+
+								// Deserialize the block announcement
+								blockAnnounced, err := block.DeserializeBlock(msg.Data)
+								if err != nil {
+									log.Debugln("Error deserializing block announcement : %s", err)
+									continue
+								}
+
+								// verify the integrity of the blockchain
+								blockchainIntegrity, err := blockchain.VerifyBlockchainIntegrity(blockAnnounced)
+								if err != nil {
+									log.Debugf("error verifying blockchain integrity : %s\n", err)
+									continue
+								}
+								if !blockchainIntegrity {
+									// If the blockchain is not verify
+									// Forget this block and wait for the next one
+									continue
+								}
+								chanBlock <- blockAnnounced
+							}
+						}()
+
+						newBlock := <-chanBlock
+
+						// Add the block to the blockchain
+						action, message = fullnode.AddBlockToBlockchain(blockchain, newBlock)
+						if !action {
+							log.Debugln(message)
+						}
+
+						// Serialize the block
+						newBlockBytes, err := newBlock.Serialize()
+						if err != nil {
+							log.Debugf("error serializing block : %s\n", err)
+							continue
+						}
+
+						// Publish the block to the network (for minors and indexing and searching nodes and storage nodes)
+						log.Debugln("Publishing block announcement to the network :", string(newBlockBytes))
+
+						if err = fullNodeAnnouncementTopic.Publish(ctx, newBlockBytes); err != nil {
+							log.Debugln("Error publishing block announcement to the network : ", err)
+						}
+
+						// Send the blockchain to IPFS
+						newCidBlockChain, err = fullnode.AddBlockchainToIPFS(ctx, nodeIpfs, ipfsAPI, cidBlockChain)
+						if err != nil {
+							log.Debugf("error adding the blockchain to IPFS : %s\n", err)
+							continue
+						}
+						cidBlockChain = newCidBlockChain
+						newCidBlockChain = path.ImmutablePath{}
+
 					}
 				}
 
