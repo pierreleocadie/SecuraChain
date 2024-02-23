@@ -7,13 +7,14 @@ import (
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/kubo/core"
 	icore "github.com/ipfs/kubo/core/coreiface"
+	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 )
 
 // AddBlockchainToIPFS adds the local blockchain to IPFS for synchronization and re-synchronization of nodes in case of absence.
-func AddBlockchainToIPFS(ctx context.Context, nodeIpfs *core.IpfsNode, ipfsApi icore.CoreAPI, oldCid path.ImmutablePath) (path.ImmutablePath, error) {
+func AddBlockchainToIPFS(ctx context.Context, config *config.Config, nodeIpfs *core.IpfsNode, ipfsApi icore.CoreAPI, oldCid path.ImmutablePath) (path.ImmutablePath, error) {
 	// Add the blockchain to IPFS
-	fileImmutablePathCid, err := ipfs.AddFile(ctx, nodeIpfs, ipfsApi, "./blockchain")
+	fileImmutablePathCid, err := ipfs.AddFile(ctx, config, ipfsApi, "./blockchain")
 	if err != nil {
 		fmt.Printf("Error adding the blockhain to IPFS : %s\n ", err)
 		return path.ImmutablePath{}, err
