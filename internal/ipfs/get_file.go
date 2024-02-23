@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 
 	files "github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
@@ -60,7 +61,7 @@ func GetDirectoryWithPath(ctx context.Context, ipfsAPI icore.CoreAPI, directoryF
 
 	downloadsStoragePath := filepath.Join(local, downloadPath)
 	// Ensure the output directory exists or create it.
-	if err := os.MkdirAll(downloadsStoragePath, config.FileRights); err != nil {
+	if err := os.MkdirAll(downloadsStoragePath, 0700); err != nil {
 		return fmt.Errorf("error creating output directory: %v", err)
 	}
 

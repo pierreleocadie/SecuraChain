@@ -52,6 +52,8 @@ type Config struct {
 	ClientAnnouncementStringFlag       string `yaml:"clientAnnouncementStringFlag"`
 	StorageNodeResponseStringFlag      string `yaml:"storageNodeResponseStringFlag"`
 	KeepRelayConnectionAliveStringFlag string `yaml:"keepRelayConnectionAliveStringFlag"`
+	BlockAnnouncementStringFlag        string `yaml:"blockAnnouncementStringFlag"`
+	FullNodeAnnouncementStringFlag     string `yaml:"fullNodeAnnouncementStringFlag"`
 
 	// Embedded IPFS node
 	FileRights               int    `yaml:"fileRights"`

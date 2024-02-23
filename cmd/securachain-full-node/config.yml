@@ -42,6 +42,8 @@ ip6quic: "/ip6/::/udp/0/quic-v1"
 rendezvousStringFlag: "SecuraChainNetwork"
 clientAnnouncementStringFlag: "ClientAnnouncement"
 storageNodeResponseStringFlag: "StorageNodeResponse"
+blocAnnouncementStringFlag: "BlocAnnouncement"
+fullNodeAnnouncementStringFlag: "FullNodeAnnouncement"
 keepRelayConnectionAliveStringFlag: "KeepRelayConnectionAlive"
 fileRights: 0700
 fileMetadataRegistryJson: "fileMetadataRegistry.json"
