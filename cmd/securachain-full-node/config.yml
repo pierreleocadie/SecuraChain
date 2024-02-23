@@ -45,6 +45,7 @@ storageNodeResponseStringFlag: "StorageNodeResponse"
 blocAnnouncementStringFlag: "BlocAnnouncement"
 fullNodeAnnouncementStringFlag: "FullNodeAnnouncement"
 keepRelayConnectionAliveStringFlag: "KeepRelayConnectionAlive"
+blacklistStringFlag: "Blacklist"
 fileRights: 0700
 fileMetadataRegistryJson: "fileMetadataRegistry.json"
 memorySpace: 10 # in GB

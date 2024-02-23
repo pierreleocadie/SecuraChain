@@ -54,6 +54,7 @@ type Config struct {
 	KeepRelayConnectionAliveStringFlag string `yaml:"keepRelayConnectionAliveStringFlag"`
 	BlockAnnouncementStringFlag        string `yaml:"blockAnnouncementStringFlag"`
 	FullNodeAnnouncementStringFlag     string `yaml:"fullNodeAnnouncementStringFlag"`
+	BlacklistStringFlag                string `yaml:"blacklistStringFlag"`
 
 	// Embedded IPFS node
 	FileRights               int    `yaml:"fileRights"`

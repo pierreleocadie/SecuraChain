@@ -9,7 +9,6 @@ import (
 	"github.com/ipfs/boxo/path"
 	icore "github.com/ipfs/kubo/core/coreiface"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/pierreleocadie/SecuraChain/internal/fullnode/pebble"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 )
 
@@ -37,7 +36,7 @@ func HasABlockchain() bool {
 }
 
 // DownloadBlockchain requests the blockchain from the network.
-func DownloadBlockchain(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.PubSub) *pebble.PebbleTransactionDB {
+func DownloadBlockchain(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.PubSub) (bool, error, string) {
 	var interval = 30 * time.Second
 
 	ticker := time.NewTicker(interval)
@@ -47,29 +46,33 @@ func DownloadBlockchain(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.P
 	fullNodeAskingForBlockchainTopic, err := ps.Join("FullNodeAskingForBlockchain")
 	if err != nil {
 		fmt.Println("Error joining FullNodeAskingForBlockchain topic : ", err)
-		return nil
+		return false, err, ""
 	}
 
 	// Join the topic to receive the blockchain
 	fullNodeGivingBlockchainTopic, err := ps.Join("FullNodeGivingBlockchain")
 	if err != nil {
 		fmt.Println("Error joining to FullNodeGivingBlockchain topic : ", err)
-		return nil
+		return false, err, ""
 	}
 	// Subscribe to the topic to receive the blockchain
 	subFullNodeGivingBlockchain, err := fullNodeGivingBlockchainTopic.Subscribe()
 	if err != nil {
 		fmt.Println("Error subscribing to FullNodeGivingBlockchain topic : ", err)
-		return nil
+		return false, err, ""
 	}
 
 	blockchainReceive := make(chan bool)
+	sender := make(chan string)
 	go func() {
 		for {
 			msg, _ := subFullNodeGivingBlockchain.Next(ctx)
 			if msg != nil {
 				fmt.Println("Blockchain received from the network")
 				blockchainReceive <- true
+
+				// Get the sender of the message
+				sender <- msg.GetFrom().String()
 
 				cidStr := string(msg.Data)
 				newPath, err := path.NewPath(cidStr)
@@ -90,16 +93,17 @@ func DownloadBlockchain(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.P
 			}
 		}
 	}()
+	senderBlockchain := <-sender
 
 	select {
 	case <-blockchainReceive:
 		fmt.Println("Blockchain successfully received. Exiting request loop.")
-		return nil
+		return true, nil, senderBlockchain
 	case <-ticker.C:
 		fmt.Println("Requesting blockchain from the network")
 		if err := fullNodeAskingForBlockchainTopic.Publish(ctx, []byte("I need the blockchain")); err != nil {
 			fmt.Printf("Error publishing blockchain request : %s\n", err)
 		}
 	}
-	return nil
+	return false, nil, ""
 }
