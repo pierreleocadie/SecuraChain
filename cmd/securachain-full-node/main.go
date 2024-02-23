@@ -24,6 +24,7 @@ import (
 var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
 var databaseInstance *pebble.PebbleTransactionDB
 var cidBlockChain path.ImmutablePath
+var newCidBlockChain path.ImmutablePath
 
 func main() {
 	log := ipfsLog.Logger("full-node")
@@ -120,6 +121,10 @@ func main() {
 	// Waiting to receive the next block announcement
 	go func() {
 		for {
+			isPrevBlockStored := false
+			isGenesisBlock := false
+			blockReceive := make(map[int64][]*block.Block)
+
 			msg, err := subBlockAnnouncement.Next(ctx)
 			if err != nil {
 				log.Panic("Error getting block announcement message : ", err)
@@ -159,22 +164,45 @@ func main() {
 
 				if prevBlockStored != nil {
 					log.Debugln("Previous block found in the database")
+					isPrevBlockStored = true
 
 					// Add the block to the blockchain
 					action, message := fullnode.AddBlockToBlockchain(blockchain, blockAnnounced)
 					if !action {
 						log.Debugln(message)
 					}
-				} else {
-					log.Debugln("Previous block not found in the database")
+
+					// Serialize the block
+					blockBytes, err := blockAnnounced.Serialize()
+					if err != nil {
+						log.Debugf("error serializing block : %s\n", err)
+						continue
+					}
+
+					// Publish the block to the network (for minors and indexing and searching nodes and storage nodes)
+					log.Debugln("Publishing block announcement to the network :", string(blockBytes))
+
+					if err = fullNodeAnnouncementTopic.Publish(ctx, blockBytes); err != nil {
+						log.Debugln("Error publishing block announcement to the network : ", err)
+					}
+
+					// Send the blockchain to IPFS
+					newCidBlockChain, err = fullnode.AddBlockchainToIPFS(ctx, nodeIpfs, ipfsAPI, cidBlockChain)
+					if err != nil {
+						log.Debugf("error adding the blockchain to IPFS : %s\n", err)
+						continue
+					}
+					cidBlockChain = newCidBlockChain
+					newCidBlockChain = path.ImmutablePath{}
 				}
+
 			} else {
 				log.Debugln("Blockchain doesn't exist")
-				// Start a new blockchain
 
 				// If the block is the genesis block, start a new blockchain
 				if blockAnnounced.PrevBlock == nil {
 					log.Debugln("Received genesis block")
+					isGenesisBlock = true
 
 					// Start a new blockchain
 					blockchain, err := pebble.NewPebbleTransactionDB("blockchain")
@@ -187,90 +215,48 @@ func main() {
 					if !action {
 						log.Debugln(message)
 					}
+
+					// Serialize the block
+					blockBytes, err := blockAnnounced.Serialize()
+					if err != nil {
+						log.Debugf("error serializing block : %s\n", err)
+						continue
+					}
+
+					// Publish the block to the network (for minors and indexing and searching nodes and storage nodes)
+					log.Debugln("Publishing block announcement to the network :", string(blockBytes))
+
+					if err = fullNodeAnnouncementTopic.Publish(ctx, blockBytes); err != nil {
+						log.Debugln("Error publishing block announcement to the network : ", err)
+					}
+
+					// Send the blockchain to IPFS
+					newCidBlockChain, err = fullnode.AddBlockchainToIPFS(ctx, nodeIpfs, ipfsAPI, cidBlockChain)
+					if err != nil {
+						log.Debugf("error adding the blockchain to IPFS : %s\n", err)
+						continue
+					}
+					cidBlockChain = newCidBlockChain
+					newCidBlockChain = path.ImmutablePath{}
 				}
 			}
 
-			/*
-			* Validate blocks coming from minors
-			* Manage conflicts
-			* Add the block to the blockchain
-			* Publish the block to the network
-			* Add the blockchain to IPFS
-			 */
+			if !isPrevBlockStored || !isGenesisBlock {
+				// Add the receive block in a list
+				blockReceive[blockAnnounced.Timestamp] = append(blockReceive[blockAnnounced.Timestamp], blockAnnounced)
 
-			blockBuff := make(map[int64][]*block.Block)
-			listOfBlocks, err := fullnode.HandleIncomingBlock(blockAnnounced, blockBuff, databaseInstance)
-			if err != nil {
-				log.Debugf("error handling incoming block : %s\n", err)
-				continue
-			}
+				// Download the blockchain from the network
+				blockchain := fullnode.DownloadBlockchain(ctx, ipfsAPI, ps)
 
-			if len(listOfBlocks) > 1 {
-				// Serialize the list of blocks
-				listOfBlocksBytes, err := json.Marshal(listOfBlocks)
-				if err != nil {
-					log.Debugf("error serializing list of blocks : %s\n", err)
-					continue
-				}
+				// Check the integrity of the blockchain downloaded
 
-				// Return all blocks with the same timestamp for the minor node to select based on the longest chain
-				if err := MinorConflictsTopic.Publish(ctx, listOfBlocksBytes); err != nil {
-					log.Debugf("error publishing blocks with the same timestamp to the minor : %s\n", err)
-					continue
-				}
-
-			}
-
-			// Serialize the block
-			blockBytes, err := listOfBlocks[0].Serialize()
-			if err != nil {
-				log.Debugf("error serializing block : %s\n", err)
-				continue
-			}
-
-			// Publish the block to the network (for minors and indexing and searching nodes)
-			log.Debugln("Publishing block announcement to the network :", string(blockBytes))
-
-			err = fullNodeAnnouncementTopic.Publish(ctx, blockBytes)
-			if err != nil {
-				log.Debugln("Error publishing block announcement to the network : ", err)
-
-			}
-
-			// Send the blockchain to IPFS
-			cidBlockChain, err = fullnode.AddBlockchainToIPFS(ctx, nodeIpfs, ipfsAPI, cidBlockChain)
-			if err != nil {
-				log.Debugf("error adding the blockchain to IPFS : %s\n", err)
-				continue
-			}
-		}
-	}()
-
-	/*
-	* Wait for blocks coming from minors
-	 */
-
-	// subFullNodeAnnouncement, err := fullNodeAnnouncementTopic.Subscribe()
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// Handle incoming block announcement messages from minors
-	go func() {
-		for {
-			msg, err := subBlockAnnouncement.Next(ctx)
-			if err != nil {
-				log.Panic("Error getting block announcement message : ", err)
-			}
-
-			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
-			log.Debugln("Received block announcement message : ", msg.Data)
-
-			// Deserialize the block announcement
-			blockAnnounced, err := block.DeserializeBlock(msg.Data)
-			if err != nil {
-				log.Debugln("Error deserializing block announcement : %s", err)
-				continue
+				// if the blockchain is valid, add the block to the blockchain else blacklist the cid of the blockchain and his peer
+				// Comparer la blockchain avec la liste des blocks en attententes
+				// verify the valiidty of blocks
+				// add in order blocks missing in the blockchain
+				// verify the integrity of the blockchain, if no delete the blockchain and wait to receive another block, if yes wait to receive another block
+				// verify the integrity
+				// add it to the blockchain
 			}
 
 			/*

@@ -13,7 +13,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 )
 
-// NeedToFet@chBlockchain checks if the blockchain exists and if it is up to date
+// HasABlockchain checks if the blockchain exists and if it is up to date
 func HasABlockchain() bool {
 	blockChainInfo, err := os.Stat("./blockchain")
 
@@ -36,12 +36,9 @@ func HasABlockchain() bool {
 	return true
 }
 
-// FetchBlockchain requests the blockchain from the network or creates a new one if not received.
-func FetchBlockchain(ctx context.Context, ipfsAPI icore.CoreAPI, timeout time.Duration, ps *pubsub.PubSub) *pebble.PebbleTransactionDB {
+// DownloadBlockchain requests the blockchain from the network.
+func DownloadBlockchain(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.PubSub) *pebble.PebbleTransactionDB {
 	var interval = 30 * time.Second
-
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -95,12 +92,8 @@ func FetchBlockchain(ctx context.Context, ipfsAPI icore.CoreAPI, timeout time.Du
 	}()
 
 	select {
-	case <-ctx.Done():
-		fmt.Println("Timeout reached, creating a new blockchain database with Pebble")
-		return createDatabase()
 	case <-blockchainReceive:
 		fmt.Println("Blockchain successfully received. Exiting request loop.")
-		//process to pull the blockchain with ipfs ...
 		return nil
 	case <-ticker.C:
 		fmt.Println("Requesting blockchain from the network")
@@ -109,15 +102,4 @@ func FetchBlockchain(ctx context.Context, ipfsAPI icore.CoreAPI, timeout time.Du
 		}
 	}
 	return nil
-}
-
-// createDatabase initializes a new Pebble database for the blockchain.
-func createDatabase() *pebble.PebbleTransactionDB {
-	pebbleDB, err := pebble.NewPebbleTransactionDB("blockchain")
-	if err != nil {
-		fmt.Printf("Error creating database: %s", err)
-		return nil
-	}
-
-	return pebbleDB
 }
