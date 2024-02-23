@@ -9,10 +9,10 @@ import (
 
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
-	"github.com/pierreleocadie/SecuraChain/internal/discovery"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode/pebble"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
+	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
@@ -74,7 +74,7 @@ func main() {
 	/*
 	* NETWORK PEER DISCOVERY WITH mDNS
 	 */
-	mdnsDiscovery := discovery.NewMDNSDiscovery(config.RendezvousStringFlag)
+	mdnsDiscovery := netwrk.NewMDNSDiscovery(config.RendezvousStringFlag)
 
 	// Run mDNS
 	if err := mdnsDiscovery.Run(host); err != nil {
