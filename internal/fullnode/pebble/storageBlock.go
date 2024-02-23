@@ -60,6 +60,29 @@ func (pdb *PebbleTransactionDB) GetBlock(key []byte) (*block.Block, error) {
 	return blockDeserialize, nil
 }
 
+// VerifyBlockchainIntegrity checks the blockchain for integrity.
+func (pdb *PebbleTransactionDB) VerifyBlockchainIntegrity(lastestBlockAdded *block.Block) (bool, error) {
+	latestBlockKey := block.ComputeHash(lastestBlockAdded)
+
+	currentBlockKey := lastestBlockKey
+	for {
+		if currentBlockKey == nil{
+			// Genesis block reached
+			fmt.Println("Blockchain integrity verified")
+			return true, nil
+		}
+
+		currentBlock, err := pdb.GetBlock(currentBlockKey)
+		if err != nil {
+			return false, fmt.Errorf("error retrieving block from the database: %v", err)
+		}
+		prevBlock, err = block.DeserializeBlock(currentBlock.PrevBlock)
+		if err != nil {
+			return false, fmt.Errorf("error deserializing previous block: %v", err)
+		}
+		currentBlockKey = block.ComputeHash(prevBlock)
+}
+
 // Close closes the database connection.
 func (pdb *PebbleTransactionDB) Close() error {
 	return pdb.db.Close()
