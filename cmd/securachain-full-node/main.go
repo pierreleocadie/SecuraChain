@@ -286,7 +286,11 @@ func main() {
 						}
 
 						if !blockchainIntegrity {
-							//  blacklist the cid of the blockchain and his peer
+							//  Delete the blockchain and wait for the next block
+							if err = os.RemoveAll("blockchain"); err != nil {
+								log.Debugf("error deleting the blockchain : %s\n", err)
+								continue
+							}
 						}
 
 						// wait for the next block
