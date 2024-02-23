@@ -117,30 +117,30 @@ func main() {
 		log.Panicf("Failed to join minor conflicts topic : %s\n", err)
 	}
 
-	/*
-	* Is the node has a blockchain ?
-	 */
+	// Waiting to receive the next block announcement
+	go func() {
+		for {
+			msg, err := subBlockAnnouncement.Next(ctx)
+			if err != nil {
+				log.Panic("Error getting block announcement message : ", err)
+			}
 
-	if fullnode.HasABlockchain() {
-		log.Debugln("Blockchain exist")
+			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
+			log.Debugln("Received block announcement message : ", msg.Data)
 
-		// Waiting for the next block
-		go func() {
-			for {
-				msg, err := subBlockAnnouncement.Next(ctx)
-				if err != nil {
-					log.Panic("Error getting block announcement message : ", err)
-				}
+			// Deserialize the block announcement
+			blockAnnounced, err := block.DeserializeBlock(msg.Data)
+			if err != nil {
+				log.Debugln("Error deserializing block announcement : %s", err)
+				continue
+			}
 
-				log.Debugln("Received block announcement message from ", msg.GetFrom().String())
-				log.Debugln("Received block announcement message : ", msg.Data)
+			/*
+			* Is the node has a blockchain ?
+			 */
 
-				// Deserialize the block announcement
-				blockAnnounced, err := block.DeserializeBlock(msg.Data)
-				if err != nil {
-					log.Debugln("Error deserializing block announcement : %s", err)
-					continue
-				}
+			if fullnode.HasABlockchain() {
+				log.Debugln("Blockchain exist")
 
 				// Deserialize the previous block
 				prevBlock, err := block.DeserializeBlock(blockAnnounced.PrevBlock)
@@ -168,27 +168,9 @@ func main() {
 				} else {
 					log.Debugln("Previous block not found in the database")
 				}
-			}
-		}()
-	} else {
-		log.Debugln("Blockchain doesn't exist")
-		// Waiting for the next block
-		go func() {
-			for {
-				msg, err := subBlockAnnouncement.Next(ctx)
-				if err != nil {
-					log.Panic("Error getting block announcement message : ", err)
-				}
-
-				log.Debugln("Received block announcement message from ", msg.GetFrom().String())
-				log.Debugln("Received block announcement message : ", msg.Data)
-
-				// Deserialize the block announcement
-				blockAnnounced, err := block.DeserializeBlock(msg.Data)
-				if err != nil {
-					log.Debugln("Error deserializing block announcement : %s", err)
-					continue
-				}
+			} else {
+				log.Debugln("Blockchain doesn't exist")
+				// Start a new blockchain
 
 				// If the block is the genesis block, start a new blockchain
 				if blockAnnounced.PrevBlock == nil {
@@ -206,12 +188,63 @@ func main() {
 						log.Debugln(message)
 					}
 				}
+			}
 
-				// METTRE LE BLOCK DANS UNE LISTE ETC
+			/*
+			* Validate blocks coming from minors
+			* Manage conflicts
+			* Add the block to the blockchain
+			* Publish the block to the network
+			* Add the blockchain to IPFS
+			 */
+
+			blockBuff := make(map[int64][]*block.Block)
+			listOfBlocks, err := fullnode.HandleIncomingBlock(blockAnnounced, blockBuff, databaseInstance)
+			if err != nil {
+				log.Debugf("error handling incoming block : %s\n", err)
+				continue
+			}
+
+			if len(listOfBlocks) > 1 {
+				// Serialize the list of blocks
+				listOfBlocksBytes, err := json.Marshal(listOfBlocks)
+				if err != nil {
+					log.Debugf("error serializing list of blocks : %s\n", err)
+					continue
+				}
+
+				// Return all blocks with the same timestamp for the minor node to select based on the longest chain
+				if err := MinorConflictsTopic.Publish(ctx, listOfBlocksBytes); err != nil {
+					log.Debugf("error publishing blocks with the same timestamp to the minor : %s\n", err)
+					continue
+				}
 
 			}
-		}()
-	}
+
+			// Serialize the block
+			blockBytes, err := listOfBlocks[0].Serialize()
+			if err != nil {
+				log.Debugf("error serializing block : %s\n", err)
+				continue
+			}
+
+			// Publish the block to the network (for minors and indexing and searching nodes)
+			log.Debugln("Publishing block announcement to the network :", string(blockBytes))
+
+			err = fullNodeAnnouncementTopic.Publish(ctx, blockBytes)
+			if err != nil {
+				log.Debugln("Error publishing block announcement to the network : ", err)
+
+			}
+
+			// Send the blockchain to IPFS
+			cidBlockChain, err = fullnode.AddBlockchainToIPFS(ctx, nodeIpfs, ipfsAPI, cidBlockChain)
+			if err != nil {
+				log.Debugf("error adding the blockchain to IPFS : %s\n", err)
+				continue
+			}
+		}
+	}()
 
 	/*
 	* Wait for blocks coming from minors
