@@ -68,3 +68,22 @@ func ProcessBlock(bblock *block.Block, database *pebble.PebbleTransactionDB) (bo
 	// Block is invalid
 	return false, fmt.Errorf("block is invalid")
 }
+
+func PrevBlockStored(blockk *block.Block, database *pebble.PebbleTransactionDB) (bool, err) {
+	// Deserialize the previous block
+	prevBlock, err := block.DeserializeBlock(blockk.PrevBlock)
+	if err != nil {
+		return false, fmt.Errorf("error deserializing previous block: %s", err)
+	}
+
+	isPrevBlockStored, err := database.IsIn(prevBlock)
+	if err != nil {
+		return false, fmt.Errorf("error checking if the previous block is stored: %s", err)
+	}
+
+	if !isPrevBlockStored {
+		return false, fmt.Errorf("previous block is not stored")
+	}
+
+	return true, nil
+}

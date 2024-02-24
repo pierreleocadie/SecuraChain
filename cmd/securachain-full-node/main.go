@@ -190,6 +190,27 @@ func main() {
 				newCidBlockChain = path.ImmutablePath{}
 			}
 
+			// If the node has a blockchain
+			if hasBlockchain {
+				// Verify if the previous block is stored in the database
+				// Deserialize the previous block
+				prevBlock, err := block.DeserializeBlock(blockAnnounced.PrevBlock)
+				if err != nil {
+					log.Debugln("error deserializing previous block : %s\n", err)
+					continue
+				}
+
+				// Verify if the previous block is stored in the database
+				blockchain := databaseInstance
+
+				isPrevBlockStored, err := blockchain.IsIn(prevBlock)
+				if err != nil {
+					log.Debugln("error checking if previous block is in the blockchain : %s\n", err)
+					continue
+				}
+
+			}
+
 
 			/*
 			* Validate blocks coming from minors
