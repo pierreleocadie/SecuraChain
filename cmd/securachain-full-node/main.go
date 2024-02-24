@@ -188,7 +188,6 @@ func main() {
 				}
 				cidBlockChain = newCidBlockChain
 				newCidBlockChain = path.ImmutablePath{}
-
 			}
 
 
