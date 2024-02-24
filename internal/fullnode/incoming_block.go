@@ -69,7 +69,7 @@ func ProcessBlock(bblock *block.Block, database *pebble.PebbleTransactionDB) (bo
 	return false, fmt.Errorf("block is invalid")
 }
 
-func PrevBlockStored(blockk *block.Block, database *pebble.PebbleTransactionDB) (bool, err) {
+func PrevBlockStored(blockk *block.Block, database *pebble.PebbleTransactionDB) (bool, error) {
 	// Deserialize the previous block
 	prevBlock, err := block.DeserializeBlock(blockk.PrevBlock)
 	if err != nil {

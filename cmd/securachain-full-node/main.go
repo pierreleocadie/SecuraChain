@@ -192,89 +192,22 @@ func main() {
 
 			// If the node has a blockchain
 			if hasBlockchain {
-				// Verify if the previous block is stored in the database
-				// Deserialize the previous block
-				prevBlock, err := block.DeserializeBlock(blockAnnounced.PrevBlock)
-				if err != nil {
-					log.Debugln("error deserializing previous block : %s\n", err)
-					continue
-				}
-
-				// Verify if the previous block is stored in the database
 				blockchain := databaseInstance
 
-				isPrevBlockStored, err := blockchain.IsIn(prevBlock)
-				if err != nil {
-					log.Debugln("error checking if previous block is in the blockchain : %s\n", err)
-					continue
-				}
-
-			}
-
-
-			/*
-			* Validate blocks coming from minors
-			* Manage conflicts
-			*/
-
-			blockBuff := make(map[int64][]*block.Block)
-
-			listOfBlocks, err := fullnode.HandleIncomingBlock(blockAnnounced, blockBuff, databaseInstance)
-			if err != nil {
-				log.Debugf("error handling incoming block : %s\n", err)
-				continue
-			}
-
-			if len(listOfBlocks) > 1 {
-				// Serialize the list of blocks
-				listOfBlocksBytes, err := json.Marshal(listOfBlocks)
-				if err != nil {
-					log.Debugf("error serializing list of blocks : %s\n", err)
-					continue
-				}
-
-				// Return all blocks with the same timestamp for the minor node to select based on the longest chain
-				if err := MinorConflictsTopic.Publish(ctx, listOfBlocksBytes); err != nil {
-					log.Debugf("error publishing blocks with the same timestamp to the minor : %s\n", err)
-					continue
-				}
-			}
-
-			blockAnnounced = listOfBlocks[0]
-
-
-			/*
-			* Is the node has a blockchain ?
-			 */
-
-			if fullnode.HasABlockchain() {
-				log.Debugln("Blockchain exist")
-
-				// Deserialize the previous block
-				prevBlock, err := block.DeserializeBlock(blockAnnounced.PrevBlock)
-				if err != nil {
-					log.Debugln("error deserializing previous block : %s\n", err)
-					continue
-				}
-
 				// Verify if the previous block is stored in the database
-				blockchain := databaseInstance
-
-				isPrevBlockStored, err := blockchain.IsIn(prevBlock)
+				isPrevBlockStored, err = fullnode.PrevBlockStored(blockAnnounced, blockchain)
 				if err != nil {
-					log.Debugln("error checking if previous block is in the blockchain : %s\n", err)
+					log.Debugln(err)
 					continue
 				}
-
-				if isPrevBlockStored {
-					log.Debugln("Previous block is in the database")
-
-					// Add the block to the blockchain
-					action, message := fullnode.AddBlockToBlockchain(blockchain, blockAnnounced)
-					if !action {
-						log.Debugln(message)
-						continue
-					}
+				
+				// Proceed to validate and add the block to the blockchain
+				proceed, err := fullnode.ProcessBlock(blockAnnounced, blockchain)
+				if err != nil {
+					log.Debugln("Error processing block : %s\n", err)
+					continue
+				}
+				log.Debugln("Block processed : ", proceed)
 
 					// Serialize the block
 					blockBytes, err := blockAnnounced.Serialize()
@@ -282,15 +215,15 @@ func main() {
 						log.Debugln("error serializing block : %s\n", err)
 						continue
 					}
-
+	
 					// Publish the block to the network (for minors and indexing and searching nodes and storage nodes)
 					log.Debugln("Publishing block announcement to the network :", string(blockBytes))
-
+	
 					if err = fullNodeAnnouncementTopic.Publish(ctx, blockBytes); err != nil {
 						log.Debugln("Error publishing block announcement to the network : ", err)
 						continue
 					}
-
+	
 					// Send the blockchain to IPFS
 					newCidBlockChain, err = fullnode.AddBlockchainToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, cidBlockChain)
 					if err != nil {
@@ -299,57 +232,9 @@ func main() {
 					}
 					cidBlockChain = newCidBlockChain
 					newCidBlockChain = path.ImmutablePath{}
-				}
-				continue
-			} else {
-				log.Debugln("Blockchain doesn't exist")
-
-				// If the block is the genesis block, start a new blockchain
-				if blockAnnounced.PrevBlock == nil {
-					log.Debugln("Received genesis block")
-					isGenesisBlock = true
-
-					// Start a new blockchain
-					blockchain, err := pebble.NewPebbleTransactionDB("blockchain")
-					if err != nil {
-						log.Debugln("Error creating a new blockchain database : %s\n", err)
-						continue
-					}
-
-					// Add the block to the blockchain
-					action, message := fullnode.AddBlockToBlockchain(blockchain, blockAnnounced)
-					if !action {
-						log.Debug(message)
-						continue
-					}
-
-					// Serialize the block
-					blockBytes, err := blockAnnounced.Serialize()
-					if err != nil {
-						log.Debugln("error serializing block : %s\n", err)
-						continue
-					}
-
-					// Publish the block to the network (for minors and indexing and searching nodes and storage nodes)
-					log.Debugln("Publishing block announcement to the network :", string(blockBytes))
-
-					if err = fullNodeAnnouncementTopic.Publish(ctx, blockBytes); err != nil {
-						log.Debugln("Error publishing block announcement to the network : ", err)
-						continue
-					}
-
-					// Send the blockchain to IPFS
-					newCidBlockChain, err = fullnode.AddBlockchainToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, cidBlockChain)
-					if err != nil {
-						log.Debugf("error adding the blockchain to IPFS : %s\n", err)
-						continue
-					}
-					cidBlockChain = newCidBlockChain
-					newCidBlockChain = path.ImmutablePath{}
-				}
 			}
 
-			if !isPrevBlockStored || !isGenesisBlock {
+			if !isPrevBlockStored || !genesisBlock {
 				// Add the receive block in a list
 				blockReceive[blockAnnounced.Timestamp] = append(blockReceive[blockAnnounced.Timestamp], blockAnnounced)
 
@@ -493,6 +378,37 @@ func main() {
 			}
 		}
 	}()
+
+
+			// /*
+			// * Validate blocks coming from minors
+			// * Manage conflicts
+			// */
+
+			// blockBuff := make(map[int64][]*block.Block)
+
+			// listOfBlocks, err := fullnode.HandleIncomingBlock(blockAnnounced, blockBuff, databaseInstance)
+			// if err != nil {
+			// 	log.Debugf("error handling incoming block : %s\n", err)
+			// 	continue
+			// }
+
+			// if len(listOfBlocks) > 1 {
+			// 	// Serialize the list of blocks
+			// 	listOfBlocksBytes, err := json.Marshal(listOfBlocks)
+			// 	if err != nil {
+			// 		log.Debugf("error serializing list of blocks : %s\n", err)
+			// 		continue
+			// 	}
+
+			// 	// Return all blocks with the same timestamp for the minor node to select based on the longest chain
+			// 	if err := MinorConflictsTopic.Publish(ctx, listOfBlocksBytes); err != nil {
+			// 		log.Debugf("error publishing blocks with the same timestamp to the minor : %s\n", err)
+			// 		continue
+			// 	}
+			// }
+
+			// blockAnnounced = listOfBlocks[0]
 
 	// Join the topic to ask for the blockchain
 	fullNodeAskingForBlockchainTopic, err := ps.Join("FullNodeAskingForBlockchain")
