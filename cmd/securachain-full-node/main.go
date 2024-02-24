@@ -120,10 +120,15 @@ func main() {
 
 	// Waiting to receive the next block announcement
 	go func() {
+		// Check if the node has a blockchain
+		hasBlockchain := fullnode.HasABlockchain()
+		
 		for {
 			var isPrevBlockStored bool
 			isGenesisBlock := false
 			blockReceive := make(map[int64][]*block.Block)
+
+			
 
 			msg, err := subBlockAnnouncement.Next(ctx)
 			if err != nil {

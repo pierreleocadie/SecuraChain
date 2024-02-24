@@ -9,6 +9,7 @@ import (
 	"github.com/ipfs/boxo/path"
 	icore "github.com/ipfs/kubo/core/coreiface"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 )
 
@@ -106,4 +107,11 @@ func DownloadBlockchain(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.P
 		}
 	}
 	return false, nil, ""
+}
+
+func IsGenesisBlock(blockk *block.Block) bool {
+	if blockk.PrevBlock == nil {
+		return true
+	}
+	return false
 }
