@@ -109,8 +109,9 @@ func DownloadBlockchain(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.P
 	return false, nil, ""
 }
 
-func IsGenesisBlock(blockk *block.Block) bool {
-	if blockk.PrevBlock == nil {
+// IsGenesisBlock checks if the block is the genesis block
+func IsGenesisBlock(b *block.Block) bool {
+	if b.PrevBlock == nil && b.Height == 0 {
 		return true
 	}
 	return false

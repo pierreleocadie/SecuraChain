@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/fullnode/pebble"
 )
 
 // ValidateBlock validates the given block
@@ -97,19 +98,24 @@ func validateGenesisBlock(genesisBlock *block.Block) bool {
 }
 
 // ValidateListBlock validates a list of blocks
-func ValidateListBlock(blockList []*block.Block) bool {
+func ValidateListBlock(blockList []*block.Block, database *pebble.PebbleTransactionDB) bool {
 	for i := 0; i < len(blockList); i++ {
 		if i == 0 {
 			if !validateGenesisBlock(blockList[i]) {
 				return false
 			}
 		} else {
-			prevBlock, err := block.DeserializeBlock(blockList[i].PrevBlock)
-			if err != nil {
-				return false
+			if i == 0 {
+				prevBlock, err := database.GetBlock(blockList[i].PrevBlock)
+				if err != nil {
+					return false
+				}
+				if !ValidateBlock(blockList[i], prevBlock) {
+					return false
+				}
 			}
 
-			if !ValidateBlock(blockList[i], prevBlock) {
+			if !ValidateBlock(blockList[i], blockList[i-1]) {
 				return false
 			}
 		}

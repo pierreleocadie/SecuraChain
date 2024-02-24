@@ -6,6 +6,7 @@ import (
 
 	"github.com/cockroachdb/pebble"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 )
 
 // BlockDatabase defines an interface for interacing with the transaction database.
@@ -13,7 +14,7 @@ type BlockDatabase interface {
 	SaveBlock(key []byte, bx block.Block) error
 	GetBlock(key []byte) (block.Block, error)
 	VerifyBlockchainIntegrity(lastestBlockAdded *block.Block) (bool, error)
-	IsIn(block *block.Block) (bool, error)
+	// IsIn(block *block.Block) (bool, error)
 	Close() error
 }
 
@@ -50,6 +51,10 @@ func (pdb *PebbleTransactionDB) SaveBlock(key []byte, bx *block.Block) error {
 func (pdb *PebbleTransactionDB) GetBlock(key []byte) (*block.Block, error) {
 	bxBytes, closer, err := pdb.db.Get(key)
 	if err != nil {
+		if err == pebble.ErrNotFound {
+			// The block does not exist in the database it returns nils
+			return nil, nil
+		}
 		return nil, fmt.Errorf("error retrieving block from the database: %v", err)
 	}
 	defer closer.Close()
@@ -64,9 +69,8 @@ func (pdb *PebbleTransactionDB) GetBlock(key []byte) (*block.Block, error) {
 
 // VerifyBlockchainIntegrity checks the blockchain for integrity.
 func (pdb *PebbleTransactionDB) VerifyBlockchainIntegrity(lastestBlockAdded *block.Block) (bool, error) {
-	latestBlockKey := block.ComputeHash(lastestBlockAdded)
+	currentBlockKey := lastestBlockAdded.PrevBlock
 
-	currentBlockKey := latestBlockKey
 	for {
 		if currentBlockKey == nil {
 			// Genesis block reached
@@ -78,34 +82,40 @@ func (pdb *PebbleTransactionDB) VerifyBlockchainIntegrity(lastestBlockAdded *blo
 		if err != nil {
 			return false, fmt.Errorf("error retrieving block from the database: %v", err)
 		}
-		prevBlock, err := block.DeserializeBlock(currentBlock.PrevBlock)
+
+		currentPrevBlock, err := pdb.GetBlock(currentBlock.PrevBlock)
 		if err != nil {
-			return false, fmt.Errorf("error deserializing previous block: %v", err)
+			return false, fmt.Errorf("previous block not found")
 		}
-		currentBlockKey = block.ComputeHash(prevBlock)
+
+		if !consensus.ValidateBlock(currentBlock, currentPrevBlock) {
+			return false, fmt.Errorf("block validation failed")
+		}
+
+		currentBlockKey = currentBlock.PrevBlock
 	}
 }
 
-// isIn checks if a blocks is in the blockchain
-func (pdb *PebbleTransactionDB) IsIn(blockk *block.Block) (bool, error) {
-	key := block.ComputeHash(blockk)
+// // IsIn checks if a blocks is in the blockchain
+// func (pdb *PebbleTransactionDB) IsIn(b *block.Block) (bool, error) {
+// 	key := block.ComputeHash(b)
 
-	_, closer, err := pdb.db.Get(key)
-	if err != nil {
-		if err == pebble.ErrNotFound {
-			// The block does not exist in the database.
-			return false, nil
-		}
-		return false, fmt.Errorf("error retrieving block from database: %v", err)
-	}
+// 	_, closer, err := pdb.db.Get(key)
+// 	if err != nil {
+// 		if err == pebble.ErrNotFound {
+// 			// The block does not exist in the database.
+// 			return false, nil
+// 		}
+// 		return false, fmt.Errorf("error retrieving block from database: %v", err)
+// 	}
 
-	if closer != nil {
-		closer.Close()
-	}
+// 	if closer != nil {
+// 		closer.Close()
+// 	}
 
-	// The block exists in the database.
-	return true, nil
-}
+// 	// The block exists in the database.
+// 	return true, nil
+// }
 
 // Close closes the database connection.
 func (pdb *PebbleTransactionDB) Close() error {

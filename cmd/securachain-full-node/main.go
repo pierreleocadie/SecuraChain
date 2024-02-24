@@ -125,7 +125,7 @@ func main() {
 
 		for {
 			var isPrevBlockStored bool
-			blockReceive := make(map[int64][]*block.Block)
+			blockReceive := make(map[int64]*block.Block)
 
 			msg, err := subBlockAnnouncement.Next(ctx)
 			if err != nil {
@@ -168,10 +168,10 @@ func main() {
 					log.Debugln("Error publishing block to the network : %s\n", err)
 					continue
 				}
-				log.Debugln("Publishing block announcement to the network :", string(blockBytes))
+				log.Debugln("Publishing block announcement to the network :", blockPublished)
 
 				// Send the blockchain to IPFS
-				newCidBlockChain, err = fullnode.AddBlockchainToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, cidBlockChain)
+				newCidBlockChain, err = fullnode.PublishBlockchainToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, cidBlockChain)
 				if err != nil {
 					log.Debugf("error adding the blockchain to IPFS : %s\n", err)
 					continue
@@ -205,7 +205,7 @@ func main() {
 						log.Debugln("Error publishing block to the network : %s\n", err)
 						continue
 					}
-					log.Debugln("Publishing block announcement to the network :", string(blockBytes))
+					log.Debugln("Publishing block announcement to the network :", blockPublished)
 
 					// Send the blockchain to IPFS
 					newCidBlockChain, err = fullnode.AddBlockchainToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, cidBlockChain)
@@ -255,7 +255,7 @@ func main() {
 				// Verify the validy of the blocks list
 				for _, blocks := range blockLists {
 					// Verify if the block is valid
-					if !consensus.ValidateListBlock(blocks) {
+					if !consensus.ValidateListBlock(blocks, blockchain) {
 						log.Debugln("Block list is invalid")
 					}
 				}

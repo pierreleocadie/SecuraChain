@@ -41,12 +41,12 @@ func HandleIncomingBlock(incomingBlock *block.Block, blockBuffer map[int64][]*bl
 }
 
 // ProcessBlock validates and adds a block to the blockchain.
-func ProcessBlock(bblock *block.Block, database *pebble.PebbleTransactionDB) (bool, error) {
-	if bblock.PrevBlock == nil {
+func ProcessBlock(b *block.Block, database *pebble.PebbleTransactionDB) (bool, error) {
+	if IsGenesisBlock(b) {
 		// Handle the genesis block.
-		if consensus.ValidateBlock(bblock, nil) {
+		if consensus.ValidateBlock(b, nil) {
 			// Block is valid, attempt to add it to the blockchain.
-			added, message := AddBlockToBlockchain(database, bblock)
+			added, message := AddBlockToBlockchain(database, b)
 			fmt.Println(message)
 			return added, nil
 		}
@@ -55,14 +55,14 @@ func ProcessBlock(bblock *block.Block, database *pebble.PebbleTransactionDB) (bo
 	}
 
 	// Handle non-genesis blocks.
-	prevBlock, err := block.DeserializeBlock(bblock.PrevBlock)
+	prevBlock, err := block.DeserializeBlock(b.PrevBlock)
 	if err != nil {
 		return false, fmt.Errorf("error deserializing previous block: %s", err)
 	}
 
-	if consensus.ValidateBlock(bblock, prevBlock) {
+	if consensus.ValidateBlock(b, prevBlock) {
 		// Block is valid, attempt to add it to the blockchain.
-		added, message := AddBlockToBlockchain(database, bblock)
+		added, message := AddBlockToBlockchain(database, b)
 		fmt.Println(message)
 		return added, nil
 	}
@@ -71,19 +71,14 @@ func ProcessBlock(bblock *block.Block, database *pebble.PebbleTransactionDB) (bo
 }
 
 // PrevBlockStored checks if the previous block is stored in the database.
-func PrevBlockStored(blockk *block.Block, database *pebble.PebbleTransactionDB) (bool, error) {
-	// Deserialize the previous block
-	prevBlock, err := block.DeserializeBlock(blockk.PrevBlock)
-	if err != nil {
-		return false, fmt.Errorf("error deserializing previous block: %s", err)
-	}
-
-	isPrevBlockStored, err := database.IsIn(prevBlock)
+func PrevBlockStored(b *block.Block, database *pebble.PebbleTransactionDB) (bool, error) {
+	// Check if the previous block is stored in the database
+	prevBlockStored, err := database.GetBlock(b.PrevBlock)
 	if err != nil {
 		return false, fmt.Errorf("error checking if the previous block is stored: %s", err)
 	}
 
-	if !isPrevBlockStored {
+	if prevBlockStored == nil {
 		return false, fmt.Errorf("previous block is not stored")
 	}
 
@@ -96,15 +91,16 @@ func CompareBlocksToBlockchain(blockBuffer map[int64][]*block.Block, database *p
 	// Iterate through the blocks in the buffer
 	for timestamp, blocks := range blockBuffer {
 		for _, blockk := range blocks {
+			blockKey := block.ComputeHash(blockk)
 			// Check if the block is already stored in the blockchain
-			isStored, err := database.IsIn(blockk)
+			isStored, err := database.GetBlock(blockKey)
 			if err != nil {
 				fmt.Printf("Error checking if the block is stored in the blockchain: %s\n", err)
 				continue
 			}
 
 			// Remove the block from the buffer if it is already stored in the blockchain
-			if isStored {
+			if isStored != nil {
 				delete(blockBuffer, timestamp)
 			}
 		}
