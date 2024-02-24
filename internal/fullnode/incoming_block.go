@@ -2,6 +2,7 @@ package fullnode
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
@@ -87,4 +88,42 @@ func PrevBlockStored(blockk *block.Block, database *pebble.PebbleTransactionDB) 
 	}
 
 	return true, nil
+}
+
+// CompareBlocksToBlockchain compares the blocks in the buffer to the blockchain and remove those that are already stored.
+// Sort the blocks in the buffer by timestamp and return the sorted buffer.
+func CompareBlocksToBlockchain(blockBuffer map[int64][]*block.Block, database *pebble.PebbleTransactionDB) map[int64][]*block.Block {
+	// Iterate through the blocks in the buffer
+	for timestamp, blocks := range blockBuffer {
+		for _, blockk := range blocks {
+			// Check if the block is already stored in the blockchain
+			isStored, err := database.IsIn(blockk)
+			if err != nil {
+				fmt.Printf("Error checking if the block is stored in the blockchain: %s\n", err)
+				continue
+			}
+
+			// Remove the block from the buffer if it is already stored in the blockchain
+			if isStored {
+				delete(blockBuffer, timestamp)
+			}
+		}
+	}
+
+	// Sort the blocks in the buffer by timestamp
+	blockSorted := sortBlocksByTimestamp(blockBuffer)
+
+	return blockSorted
+}
+
+// sortBlocksByTimestamp sorts the blocks in the buffer by timestamp and returns the sorted buffer.
+func sortBlocksByTimestamp(blockBuffer map[int64][]*block.Block) map[int64][]*block.Block {
+	// Sort the blocks in the buffer by timestamp
+	for timestamp, blocks := range blockBuffer {
+		sort.SliceStable(blocks, func(i, j int) bool {
+			return uint32(blocks[i].Timestamp) < uint32(blocks[j].Timestamp)
+		})
+		blockBuffer[timestamp] = blocks
+	}
+	return blockBuffer
 }

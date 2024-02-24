@@ -246,9 +246,11 @@ func main() {
 								log.Debugln("Error publishing blacklist message to the network : ", err)
 							}
 							continue // to re download the blockchain
-
 						}
 					}
+
+					// Compare the blockchain with the list of blocks received
+					blockLists := fullnode.CompareBlocksToBlockchain(blockReceive, blockchain)
 
 					// Sort the blocks by their timestamp
 					sort.SliceStable(blockReceive[blockAnnounced.Timestamp], func(i, j int) bool {

@@ -11,8 +11,8 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 )
 
-// AddBlockchainToIPFS adds the local blockchain to IPFS for synchronization and re-synchronization of nodes in case of absence.
-func AddBlockchainToIPFS(ctx context.Context, config *config.Config, nodeIpfs *core.IpfsNode, ipfsApi icore.CoreAPI, oldCid path.ImmutablePath) (path.ImmutablePath, error) {
+// PublishBlockchainToIPFS adds the local blockchain to IPFS for synchronization and re-synchronization of nodes in case of absence.
+func PublishBlockchainToIPFS(ctx context.Context, config *config.Config, nodeIpfs *core.IpfsNode, ipfsApi icore.CoreAPI, oldCid path.ImmutablePath) (path.ImmutablePath, error) {
 	// Add the blockchain to IPFS
 	fileImmutablePathCid, err := ipfs.AddFile(ctx, config, ipfsApi, "./blockchain")
 	if err != nil {
