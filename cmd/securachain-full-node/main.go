@@ -122,10 +122,9 @@ func main() {
 	go func() {
 		// Check if the node has a blockchain
 		hasBlockchain := fullnode.HasABlockchain()
-		
+
 		for {
 			var isPrevBlockStored bool
-			isGenesisBlock := false
 			blockReceive := make(map[int64][]*block.Block)
 
 			
@@ -144,6 +143,54 @@ func main() {
 				log.Debugln("Error deserializing block announcement : %s", err)
 				continue
 			}
+
+			// Verify if the block is the genesis block
+			genesisBlock := fullnode.IsGenesisBlock(blockAnnounced)
+
+			if !hasBlockchain && genesisBlock {
+				log.Debugln("Blockchain doesn't exist and received genesis block")
+
+				// Start a new blockchain
+				blockchain, err := pebble.NewPebbleTransactionDB("blockchain")
+					if err != nil {
+						log.Debugln("Error creating a new blockchain database : %s\n", err)
+						continue
+					}
+				
+				// Proceed to validate and add the block to the blockchain
+				proceed, err := fullnode.ProcessBlock(blockAnnounced, blockchain)
+				if err != nil {
+					log.Debugln("Error processing block : %s\n", err)
+					continue
+				}
+				log.Debugln("Block processed : ", proceed)
+
+				// Serialize the block
+				blockBytes, err := blockAnnounced.Serialize()
+				if err != nil {
+					log.Debugln("error serializing block : %s\n", err)
+					continue
+				}
+
+				// Publish the block to the network (for minors and indexing and searching nodes and storage nodes)
+				log.Debugln("Publishing block announcement to the network :", string(blockBytes))
+
+				if err = fullNodeAnnouncementTopic.Publish(ctx, blockBytes); err != nil {
+					log.Debugln("Error publishing block announcement to the network : ", err)
+					continue
+				}
+
+				// Send the blockchain to IPFS
+				newCidBlockChain, err = fullnode.AddBlockchainToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, cidBlockChain)
+				if err != nil {
+					log.Debugf("error adding the blockchain to IPFS : %s\n", err)
+					continue
+				}
+				cidBlockChain = newCidBlockChain
+				newCidBlockChain = path.ImmutablePath{}
+
+			}
+
 
 			/*
 			* Validate blocks coming from minors

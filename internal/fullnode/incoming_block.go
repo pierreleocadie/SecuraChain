@@ -31,7 +31,7 @@ func HandleIncomingBlock(incomingBlock *block.Block, blockBuffer map[int64][]*bl
 
 	// Proceed normally if there is only one block.
 
-	if processedSuccessfully, err := processBlock(blocks[0], database); processedSuccessfully {
+	if processedSuccessfully, err := ProcessBlock(blocks[0], database); processedSuccessfully {
 		return []*block.Block{blocks[0]}, nil
 	} else {
 		fmt.Printf("Error processing block: %s\n", err)
@@ -39,8 +39,8 @@ func HandleIncomingBlock(incomingBlock *block.Block, blockBuffer map[int64][]*bl
 	}
 }
 
-// processBlock validates and adds a block to the blockchain.
-func processBlock(bblock *block.Block, database *pebble.PebbleTransactionDB) (bool, error) {
+// ProcessBlock validates and adds a block to the blockchain.
+func ProcessBlock(bblock *block.Block, database *pebble.PebbleTransactionDB) (bool, error) {
 	if bblock.PrevBlock == nil {
 		// Handle the genesis block.
 		if consensus.ValidateBlock(bblock, nil) {
