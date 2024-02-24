@@ -8,6 +8,7 @@ import (
 
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode/pebble"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
@@ -252,10 +253,18 @@ func main() {
 					// Compare the blockchain with the list of blocks received
 					blockLists := fullnode.CompareBlocksToBlockchain(blockReceive, blockchain)
 
-					// Sort the blocks by their timestamp
-					sort.SliceStable(blockReceive[blockAnnounced.Timestamp], func(i, j int) bool {
-						return uint32(blockReceive[blockAnnounced.Timestamp][i].Timestamp) < uint32(blockReceive[blockAnnounced.Timestamp][j].Timestamp)
-					})
+					// Verify the validy of the blocks list
+					for _, blocks := range blockLists {
+						for _, block := range blocks {
+							// Verify if the block is valid
+							if !consensus.ValidateListBlock(block) {
+								log.Debugln("Block list is invalid")
+							}
+						}
+					}
+
+
+						
 
 					// Comparer la blockchain avec la liste des blocks en attentes
 					for _, blocks := range blockReceive {

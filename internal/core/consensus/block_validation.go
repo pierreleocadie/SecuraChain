@@ -95,3 +95,24 @@ func validateGenesisBlock(genesisBlock *block.Block) bool {
 
 	return true
 }
+
+// ValidateListBlock validates a list of blocks
+func ValidateListBlock(blockList []*block.Block) bool {
+	for i := 0; i < len(blockList); i++ {
+		if i == 0 {
+			if !validateGenesisBlock(blockList[i]) {
+				return false
+			}
+		} else {
+			prevBlock, err := block.DeserializeBlock(blockList[i].PrevBlock)
+			if err != nil {
+				return false
+			}
+
+			if !ValidateBlock(blockList[i], prevBlock) {
+				return false
+			}
+		}
+	}
+	return true
+}
