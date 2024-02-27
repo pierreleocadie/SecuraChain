@@ -16,7 +16,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
 	client "github.com/pierreleocadie/SecuraChain/internal/client"
-	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
@@ -44,14 +43,7 @@ func main() { //nolint: funlen, gocyclo
 	flag.Parse()
 
 	// Load the config file
-	if *yamlConfigFilePath == "" {
-		log.Panicln("Please provide a path to the yaml config file")
-	}
-
-	cfg, err := config.LoadConfig(*yamlConfigFilePath)
-	if err != nil {
-		log.Panicln("Error loading config file : ", err)
-	}
+	cfg := node.LoadConfig(yamlConfigFilePath, log)
 
 	/*
 	* IPFS NODE

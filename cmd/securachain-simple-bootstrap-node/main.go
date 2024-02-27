@@ -10,7 +10,6 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
@@ -32,14 +31,7 @@ func main() { //nolint: funlen
 	flag.Parse()
 
 	// Load the config file
-	if *yamlConfigFilePath == "" {
-		log.Panicln("Please provide a path to the yaml config file. Flag: -config <path/to/config.yaml>")
-	}
-
-	cfg, err := config.LoadConfig(*yamlConfigFilePath)
-	if err != nil {
-		log.Panicln("Error loading config file : ", err)
-	}
+	cfg := node.LoadConfig(yamlConfigFilePath, log)
 
 	/*
 	* NODE LIBP2P

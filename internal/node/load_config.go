@@ -8,7 +8,7 @@ import (
 func LoadConfig(yamlConfigFilePath *string, log *ipfsLog.ZapEventLogger) *config.Config {
 	// Load the config file
 	if *yamlConfigFilePath == "" {
-		log.Panicln("Please provide a path to the yaml config file")
+		log.Panicln("Please provide a path to the yaml config file. Flag: -config <path/to/config.yaml>")
 	}
 
 	cfg, err := config.LoadConfig(*yamlConfigFilePath)
