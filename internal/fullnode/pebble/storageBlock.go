@@ -1,7 +1,6 @@
 package pebble
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/cockroachdb/pebble"
@@ -15,6 +14,7 @@ type BlockDatabase interface {
 	GetBlock(key []byte) (block.Block, error)
 	VerifyBlockchainIntegrity(lastestBlockAdded *block.Block) (bool, error)
 	// IsIn(block *block.Block) (bool, error)
+	GetLastBlock() (block.Block, error)
 	Close() error
 }
 
@@ -34,8 +34,8 @@ func NewPebbleTransactionDB(dbPath string) (*PebbleTransactionDB, error) {
 }
 
 // SaveBlock stores a block in the database.
-func (pdb *PebbleTransactionDB) SaveBlock(key []byte, bx *block.Block) error {
-	bxBytes, err := json.Marshal(bx)
+func (pdb *PebbleTransactionDB) SaveBlock(key []byte, b *block.Block) error {
+	bxBytes, err := b.Serialize()
 	if err != nil {
 		return fmt.Errorf("error serializing block: %v", err)
 	}
@@ -44,6 +44,8 @@ func (pdb *PebbleTransactionDB) SaveBlock(key []byte, bx *block.Block) error {
 	if err != nil {
 		return fmt.Errorf("error saving block to the database : %v", err)
 	}
+
+	err = pdb.saveLastBlock(b)
 	return nil
 }
 
@@ -59,11 +61,11 @@ func (pdb *PebbleTransactionDB) GetBlock(key []byte) (*block.Block, error) {
 	}
 	defer closer.Close()
 
-	var blockDeserialize *block.Block
-	err = json.Unmarshal(bxBytes, &blockDeserialize)
+	blockDeserialize, err := block.DeserializeBlock(bxBytes)
 	if err != nil {
 		return nil, fmt.Errorf("error deserializing block: %v", err)
 	}
+
 	return blockDeserialize, nil
 }
 
@@ -116,6 +118,35 @@ func (pdb *PebbleTransactionDB) VerifyBlockchainIntegrity(lastestBlockAdded *blo
 // 	// The block exists in the database.
 // 	return true, nil
 // }
+
+// saveLastBlock saves the last block to the PebbleTransactionDB.
+// It serializes the lastBlock object into JSON format and stores it in the database.
+// The last block is saved with the key "lastKey".
+// Returns an error if there is an issue serializing the block or saving it to the database.
+func (pdb *PebbleTransactionDB) saveLastBlock(lastBlock *block.Block) error {
+	lastBlockBytes, err := lastBlock.Serialize()
+	if err != nil {
+		return fmt.Errorf("error serializing block: %v", err)
+	}
+
+	err = pdb.db.Set([]byte("lastKey"), lastBlockBytes, pebble.Sync)
+	if err != nil {
+		return fmt.Errorf("error saving block to the database : %v", err)
+	}
+
+	return nil
+}
+
+// GetLastBlock retrieves the last block from the database.
+// It returns the last block and an error if any occurred.
+func (pdb *PebbleTransactionDB) GetLastBlock() (*block.Block, error) {
+	lastBlock, err := pdb.GetBlock([]byte("lastKey"))
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving last block from the database: %v", err)
+	}
+
+	return lastBlock, nil
+}
 
 // Close closes the database connection.
 func (pdb *PebbleTransactionDB) Close() error {

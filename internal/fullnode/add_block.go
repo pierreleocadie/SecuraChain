@@ -14,15 +14,10 @@ func AddBlockToBlockchain(database *pebble.PebbleTransactionDB, blockAnnounced *
 	key := block.ComputeHash(blockAnnounced)
 
 	// Attempt to retrieve the block by its signature to check for its existence in the database.
-	existingBlock, err := database.IsIn(blockAnnounced)
+	_, err := database.GetBlock(key)
 	if err != nil {
-		return false, fmt.Sprintf("Error checking for the block existence in the database: %s", err)
+		return false, fmt.Sprintf("Error checking for the block existence in the database or Block already exists in the blockchain: %s", err)
 
-	}
-
-	if existingBlock {
-		// The bloc already exists in the database, so there's no need to add it again.
-		return false, "Block already exists in the blockchain"
 	}
 
 	// If the block is not in the blockchain, add it.
