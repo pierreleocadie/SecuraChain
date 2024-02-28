@@ -232,8 +232,15 @@ func main() {
 
 				blockchain := databaseInstance
 				if blockchainDownloaded {
+					// Get the last block of the blockchain donwloaded
+					lastBlockFromBlockchain, err := blockchain.GetLastBlock()
+					if err != nil {
+						log.Debugf("error getting last block from the blockchain : %s\n", err)
+						continue
+					}
+
 					// Check the integrity of the blockchain downloaded
-					blockchainIntegrity, err := blockchain.VerifyBlockchainIntegrity(blockAnnounced)
+					blockchainIntegrity, err := blockchain.VerifyBlockchainIntegrity(lastBlockFromBlockchain)
 					if err != nil {
 						log.Debugf("error verifying blockchain integrity : %s\n", err)
 						continue
