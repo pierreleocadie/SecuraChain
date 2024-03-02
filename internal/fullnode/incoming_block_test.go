@@ -241,3 +241,136 @@ func TestProcessBlock_NonGenesisBlock_Invalid(t *testing.T) {
 		t.Fatalf("Error removing blockchainDB: %v", err)
 	}
 }
+func TestPrevBlockStored_BlockStored(t *testing.T) {
+	t.Parallel()
+
+	// Create a new PebbleDB instance
+	database, err := pebble.NewBlockchainDB("blockchainDB")
+	if err != nil {
+		t.Fatalf("Error creating PebbleDB: %v", err)
+	}
+
+	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
+	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
+
+	/*
+	* PREVIOUS BLOCK
+	 */
+
+	// Create a previous block
+	prevBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
+
+	consensus.MineBlock(prevBlock)
+
+	err = prevBlock.SignBlock(minerKeyPair)
+	if err != nil {
+		t.Errorf("Failed to sign block: %s", err)
+	}
+
+	// Generate a key for the previous block
+	key := block.ComputeHash(prevBlock)
+
+	// Check if the returned block is not nil
+	if prevBlock == nil {
+		t.Errorf("NewBlock returned nil")
+	}
+
+	if err = database.SaveBlock(key, prevBlock); err != nil {
+		t.Fatalf("Error saving block: %v", err)
+	}
+
+	// Create a second block
+	secondBlock := block.NewBlock(transactions, key, 2, minerKeyPair)
+
+	consensus.MineBlock(secondBlock)
+
+	err = secondBlock.SignBlock(minerKeyPair)
+	if err != nil {
+		t.Errorf("Failed to sign block: %s", err)
+	}
+
+	// Check if the returned block is not nil
+	if secondBlock == nil {
+		t.Errorf("NewBlock returned nil")
+	}
+
+	stored, err := fullnode.PrevBlockStored(secondBlock, database)
+	if err != nil {
+		t.Fatalf("Error checking if the previous block is stored: %v", err)
+	}
+
+	// Verify the result
+	if !stored {
+		t.Errorf("Expected previous block to be stored, but it was not stored")
+	}
+
+	if err = os.RemoveAll("blockchainDB"); err != nil {
+		t.Fatalf("Error removing blockchainDB: %v", err)
+	}
+}
+
+func TestPrevBlockStored_BlockNotStored(t *testing.T) {
+	t.Parallel()
+
+	// Create a new PebbleDB instance
+	database, err := pebble.NewBlockchainDB("blockchainDB")
+	if err != nil {
+		t.Fatalf("Error creating PebbleDB: %v", err)
+	}
+
+	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
+	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
+
+	/*
+	* PREVIOUS BLOCK
+	 */
+
+	// Create a previous block
+	prevBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
+
+	consensus.MineBlock(prevBlock)
+
+	err = prevBlock.SignBlock(minerKeyPair)
+	if err != nil {
+		t.Errorf("Failed to sign block: %s", err)
+	}
+
+	// Generate a key for the previous block
+	key := block.ComputeHash(prevBlock)
+
+	// Check if the returned block is not nil
+	if prevBlock == nil {
+		t.Errorf("NewBlock returned nil")
+	}
+
+	// Create a second block
+	secondBlock := block.NewBlock(transactions, key, 2, minerKeyPair)
+
+	consensus.MineBlock(secondBlock)
+
+	err = secondBlock.SignBlock(minerKeyPair)
+	if err != nil {
+		t.Errorf("Failed to sign block: %s", err)
+	}
+
+	// Check if the returned block is not nil
+	if secondBlock == nil {
+		t.Errorf("NewBlock returned nil")
+	}
+
+	stored, err := fullnode.PrevBlockStored(secondBlock, database)
+	if err != nil {
+		if err.Error() != "previous block is not stored" {
+			t.Errorf("Expected error message: previous block not found, but got: %s", err.Error())
+		}
+	}
+
+	// Verify the result
+	if stored {
+		t.Errorf("Expected previous block to not be stored, but it was stored")
+	}
+
+	if err = os.RemoveAll("blockchainDB"); err != nil {
+		t.Fatalf("Error removing blockchainDB: %v", err)
+	}
+}
