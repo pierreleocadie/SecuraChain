@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode/pebble"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
@@ -14,7 +15,7 @@ import (
 // TestSaveBlock is a unit test function that tests the SaveBlock method of the PebbleTransactionDB struct.
 // It creates a new PebbleTransactionDB instance, generates a key pair, creates a previous block, saves the block to the database,
 // retrieves the saved block, serializes both the original and retrieved blocks, and compares them to ensure consistency.
-func TestSaveBlock(t *testing.T) {
+func TestSaveAndGetBlock(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleTransactionDB instance
@@ -152,10 +153,7 @@ func TestGetLastBlock(t *testing.T) {
 	 */
 
 	// Retrieve the last block from the database
-	retrievedLastBlock, err := blockchainTest2.GetLastBlock()
-	if err != nil {
-		t.Errorf("Error retrieving block from the database: %v", err)
-	}
+	retrievedLastBlock := blockchainTest2.GetLastBlock()
 
 	// Serialize the retrieved last block
 	retrievedLastBlockBytes, err := retrievedLastBlock.Serialize()
@@ -187,4 +185,97 @@ func TestGetLastBlock(t *testing.T) {
 	// 	t.Errorf("Retrieved lastblock does not with match the second block")
 	// }
 
+}
+
+// Test: TestVerifyBlockchainIntegrity
+func TestVerifyBlockchainIntegrity(t *testing.T) {
+	t.Parallel()
+
+	// Create a new PebbleTransactionDB instance
+	blockchainTestV, err := pebble.NewPebbleTransactionDB("blockchain_test_verify_integrity")
+	if err != nil {
+		t.Errorf("Error creating PebbleTransactionDB: %v", err)
+	}
+
+	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
+	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
+
+	/*
+	* PREVIOUS BLOCK
+	 */
+
+	// Create a previous block
+	prevBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
+
+	consensus.MineBlock(prevBlock)
+
+	// Generate a key for the previous block
+	key := block.ComputeHash(prevBlock)
+
+	// Check if the returned block is not nil
+	if prevBlock == nil {
+		t.Errorf("NewBlock returned nil")
+	}
+	// Save the block the previous block in the database
+	err = blockchainTestV.SaveBlock(key, prevBlock)
+	if err != nil {
+		t.Errorf("Error saving block: %v", err)
+	}
+
+	/*
+	* SECOND BLOCK
+	 */
+
+	// Create a second block
+	secondBlock := block.NewBlock(transactions, key, 2, minerKeyPair)
+
+	consensus.MineBlock(secondBlock)
+
+	// Generate a key for the second blockblock
+	keySecondBlock := block.ComputeHash(secondBlock)
+
+	// Check if the returned block is not nil
+	if secondBlock == nil {
+		t.Errorf("NewBlock returned nil")
+	}
+
+	// Save the second block in the database
+	err = blockchainTestV.SaveBlock(keySecondBlock, secondBlock)
+	if err != nil {
+		t.Errorf("Error saving block: %v", err)
+	}
+
+	/*
+	* THIRD BLOCK
+	 */
+
+	// Create a thrid block
+	thirdBlock := block.NewBlock(transactions, keySecondBlock, 3, minerKeyPair)
+
+	consensus.MineBlock(thirdBlock)
+
+	// Generate a key for the third block
+	keyThirdBlock := block.ComputeHash(thirdBlock)
+
+	// Check if the returned block is not nil
+	if thirdBlock == nil {
+		t.Errorf("NewBlock returned nil")
+	}
+
+	// Save the third block in the database
+	err = blockchainTestV.SaveBlock(keyThirdBlock, thirdBlock)
+	if err != nil {
+		t.Errorf("Error saving block: %v", err)
+	}
+
+	// Call the VerifyBlockchainIntegrity function
+	valid, err := blockchainTestV.VerifyBlockchainIntegrity(blockchainTestV.GetLastBlock())
+	if err != nil {
+		t.Errorf("Error verifying blockchain integrity: %v", err)
+	}
+
+	// Check if the blockchain integrity is valid
+	if !valid {
+		t.Errorf("Blockchain integrity verification failed")
+	}
 }

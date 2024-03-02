@@ -14,7 +14,7 @@ type BlockDatabase interface {
 	GetBlock(key []byte) (block.Block, error)
 	VerifyBlockchainIntegrity(lastestBlockAdded *block.Block) (bool, error)
 	// IsIn(block *block.Block) (bool, error)
-	GetLastBlock() (block.Block, error)
+	GetLastBlock() block.Block
 	Close() error
 }
 
@@ -139,13 +139,13 @@ func (pdb *PebbleTransactionDB) saveLastBlock(lastBlock *block.Block) error {
 
 // GetLastBlock retrieves the last block from the database.
 // It returns the last block and an error if any occurred.
-func (pdb *PebbleTransactionDB) GetLastBlock() (*block.Block, error) {
+func (pdb *PebbleTransactionDB) GetLastBlock() *block.Block {
 	lastBlock, err := pdb.GetBlock([]byte("lastKey"))
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving last block from the database: %v", err)
+		return nil
 	}
 
-	return lastBlock, nil
+	return lastBlock
 }
 
 // Close closes the database connection.
