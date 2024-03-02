@@ -5,8 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode/pebble"
+	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
 func TestHasABlockchain_BlockchainDoesNotExist(t *testing.T) {
@@ -77,4 +80,55 @@ func TestHasABlockchain_BlockchainExistsAndIsNotUpToDate(t *testing.T) {
 
 	pebbleDB.Close()
 	os.RemoveAll("./blockchain")
+}
+func TestIsGenesisBlock(t *testing.T) {
+	t.Parallel()
+
+	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
+	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
+
+	/*
+	* FIRST BLOCK
+	 */
+
+	// Create a genesis block
+	genesisBlock := block.NewBlock(transactions, nil, 0, minerKeyPair)
+
+	// Call the IsGenesisBlock function
+	isGenesis := fullnode.IsGenesisBlock(genesisBlock)
+
+	// Verify that the function returns true
+	if !isGenesis {
+		t.Errorf("Expected IsGenesisBlock to return true, got false")
+	}
+}
+
+func TestIsNotGenesisBlock(t *testing.T) {
+	t.Parallel()
+
+	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
+	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
+
+	/*
+	* FIRST BLOCK
+	 */
+
+	// Create a genesis block
+	genesisBlock := block.NewBlock(transactions, nil, 0, minerKeyPair)
+	key := block.ComputeHash(genesisBlock)
+
+	/*
+	* SECOND BLOCK
+	 */
+
+	// Create a second block
+	secondBlock := block.NewBlock(transactions, key, 1, minerKeyPair)
+
+	// Call the IsGenesisBlock function
+	isGenesis := fullnode.IsGenesisBlock(secondBlock)
+
+	// Verify that the function returns false
+	if isGenesis {
+		t.Errorf("Expected IsGenesisBlock to return false, got true")
+	}
 }
