@@ -92,7 +92,7 @@ func TestIsGenesisBlock(t *testing.T) {
 	 */
 
 	// Create a genesis block
-	genesisBlock := block.NewBlock(transactions, nil, 0, minerKeyPair)
+	genesisBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
 
 	// Call the IsGenesisBlock function
 	isGenesis := fullnode.IsGenesisBlock(genesisBlock)
@@ -114,7 +114,7 @@ func TestIsNotGenesisBlock(t *testing.T) {
 	 */
 
 	// Create a genesis block
-	genesisBlock := block.NewBlock(transactions, nil, 0, minerKeyPair)
+	genesisBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
 	key := block.ComputeHash(genesisBlock)
 
 	/*
@@ -122,7 +122,7 @@ func TestIsNotGenesisBlock(t *testing.T) {
 	 */
 
 	// Create a second block
-	secondBlock := block.NewBlock(transactions, key, 1, minerKeyPair)
+	secondBlock := block.NewBlock(transactions, key, 2, minerKeyPair)
 
 	// Call the IsGenesisBlock function
 	isGenesis := fullnode.IsGenesisBlock(secondBlock)

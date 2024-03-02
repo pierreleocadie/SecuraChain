@@ -31,7 +31,7 @@ func TestAddBlockToBlockchain(t *testing.T) {
 	 */
 
 	// Create a genesis block
-	genesisBlock := block.NewBlock(transactions, nil, 0, minerKeyPair)
+	genesisBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
 
 	// Check if the returned block is not nil
 	if genesisBlock == nil {

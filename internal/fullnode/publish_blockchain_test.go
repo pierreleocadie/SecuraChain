@@ -18,6 +18,8 @@ import (
 )
 
 func TestPublishBlockchainToIPFS(t *testing.T) {
+	t.Parallel()
+
 	// Create a new PebbleTransactionDB instance
 	database, err := pebble.NewBlockchainDB("blockchain")
 	if err != nil {
@@ -32,7 +34,7 @@ func TestPublishBlockchainToIPFS(t *testing.T) {
 	 */
 
 	// Create a genesis block
-	genesisBlock := block.NewBlock(transactions, nil, 0, minerKeyPair)
+	genesisBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
 	genesisBlockBytes, err := genesisBlock.Serialize()
 	if err != nil {
 		t.Errorf("Error serializing block: %v", err)

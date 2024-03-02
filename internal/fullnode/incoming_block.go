@@ -55,9 +55,9 @@ func ProcessBlock(b *block.Block, database *pebble.PebbleDB) (bool, error) {
 	}
 
 	// Handle non-genesis blocks.
-	prevBlock, err := block.DeserializeBlock(b.PrevBlock)
+	prevBlock, err := database.GetBlock(b.PrevBlock)
 	if err != nil {
-		return false, fmt.Errorf("error deserializing previous block: %s", err)
+		return false, fmt.Errorf("error getting previous block: %s", err)
 	}
 
 	if consensus.ValidateBlock(b, prevBlock) {
