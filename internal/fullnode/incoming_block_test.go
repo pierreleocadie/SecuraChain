@@ -374,3 +374,71 @@ func TestPrevBlockStored_BlockNotStored(t *testing.T) {
 		t.Fatalf("Error removing blockchainDB: %v", err)
 	}
 }
+
+func TestCompareBlocksToBlockchain(t *testing.T) {
+	t.Parallel()
+
+	// Create a new PebbleDB instance
+	database, err := pebble.NewBlockchainDB("blockchainDB")
+	if err != nil {
+		t.Fatalf("Error creating PebbleDB: %v", err)
+	}
+
+	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
+	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
+
+	/*
+	* PREVIOUS BLOCK
+	 */
+
+	// Create a previous block
+	prevBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
+
+	consensus.MineBlock(prevBlock)
+
+	// Generate a key for the previous block
+	key := block.ComputeHash(prevBlock)
+
+	err = prevBlock.SignBlock(minerKeyPair)
+	if err != nil {
+		t.Errorf("Failed to sign block: %s", err)
+	}
+
+	// Save the block the previous block in the database
+	err = database.SaveBlock(key, prevBlock)
+	if err != nil {
+		t.Errorf("Error saving block: %v", err)
+	}
+
+	/*
+	* SECOND BLOCK
+	 */
+
+	// Create a second block
+	secondBlock := block.NewBlock(transactions, key, 2, minerKeyPair)
+
+	consensus.MineBlock(secondBlock)
+
+	err = secondBlock.SignBlock(minerKeyPair)
+	if err != nil {
+		t.Errorf("Failed to sign block: %s", err)
+	}
+
+	blockBuffer := make(map[int64]*block.Block)
+
+	// Add the blocks to the buffer
+	blockBuffer[prevBlock.Timestamp] = prevBlock
+	blockBuffer[secondBlock.Timestamp] = secondBlock
+
+	// Call the function under test
+	blockSorted := fullnode.CompareBlocksToBlockchain(blockBuffer, database)
+
+	// Verify the result
+	if len(blockSorted) != 1 {
+		t.Errorf("Expected block buffer to contain 1 block, but got: %d", len(blockSorted))
+	}
+
+	if err = os.RemoveAll("blockchainDB"); err != nil {
+		t.Fatalf("Error removing blockchainDB: %v", err)
+	}
+}

@@ -87,22 +87,20 @@ func PrevBlockStored(b *block.Block, database *pebble.PebbleDB) (bool, error) {
 
 // CompareBlocksToBlockchain compares the blocks in the buffer to the blockchain and remove those that are already stored.
 // Sort the blocks in the buffer by timestamp and return the sorted buffer.
-func CompareBlocksToBlockchain(blockBuffer map[int64][]*block.Block, database *pebble.PebbleDB) map[int64][]*block.Block {
+func CompareBlocksToBlockchain(blockBuffer map[int64]*block.Block, database *pebble.PebbleDB) []*block.Block {
 	// Iterate through the blocks in the buffer
 	for timestamp, blocks := range blockBuffer {
-		for _, blockk := range blocks {
-			blockKey := block.ComputeHash(blockk)
-			// Check if the block is already stored in the blockchain
-			isStored, err := database.GetBlock(blockKey)
-			if err != nil {
-				fmt.Printf("Error checking if the block is stored in the blockchain: %s\n", err)
-				continue
-			}
+		blockKey := block.ComputeHash(blocks)
+		// Check if the block is already stored in the blockchain
+		isStored, err := database.GetBlock(blockKey)
+		if err != nil {
+			fmt.Printf("Error checking if the block is stored in the blockchain: %s\n", err)
+			continue
+		}
 
-			// Remove the block from the buffer if it is already stored in the blockchain
-			if isStored != nil {
-				delete(blockBuffer, timestamp)
-			}
+		// Remove the block from the buffer if it is already stored in the blockchain
+		if isStored != nil {
+			delete(blockBuffer, timestamp)
 		}
 	}
 
@@ -113,13 +111,17 @@ func CompareBlocksToBlockchain(blockBuffer map[int64][]*block.Block, database *p
 }
 
 // sortBlocksByTimestamp sorts the blocks in the buffer by timestamp and returns the sorted buffer.
-func sortBlocksByTimestamp(blockBuffer map[int64][]*block.Block) map[int64][]*block.Block {
-	// Sort the blocks in the buffer by timestamp
-	for timestamp, blocks := range blockBuffer {
-		sort.SliceStable(blocks, func(i, j int) bool {
-			return uint32(blocks[i].Timestamp) < uint32(blocks[j].Timestamp)
-		})
-		blockBuffer[timestamp] = blocks
+func sortBlocksByTimestamp(blockBuffer map[int64]*block.Block) []*block.Block {
+	var blocks []*block.Block
+
+	for _, block := range blockBuffer {
+		blocks = append(blocks, block)
 	}
-	return blockBuffer
+
+	// Sort the blocks in the buffer by timestamp
+	sort.SliceStable(blocks, func(i, j int) bool {
+		return blocks[i].Timestamp < blocks[j].Timestamp
+	})
+
+	return blocks
 }
