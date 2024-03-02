@@ -8,16 +8,16 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 )
 
-// PublishBlockToNetwork publishes a block to the network. (for minors and indexing and searching nodes and storage nodes)
-func PublishBlockToNetwork(ctx context.Context, blockk *block.Block, fullNodeAnnouncementTopic *pubsub.Topic) (bool, error) {
+// PublishBlockToNetwork publishes a block to the network.
+func PublishBlockToNetwork(ctx context.Context, b *block.Block, blockAnnouncementTopic *pubsub.Topic) (bool, error) {
 	// Serialize the block
-	blockBytes, err := blockk.Serialize()
+	blockBytes, err := b.Serialize()
 	if err != nil {
-		return false, fmt.Errorf("Error serializing block : %s", err)
+		return false, fmt.Errorf("error serializing block: %s", err)
 	}
 
-	if err = fullNodeAnnouncementTopic.Publish(ctx, blockBytes); err != nil {
-		return false, fmt.Errorf("Error publishing block to the network : %s", err)
+	if err = blockAnnouncementTopic.Publish(ctx, blockBytes); err != nil {
+		return false, fmt.Errorf("error publishing block to the network: %s", err)
 	}
 
 	return true, nil

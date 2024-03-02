@@ -46,7 +46,7 @@ func ProcessBlock(b *block.Block, database *pebble.PebbleDB) (bool, error) {
 		// Handle the genesis block.
 		if consensus.ValidateBlock(b, nil) {
 			// Block is valid, attempt to add it to the blockchain.
-			added, message := AddBlockToBlockchain(database, b)
+			added, message := pebble.AddBlockToBlockchain(database, b)
 			fmt.Println(message)
 			return added, nil
 		}
@@ -62,7 +62,7 @@ func ProcessBlock(b *block.Block, database *pebble.PebbleDB) (bool, error) {
 
 	if consensus.ValidateBlock(b, prevBlock) {
 		// Block is valid, attempt to add it to the blockchain.
-		added, message := AddBlockToBlockchain(database, b)
+		added, message := pebble.AddBlockToBlockchain(database, b)
 		fmt.Println(message)
 		return added, nil
 	}
