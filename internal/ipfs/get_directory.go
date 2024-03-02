@@ -10,14 +10,14 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 )
 
-func GetDirectory(ctx context.Context, config *config.Config, ipfsAPI icore.CoreAPI, cidDirectory path.ImmutablePath) error {
+func GetDirectory(ctx context.Context, config *config.Config, ipfsAPI icore.CoreAPI, cidDirectory path.ImmutablePath, blockchainName string) error {
 
 	rootNodeDirectory, err := ipfsAPI.Unixfs().Get(ctx, cidDirectory)
 	if err != nil {
 		return fmt.Errorf("could not get directory with CID: %s", err)
 	}
 
-	err = files.WriteTo(rootNodeDirectory, "blockchain/")
+	err = files.WriteTo(rootNodeDirectory, blockchainName)
 	if err != nil {
 		return fmt.Errorf("could not write out the fetched CID: %v", err)
 	}

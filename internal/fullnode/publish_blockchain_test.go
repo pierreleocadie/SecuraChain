@@ -1,6 +1,7 @@
 package fullnode_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -32,6 +33,10 @@ func TestPublishBlockchainToIPFS(t *testing.T) {
 
 	// Create a genesis block
 	genesisBlock := block.NewBlock(transactions, nil, 0, minerKeyPair)
+	genesisBlockBytes, err := genesisBlock.Serialize()
+	if err != nil {
+		t.Errorf("Error serializing block: %v", err)
+	}
 
 	// Check if the returned block is not nil
 	if genesisBlock == nil {
@@ -81,8 +86,24 @@ func TestPublishBlockchainToIPFS(t *testing.T) {
 	os.Chdir("./test")
 
 	// Get the directory from IPFS
-	if err = ipfs.GetDirectory(ctx, cfg, ipfsAPI, newCidBlockChain); err != nil {
+	if err = ipfs.GetDirectory(ctx, cfg, ipfsAPI, newCidBlockChain, "blockchainDownloaded"); err != nil {
 		t.Errorf("Error getting blockchain from IPFS : %v", err)
+	}
+
+	databaseInstance, err := pebble.NewBlockchainDB("blockchainDownloaded/")
+	if err != nil {
+		t.Errorf("Error creating PebbleTransactionDB: %v", err)
+	}
+
+	lastBlockTest := databaseInstance.GetLastBlock()
+
+	lastBlockTestBytes, err := lastBlockTest.Serialize()
+	if err != nil {
+		t.Errorf("Error serializing last block : %v", err)
+	}
+
+	if !bytes.Equal(genesisBlockBytes, lastBlockTestBytes) {
+		t.Errorf("Expected block to be equal, but it was not equal")
 	}
 
 	fmt.Printf("Got directory back from IPFS (IPFS path: %s) and wrote it to %s\n", newCidBlockChain.String(), "./")
