@@ -15,7 +15,7 @@ import (
 
 // HasABlockchain checks if the blockchain exists and if it is up to date
 func HasABlockchain() bool {
-	blockChainInfo, err := os.Stat("./blockchain")
+	blockChainInfo, err := os.Stat("blockchain")
 
 	if os.IsNotExist(err) {
 		fmt.Println("Blockchain doesn't exist")

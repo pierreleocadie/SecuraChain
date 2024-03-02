@@ -16,7 +16,7 @@ func TestHasABlockchain_BlockchainDoesNotExist(t *testing.T) {
 	t.Parallel()
 
 	// Remove the blockchain directory if it exists
-	os.RemoveAll("./blockchain")
+	os.RemoveAll("blockchain")
 
 	// Call the HasABlockchain function
 	hasBlockchain := fullnode.HasABlockchain()
@@ -34,14 +34,14 @@ func TestHasABlockchain_BlockchainExistsAndIsUpToDate(t *testing.T) {
 	os.RemoveAll("./blockchain")
 
 	// Create a dummy blockchain
-	pebbleDB, err := pebble.NewPebbleTransactionDB("./blockchain")
+	pebbleDB, err := pebble.NewBlockchainDB("blockchain")
 	if err != nil {
 		t.Fatalf("Error creating pebble database: %v", err)
 	}
 
 	// Set the modification time of the blockchain directory to the current time
 	currentTime := time.Now()
-	os.Chtimes("./blockchain", currentTime, currentTime)
+	os.Chtimes("blockchain", currentTime, currentTime)
 
 	// Call the HasABlockchain function
 	hasBlockchain := fullnode.HasABlockchain()
@@ -52,23 +52,23 @@ func TestHasABlockchain_BlockchainExistsAndIsUpToDate(t *testing.T) {
 	}
 
 	pebbleDB.Close()
-	os.RemoveAll("./blockchain")
+	os.RemoveAll("blockchain")
 }
 
 func TestHasABlockchain_BlockchainExistsAndIsNotUpToDate(t *testing.T) {
 
 	// Remove the blockchain directory if it exists to make sure it doesn't exist
-	os.RemoveAll("./blockchain")
+	os.RemoveAll("blockchain")
 
 	// Create a dummy blockchain
-	pebbleDB, err := pebble.NewPebbleTransactionDB("./blockchain")
+	pebbleDB, err := pebble.NewBlockchainDB("blockchain")
 	if err != nil {
 		t.Fatalf("Error creating pebble database: %v", err)
 	}
 
 	// Set the modification time of the blockchain directory to more than 1 hour ago
 	lastModifiedTime := time.Now().Add(-2 * time.Hour)
-	os.Chtimes("./blockchain", lastModifiedTime, lastModifiedTime)
+	os.Chtimes("blockchain", lastModifiedTime, lastModifiedTime)
 
 	// Call the HasABlockchain function
 	hasBlockchain := fullnode.HasABlockchain()
@@ -79,7 +79,7 @@ func TestHasABlockchain_BlockchainExistsAndIsNotUpToDate(t *testing.T) {
 	}
 
 	pebbleDB.Close()
-	os.RemoveAll("./blockchain")
+	os.RemoveAll("blockchain")
 }
 func TestIsGenesisBlock(t *testing.T) {
 	t.Parallel()

@@ -19,7 +19,7 @@ func TestSaveAndGetBlock(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleTransactionDB instance
-	blockchainTest, err := pebble.NewPebbleTransactionDB("blockchain_test")
+	blockchainTest, err := pebble.NewBlockchainDB("blockchain_test")
 	if err != nil {
 		t.Errorf("Error creating PebbleTransactionDB: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestGetLastBlock(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleTransactionDB instance
-	blockchainTest2, err := pebble.NewPebbleTransactionDB("blockchain_test2")
+	blockchainTest2, err := pebble.NewBlockchainDB("blockchain_test2")
 	if err != nil {
 		t.Errorf("Error creating PebbleTransactionDB: %v", err)
 	}
@@ -192,7 +192,7 @@ func TestVerifyBlockchainIntegrity(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleTransactionDB instance
-	blockchainTestV, err := pebble.NewPebbleTransactionDB("blockchain_test_verify_integrity")
+	blockchainTestV, err := pebble.NewBlockchainDB("blockchain_test_verify_integrity")
 	if err != nil {
 		t.Errorf("Error creating PebbleTransactionDB: %v", err)
 	}

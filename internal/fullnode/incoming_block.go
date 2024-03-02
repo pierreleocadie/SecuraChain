@@ -11,7 +11,7 @@ import (
 )
 
 // HandleIncomingBlock handles the logic for processing incoming blocks, including conflict resolution.
-func HandleIncomingBlock(incomingBlock *block.Block, blockBuffer map[int64][]*block.Block, database *pebble.PebbleTransactionDB) ([]*block.Block, error) {
+func HandleIncomingBlock(incomingBlock *block.Block, blockBuffer map[int64][]*block.Block, database *pebble.PebbleDB) ([]*block.Block, error) {
 	var timeToWait = 2 * time.Second
 
 	// verify that the blocks got's the same hash before adding it to the buffer
@@ -41,7 +41,7 @@ func HandleIncomingBlock(incomingBlock *block.Block, blockBuffer map[int64][]*bl
 }
 
 // ProcessBlock validates and adds a block to the blockchain.
-func ProcessBlock(b *block.Block, database *pebble.PebbleTransactionDB) (bool, error) {
+func ProcessBlock(b *block.Block, database *pebble.PebbleDB) (bool, error) {
 	if IsGenesisBlock(b) {
 		// Handle the genesis block.
 		if consensus.ValidateBlock(b, nil) {
@@ -71,7 +71,7 @@ func ProcessBlock(b *block.Block, database *pebble.PebbleTransactionDB) (bool, e
 }
 
 // PrevBlockStored checks if the previous block is stored in the database.
-func PrevBlockStored(b *block.Block, database *pebble.PebbleTransactionDB) (bool, error) {
+func PrevBlockStored(b *block.Block, database *pebble.PebbleDB) (bool, error) {
 	// Check if the previous block is stored in the database
 	prevBlockStored, err := database.GetBlock(b.PrevBlock)
 	if err != nil {
@@ -87,7 +87,7 @@ func PrevBlockStored(b *block.Block, database *pebble.PebbleTransactionDB) (bool
 
 // CompareBlocksToBlockchain compares the blocks in the buffer to the blockchain and remove those that are already stored.
 // Sort the blocks in the buffer by timestamp and return the sorted buffer.
-func CompareBlocksToBlockchain(blockBuffer map[int64][]*block.Block, database *pebble.PebbleTransactionDB) map[int64][]*block.Block {
+func CompareBlocksToBlockchain(blockBuffer map[int64][]*block.Block, database *pebble.PebbleDB) map[int64][]*block.Block {
 	// Iterate through the blocks in the buffer
 	for timestamp, blocks := range blockBuffer {
 		for _, blockk := range blocks {
