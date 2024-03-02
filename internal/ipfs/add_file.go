@@ -8,38 +8,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
 	icore "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
-	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
-
-// prepareFileForIPFS prepares a file to be added to IPFS by creating a UnixFS node from the given path.
-// It retrieves file information and creates a serial file node for IPFS.
-func prepareFileForIPFS(path string) (files.Node, error) {
-	sanitizedPath, err := utils.SanitizePath(path)
-	if err != nil {
-		return nil, err
-	}
-
-	stat, err := os.Stat(sanitizedPath)
-	if err != nil {
-		return nil, err
-	}
-
-	fileNode, err := files.NewSerialFile(path, false, stat)
-	if err != nil {
-		return nil, err
-	}
-
-	return fileNode, nil
-}
 
 // AddFileToIPFS adds a file to IPFS and returns its CID. It also collects and saves file metadata.
 // The function handles the file addition process and records metadata such as file size, type, name, and user public key.
 func AddFile(ctx context.Context, config *config.Config, ipfsAPI icore.CoreAPI, filePath string) (path.ImmutablePath, error) {
-	file, err := prepareFileForIPFS(filePath)
+	file, err := PrepareFileForIPFS(filePath)
 	if err != nil {
 		log.Println("could not get File:", err)
 	}

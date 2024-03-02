@@ -14,7 +14,7 @@ import (
 // PublishBlockchainToIPFS adds the local blockchain to IPFS for synchronization and re-synchronization of nodes in case of absence.
 func PublishBlockchainToIPFS(ctx context.Context, config *config.Config, nodeIpfs *core.IpfsNode, ipfsApi icore.CoreAPI, oldCid path.ImmutablePath) (path.ImmutablePath, error) {
 	// Add the blockchain to IPFS
-	fileImmutablePathCid, err := ipfs.AddFile(ctx, config, ipfsApi, "./blockchain")
+	fileImmutablePathCid, err := ipfs.AddDirectory(ctx, config, ipfsApi, "blockchain/")
 	if err != nil {
 		fmt.Printf("Error adding the blockhain to IPFS : %s\n ", err)
 		return path.ImmutablePath{}, err
