@@ -9,12 +9,12 @@ import (
 
 // AddBlockToBlockchain adds a block to the blockchain if it is not already present.
 // It returns a boolean indicating whether the block was added, and a message.
-func AddBlockToBlockchain(database *PebbleDB, blockAnnounced *block.Block) (bool, string) {
+func AddBlockToBlockchain(b *block.Block, database *PebbleDB) (bool, string) {
 	// Use the block's signature as a unique key for storage.
-	key := block.ComputeHash(blockAnnounced)
+	key := block.ComputeHash(b)
 
 	// Serialize the original block
-	originalBlockBytes, err := blockAnnounced.Serialize()
+	originalBlockBytes, err := b.Serialize()
 	if err != nil {
 		return false, fmt.Sprintf("Error serializing the original block: %v", err)
 	}
@@ -37,7 +37,7 @@ func AddBlockToBlockchain(database *PebbleDB, blockAnnounced *block.Block) (bool
 	}
 
 	// If the block is not in the blockchain, add it.
-	err = database.SaveBlock(key, blockAnnounced)
+	err = database.SaveBlock(key, b)
 	if err != nil {
 		// An error occurred while trying to save the block to the database.
 		return false, "Error adding block to the database: " + err.Error()

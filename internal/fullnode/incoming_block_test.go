@@ -442,3 +442,62 @@ func TestCompareBlocksToBlockchain(t *testing.T) {
 		t.Fatalf("Error removing blockchainDB: %v", err)
 	}
 }
+
+// func TestHandleIncomingBlock(t *testing.T) {
+// 	t.Parallel()
+
+// 	// Create a new PebbleDB instance
+// 	database, err := pebble.NewBlockchainDB("blockchainDB")
+// 	if err != nil {
+// 		t.Fatalf("Error creating PebbleDB: %v", err)
+// 	}
+
+// 	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
+// 	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
+
+// 	/*
+// 	* PREVIOUS BLOCK
+// 	 */
+
+// 	// Create a previous block
+// 	prevBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
+
+// 	consensus.MineBlock(prevBlock)
+
+// 	// Generate a key for the previous block
+// 	key := block.ComputeHash(prevBlock)
+
+// 	err = prevBlock.SignBlock(minerKeyPair)
+// 	if err != nil {
+// 		t.Errorf("Failed to sign block: %s", err)
+// 	}
+
+// 	/*
+// 	* SECOND BLOCK
+// 	 */
+
+// 	// Create a second block
+// 	secondBlock := block.NewBlock(transactions, key, 2, minerKeyPair)
+
+// 	consensus.MineBlock(secondBlock)
+
+// 	err = secondBlock.SignBlock(minerKeyPair)
+// 	if err != nil {
+// 		t.Errorf("Failed to sign block: %s", err)
+// 	}
+
+// 	// Create an incoming block
+// 	incomingBlock := block.NewBlock(nil, nil, 1, nil)
+
+// 	blockBuffer := make(map[int64]*block.Block)
+
+// 	// Call the HandleIncomingBlock function
+// 	_, err = HandleIncomingBlock(incomingBlock, blockBuffer, database)
+// 	if err != nil {
+// 		t.Errorf("Error handling incoming block: %v", err)
+// 	}
+
+// 	// Verify the result
+
+// 	// Add your assertions here
+// }

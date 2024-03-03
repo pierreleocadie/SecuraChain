@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"time"
 
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
@@ -22,9 +23,7 @@ import (
 )
 
 var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
-var databaseInstance *pebble.PebbleTransactionDB
 var cidBlockChain path.ImmutablePath
-var newCidBlockChain path.ImmutablePath
 
 func main() {
 	log := ipfsLog.Logger("full-node")
@@ -118,7 +117,7 @@ func main() {
 		log.Panicf("Failed to join blacklist topic : %s\n", err)
 	}
 
-	// Waiting to receive the next block announcement
+	// Waiting to receive blocks from the minor nodes
 	go func() {
 		// Check if the node has a blockchain
 		hasBlockchain := fullnode.HasABlockchain()
@@ -133,7 +132,7 @@ func main() {
 			}
 
 			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
-			log.Debugln("Received block announcement message : ", msg.Data)
+			log.Debugln("Received block : ", msg.Data)
 
 			// Deserialize the block announcement
 			blockAnnounced, err := block.DeserializeBlock(msg.Data)
@@ -142,14 +141,15 @@ func main() {
 				continue
 			}
 
-			// Verify if the block is the genesis block
+			// Check if the block received is the genesis block
 			genesisBlock := fullnode.IsGenesisBlock(blockAnnounced)
 
+			// If the node doesn't have a blockchain and the block received is the genesis block
 			if !hasBlockchain && genesisBlock {
 				log.Debugln("Blockchain doesn't exist and received genesis block")
 
 				// Start a new blockchain
-				blockchain, err := pebble.NewPebbleTransactionDB("blockchain")
+				blockchain, err := pebble.NewBlockchainDB("blockchain")
 				if err != nil {
 					log.Debugln("Error creating a new blockchain database : %s\n", err)
 					continue
@@ -161,17 +161,17 @@ func main() {
 					log.Debugln("Error processing block : %s\n", err)
 					continue
 				}
-				log.Debugln("Block processed : ", proceed)
+				log.Debugln("Block validate and added to the blockchain : ", proceed)
 
 				blockPublished, err := fullnode.PublishBlockToNetwork(ctx, blockAnnounced, fullNodeAnnouncementTopic)
 				if err != nil {
 					log.Debugln("Error publishing block to the network : %s\n", err)
 					continue
 				}
-				log.Debugln("Publishing block announcement to the network :", blockPublished)
+				log.Debugln("Publishing block to the network :", blockPublished)
 
 				// Send the blockchain to IPFS
-				newCidBlockChain, err = fullnode.PublishBlockchainToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, cidBlockChain)
+				newCidBlockChain, err := fullnode.PublishBlockchainToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, cidBlockChain)
 				if err != nil {
 					log.Debugf("error adding the blockchain to IPFS : %s\n", err)
 					continue
@@ -182,7 +182,13 @@ func main() {
 
 			// If the node has a blockchain
 			if hasBlockchain {
-				blockchain := databaseInstance
+
+				// Get the blockchain from the database
+				blockchain, err := pebble.NewBlockchainDB("blockchain")
+				if err != nil {
+					log.Debugln("Error opening the blockchain database : %s\n", err)
+					continue
+				}
 
 				// Verify if the previous block is stored in the database
 				isPrevBlockStored, err = fullnode.PrevBlockStored(blockAnnounced, blockchain)
@@ -192,23 +198,24 @@ func main() {
 				}
 
 				if isPrevBlockStored {
+
 					// Proceed to validate and add the block to the blockchain
 					proceed, err := fullnode.ProcessBlock(blockAnnounced, blockchain)
 					if err != nil {
 						log.Debugln("Error processing block : %s\n", err)
 						continue
 					}
-					log.Debugln("Block processed : ", proceed)
+					log.Debugln("Block validate and added to the blockchain : ", proceed)
 
 					blockPublished, err := fullnode.PublishBlockToNetwork(ctx, blockAnnounced, fullNodeAnnouncementTopic)
 					if err != nil {
 						log.Debugln("Error publishing block to the network : %s\n", err)
 						continue
 					}
-					log.Debugln("Publishing block announcement to the network :", blockPublished)
+					log.Debugln("Publishing block to the network :", blockPublished)
 
 					// Send the blockchain to IPFS
-					newCidBlockChain, err = fullnode.AddBlockchainToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, cidBlockChain)
+					newCidBlockChain, err := fullnode.PublishBlockchainToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, cidBlockChain)
 					if err != nil {
 						log.Debugf("error adding the blockchain to IPFS : %s\n", err)
 						continue
@@ -220,168 +227,161 @@ func main() {
 
 			// If the previous block is not stored in the database and the block is not the genesis block
 			if !isPrevBlockStored || !genesisBlock {
-				// Add the receive block in a list
-				blockReceive[blockAnnounced.Timestamp] = append(blockReceive[blockAnnounced.Timestamp], blockAnnounced)
 
-				// Download the blockchain from the network
-				blockchainDownloaded, err, sender := fullnode.DownloadBlockchain(ctx, ipfsAPI, ps)
-				if err != nil {
-					log.Debugf("error downloading the blockchain : %s\n", err)
-					continue
-				}
+				for { // Add the receive block in a list
+					blockReceive[blockAnnounced.Timestamp] = blockAnnounced
+					// Artificial delay to allow for more blocks to arrive.
 
-				blockchain := databaseInstance
-				if blockchainDownloaded {
-					// Get the last block of the blockchain donwloaded
-					lastBlockFromBlockchain, err := blockchain.GetLastBlock()
+					for {
+
+						// A TESTER FORT // RETURN THE SENDER AND THE CID OF THE BLOCKCHAIN
+						// Download the blockchain from the network
+						downloaded, err, sender := fullnode.DownloadBlockchain(ctx, ipfsAPI, ps)
+						if err != nil {
+							log.Debugf("error downloading the blockchain : %s\n", err)
+							time.Sleep(time.Second * 5)
+							continue
+						}
+
+						if !downloaded {
+							log.Debugln("Blockchain not downloaded")
+							continue // not downloaded so we try again
+						}
+
+						// Get the blockchain from the database
+						blockchain, err := pebble.NewBlockchainDB("blockchain")
+						if err != nil {
+							log.Debugln("Error opening the blockchain database : %s\n", err)
+							continue
+						}
+
+						lastBlock := blockchain.GetLastBlock()
+
+						// Check the integrity of the blockchain downloaded
+						integrity, err := blockchain.VerifyBlockchainIntegrity(lastBlock)
+						if err != nil {
+							log.Debugf("error verifying blockchain integrity : %s\n", err)
+							continue
+						}
+
+						if !integrity {
+							// Blacklist the sender and the cid of the blockchain
+							blacklistMessage := []byte(sender + " " + cidBlockChain.String())
+							if err = blacklistTopic.Publish(ctx, blacklistMessage); err != nil {
+								log.Debugln("Error publishing blacklist message to the network : ", err)
+							}
+							continue
+						}
+						break // the blockchain is verified
+					}
+
+					// Get the blockchain from the database
+					blockchain, err := pebble.NewBlockchainDB("blockchain")
 					if err != nil {
-						log.Debugf("error getting last block from the blockchain : %s\n", err)
+						log.Debugln("Error opening the blockchain database : %s\n", err)
 						continue
 					}
 
-					// Check the integrity of the blockchain downloaded
-					blockchainIntegrity, err := blockchain.VerifyBlockchainIntegrity(lastBlockFromBlockchain)
+					// Compare the blocks received to the blockchain
+					blockLists := fullnode.CompareBlocksToBlockchain(blockReceive, blockchain)
+
+					// Verify the validy of the blocks list
+					for _, b := range blockLists {
+						isProcessed, err := fullnode.ProcessBlock(b, blockchain)
+						if err != nil {
+							log.Debugf("error processing block : %s\n", err)
+							continue
+						}
+						if !isProcessed {
+							log.Debugln("Block not processed")
+						}
+					}
+
+					lastBlock := blockchain.GetLastBlock()
+					integrity, err := blockchain.VerifyBlockchainIntegrity(lastBlock)
 					if err != nil {
 						log.Debugf("error verifying blockchain integrity : %s\n", err)
 						continue
 					}
 
-					if !blockchainIntegrity {
-						// Announce the cid and the sender of the blockchain to the network to blacklist the sender
-						blacklistMessage := []byte(sender + " " + cidBlockChain.String())
-						if err = blacklistTopic.Publish(ctx, blacklistMessage); err != nil {
-							log.Debugln("Error publishing blacklist message to the network : ", err)
+					// If the blockchain isn't verify
+					if !integrity {
+						//  Delete the blockchain and wait for the next block
+						if err = os.RemoveAll("blockchain"); err != nil {
+							log.Debugf("error deleting the blockchain : %s\n", err)
+							continue
 						}
-						continue // to re download the blockchain
 					}
+					break
 				}
 
-				// Compare the blockchain with the list of blocks received
-				blockLists := fullnode.CompareBlocksToBlockchain(blockReceive, blockchain)
-
-				// Verify the validy of the blocks list
-				for _, blocks := range blockLists {
-					// Verify if the block is valid
-					if !consensus.ValidateListBlock(blocks, blockchain) {
-						log.Debugln("Block list is invalid")
-					}
+				// wait for the next block
+				msg, err := subBlockAnnouncement.Next(ctx)
+				if err != nil {
+					log.Panic("Error getting block announcement message : ", err)
 				}
 
-				// Add the blocks to the blockchain
-				for _, blocks := range blockLists {
-					added, message := fullnode.AddBlockToBlockchain(blockchain, blocks)
-					if !added {
-						log.Debugln(message)
-					}
+				log.Debugln("Received block announcement message from ", msg.GetFrom().String())
+				log.Debugln("Received block message : ", msg.Data)
+
+				// Deserialize the block announcement
+				nextBlock, err := block.DeserializeBlock(msg.Data)
+				if err != nil {
+					log.Debugln("Error deserializing block announcement : %s", err)
+					continue
 				}
 
-				// verify the integrity of the blockchain after adding the blocks
-				blockchainIntegrity, err := blockchain.VerifyBlockchainIntegrity(blockLists[len(blockLists)][len(blockLists[len(blockLists)])-1])
+				blockchain, err := pebble.NewBlockchainDB("blockchain")
+				if err != nil {
+					log.Debugln("Error opening the blockchain database : %s\n", err)
+					continue
+				}
+
+				lastBlock := blockchain.GetLastBlock()
+
+				validate := consensus.ValidateBlock(nextBlock, lastBlock)
+				if !validate {
+					log.Debugln("Block not validated")
+					continue
+				}
+
+				isVerified, err := blockchain.VerifyBlockchainIntegrity(nextBlock)
 				if err != nil {
 					log.Debugf("error verifying blockchain integrity : %s\n", err)
 					continue
 				}
 
-				// If the blockchain isn't verify
-				if !blockchainIntegrity {
-					//  Delete the blockchain and wait for the next block
-					if err = os.RemoveAll("blockchain"); err != nil {
-						log.Debugf("error deleting the blockchain : %s\n", err)
-						continue
-					}
-					break // should quit the loop and go back to the first if
-				} else {
-					// wait for the next block
-					chanBlock := make(chan *block.Block)
-					go func() {
-						for {
-							msg, err := subBlockAnnouncement.Next(ctx)
-							if err != nil {
-								log.Panic("Error getting block announcement message : ", err)
-							}
-
-							log.Debugln("Received block announcement message from ", msg.GetFrom().String())
-							log.Debugln("Received block announcement message : ", msg.Data)
-
-							// Deserialize the block announcement
-							nextBlockAnnounced, err := block.DeserializeBlock(msg.Data)
-							if err != nil {
-								log.Debugln("Error deserializing block announcement : %s", err)
-								continue
-							}
-
-							prevNextBlock, err := block.DeserializeBlock(nextBlockAnnounced.PrevBlock)
-							if err != nil {
-								log.Debugln("Error deserializing previous block : %s", err)
-								continue
-							}
-
-							nextBlockValid := consensus.ValidateBlock(nextBlockAnnounced, prevNextBlock)
-
-							if blockchain.VerifyBlockchainIntegrity(nextBlockAnnounced) {
-								chanBlock <- nextBlockAnnounced
-							}
-						}
-					}()
-
-					newBlock := <-chanBlock
-					nextBlockAdded, message := fullnode.AddBlockToBlockchain(blockchain, newBlock)
-					if !nextBlockAdded {
-						log.Debugln(message)
-					}
-
-
-					published, err := fullnode.PublishBlockToNetwork(ctx, newBlock, fullNodeAnnouncementTopic)
-					if err != nil {
-						log.Debugln("Error publishing block to the network : %s\n", err)
-						continue
-					}
-					
-
-					if published {
-						// Send the blockchain to IPFS
-						newCidBlockChain, err = fullnode.AddBlockchainToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, cidBlockChain)
-						if err != nil {
-							log.Debugf("error adding the blockchain to IPFS : %s\n", err)
-							continue
-						}
-						cidBlockChain = newCidBlockChain
-						newCidBlockChain = path.ImmutablePath{}
-					}
-
+				if !isVerified {
+					log.Debugln("Blockchain not verified")
+					continue
 				}
+
+				// Proceed to validate and add the block to the blockchain
+				added, message := pebble.AddBlockToBlockchain(nextBlock, blockchain)
+				if !added {
+					log.Debugln(message)
+				}
+				log.Debugln(message)
+
+				published, err := fullnode.PublishBlockToNetwork(ctx, nextBlock, fullNodeAnnouncementTopic)
+				if err != nil {
+					log.Debugln("Error publishing block to the network : %s\n", err)
+					continue
+				}
+				log.Debugln("Publishing block to the network :", published)
+
+				// Send the blockchain to IPFS
+				newCidBlockChain, err := fullnode.PublishBlockchainToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, cidBlockChain)
+				if err != nil {
+					log.Debugf("error adding the blockchain to IPFS : %s\n", err)
+					continue
+				}
+				cidBlockChain = newCidBlockChain
+				newCidBlockChain = path.ImmutablePath{}
+
 			}
+		}
 	}()
-
-	// /*
-	// * Validate blocks coming from minors
-	// * Manage conflicts
-	// */
-
-	// blockBuff := make(map[int64][]*block.Block)
-
-	// listOfBlocks, err := fullnode.HandleIncomingBlock(blockAnnounced, blockBuff, databaseInstance)
-	// if err != nil {
-	// 	log.Debugf("error handling incoming block : %s\n", err)
-	// 	continue
-	// }
-
-	// if len(listOfBlocks) > 1 {
-	// 	// Serialize the list of blocks
-	// 	listOfBlocksBytes, err := json.Marshal(listOfBlocks)
-	// 	if err != nil {
-	// 		log.Debugf("error serializing list of blocks : %s\n", err)
-	// 		continue
-	// 	}
-
-	// 	// Return all blocks with the same timestamp for the minor node to select based on the longest chain
-	// 	if err := MinorConflictsTopic.Publish(ctx, listOfBlocksBytes); err != nil {
-	// 		log.Debugf("error publishing blocks with the same timestamp to the minor : %s\n", err)
-	// 		continue
-	// 	}
-	// }
-
-	// blockAnnounced = listOfBlocks[0]
 
 	// Join the topic to ask for the blockchain
 	fullNodeAskingForBlockchainTopic, err := ps.Join("FullNodeAskingForBlockchain")

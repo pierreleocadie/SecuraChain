@@ -39,7 +39,7 @@ func TestAddBlockToBlockchain(t *testing.T) {
 	}
 
 	// Call the AddBlockToBlockchain function
-	added, message := pebble.AddBlockToBlockchain(database, genesisBlock)
+	added, message := pebble.AddBlockToBlockchain(genesisBlock, database)
 
 	// Verify the result
 	if !added {
@@ -104,7 +104,7 @@ func TestAddBlockToBlockchain_BlockAlreadyStored(t *testing.T) {
 	}
 
 	// Call the AddBlockToBlockchain function
-	added, message := pebble.AddBlockToBlockchain(database, genesisBlock)
+	added, message := pebble.AddBlockToBlockchain(genesisBlock, database)
 
 	// Verify the result
 	if !added {
@@ -116,7 +116,7 @@ func TestAddBlockToBlockchain_BlockAlreadyStored(t *testing.T) {
 	}
 
 	// Call the AddBlockToBlockchain function again
-	added, message = pebble.AddBlockToBlockchain(database, genesisBlock)
+	added, message = pebble.AddBlockToBlockchain(genesisBlock, database)
 
 	// Verify the result
 	if added {
