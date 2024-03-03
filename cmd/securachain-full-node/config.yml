@@ -48,4 +48,5 @@ keepRelayConnectionAliveStringFlag: "KeepRelayConnectionAlive"
 blacklistStringFlag: "Blacklist"
 fileRights: 0700
 fileMetadataRegistryJson: "fileMetadataRegistry.json"
+blocksRegistryJson: "blocksRegistry.json"
 memorySpace: 10 # in GB

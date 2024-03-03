@@ -4,21 +4,36 @@ import (
 	"context"
 	"fmt"
 
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/ipfs/kubo/core"
+	icore "github.com/ipfs/kubo/core/coreiface"
+	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/fullnode/pebble"
+	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 )
 
-// PublishBlockToNetwork publishes a block to the network.
-func PublishBlockToNetwork(ctx context.Context, b *block.Block, blockAnnouncementTopic *pubsub.Topic) (bool, error) {
-	// Serialize the block
-	blockBytes, err := b.Serialize()
+// PublishBlockchainToIPFS adds the local blockchain to IPFS for synchronization and re-synchronization of nodes in case of absence.
+func PublishBlockToIPFS(ctx context.Context, config *config.Config, nodeIpfs *core.IpfsNode, ipfsApi icore.CoreAPI, b *block.Block) error {
+	// Add the blockchain to IPFS
+	fileImmutablePathCid, err := ipfs.AddBlockToIPFS(ctx, config, ipfsApi, b)
 	if err != nil {
-		return false, fmt.Errorf("error serializing block: %s", err)
+		fmt.Printf("Error adding the block to IPFS : %s\n ", err)
+		return err
 	}
 
-	if err = blockAnnouncementTopic.Publish(ctx, blockBytes); err != nil {
-		return false, fmt.Errorf("error publishing block to the network: %s", err)
+	// Pin the file on IPFS
+	pinned, err := ipfs.PinFile(ctx, ipfsApi, fileImmutablePathCid)
+	if err != nil {
+		fmt.Printf("Error pinning the block to IPFS : %s\n", err)
+		return err
+	}
+	fmt.Println("block pinned on IPFS : ", pinned)
+
+	// Save the file CID to the blockchain registry
+	if err := pebble.AddBlockMetadataToRegistry(b, config, fileImmutablePathCid); err != nil {
+		fmt.Printf("Error adding the block metadata to the registry : %s\n", err)
+		return err
 	}
 
-	return true, nil
+	return nil
 }
