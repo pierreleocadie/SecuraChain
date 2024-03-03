@@ -6,7 +6,7 @@ import (
 
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
-	"github.com/pierreleocadie/SecuraChain/internal/fullnode/pebble"
+	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 )
 
 // // HandleIncomingBlock handles the logic for processing incoming blocks, including conflict resolution.

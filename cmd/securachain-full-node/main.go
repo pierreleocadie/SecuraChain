@@ -10,9 +10,9 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
-	"github.com/pierreleocadie/SecuraChain/internal/fullnode/pebble"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
+	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
 	"github.com/ipfs/boxo/path"
@@ -120,7 +120,7 @@ func main() {
 	// Waiting to receive blocks from the minor nodes
 	go func() {
 		// Check if the node has a blockchain
-		hasBlockchain := fullnode.HasABlockchain()
+		hasBlockchain := pebble.HasABlockchain()
 
 		for {
 			var isPrevBlockStored bool
@@ -170,14 +170,11 @@ func main() {
 				}
 				log.Debugln("Publishing block to the network :", blockPublished)
 
-				// Send the blockchain to IPFS
-				newCidBlockChain, err := fullnode.PublishBlockchainToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, cidBlockChain)
-				if err != nil {
-					log.Debugf("error adding the blockchain to IPFS : %s\n", err)
+				// Send the block to IPFS
+				if err := fullnode.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced); err != nil {
+					log.Debugf("error adding the block to IPFS : %s\n", err)
 					continue
 				}
-				cidBlockChain = newCidBlockChain
-				newCidBlockChain = path.ImmutablePath{}
 			}
 
 			// If the node has a blockchain
@@ -214,14 +211,11 @@ func main() {
 					}
 					log.Debugln("Publishing block to the network :", blockPublished)
 
-					// Send the blockchain to IPFS
-					newCidBlockChain, err := fullnode.PublishBlockchainToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, cidBlockChain)
-					if err != nil {
-						log.Debugf("error adding the blockchain to IPFS : %s\n", err)
+					// Send the block to IPFS
+					if err := fullnode.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced); err != nil {
+						log.Debugf("error adding the block to IPFS : %s\n", err)
 						continue
 					}
-					cidBlockChain = newCidBlockChain
-					newCidBlockChain = path.ImmutablePath{}
 				}
 			}
 
@@ -370,14 +364,11 @@ func main() {
 				}
 				log.Debugln("Publishing block to the network :", published)
 
-				// Send the blockchain to IPFS
-				newCidBlockChain, err := fullnode.PublishBlockchainToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, cidBlockChain)
-				if err != nil {
-					log.Debugf("error adding the blockchain to IPFS : %s\n", err)
+				// Send the block to IPFS
+				if err := fullnode.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, nextBlock); err != nil {
+					log.Debugf("error adding the block to IPFS : %s\n", err)
 					continue
 				}
-				cidBlockChain = newCidBlockChain
-				newCidBlockChain = path.ImmutablePath{}
 
 			}
 		}

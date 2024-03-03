@@ -10,7 +10,7 @@ import (
 	icore "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
-	"github.com/pierreleocadie/SecuraChain/internal/fullnode/pebble"
+	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 )
 
 func GetBlock(ctx context.Context, config *config.Config, ipfsAPI icore.CoreAPI, cidBlock string, blockName string) (*block.Block, error) {

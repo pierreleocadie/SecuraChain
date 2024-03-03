@@ -8,7 +8,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
-	"github.com/pierreleocadie/SecuraChain/internal/fullnode/pebble"
+	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 

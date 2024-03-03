@@ -8,8 +8,8 @@ import (
 	icore "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
-	"github.com/pierreleocadie/SecuraChain/internal/fullnode/pebble"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
+	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 )
 
 // PublishBlockchainToIPFS adds the local blockchain to IPFS for synchronization and re-synchronization of nodes in case of absence.
