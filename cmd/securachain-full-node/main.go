@@ -15,7 +15,6 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
-	"github.com/ipfs/boxo/path"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
@@ -23,11 +22,12 @@ import (
 )
 
 var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
-var cidBlockChain path.ImmutablePath
 
 func main() {
 	log := ipfsLog.Logger("full-node")
-	ipfsLog.SetLogLevel("full-node", "DEBUG")
+	if err := ipfsLog.SetLogLevel("full-node", "DEBUG"); err != nil {
+		log.Errorln("Failed to set log level : ", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -111,11 +111,11 @@ func main() {
 		log.Panicf("Failed to join full node announcement topic : %s\n", err)
 	}
 
-	// Join Blacklist topic
-	blacklistTopic, err := ps.Join(cfg.BlacklistStringFlag)
-	if err != nil {
-		log.Panicf("Failed to join blacklist topic : %s\n", err)
-	}
+	// // Join Blacklist topic
+	// blacklistTopic, err := ps.Join(cfg.BlacklistStringFlag)
+	// if err != nil {
+	// 	log.Panicf("Failed to join blacklist topic : %s\n", err)
+	// }
 
 	// Waiting to receive blocks from the minor nodes
 	go func() {
@@ -230,7 +230,7 @@ func main() {
 
 						// A TESTER FORT // RETURN THE SENDER AND THE CID OF THE BLOCKCHAIN
 						// Download the blockchain from the network
-						downloaded, err, sender := fullnode.DownloadBlockchain(ctx, ipfsAPI, ps)
+						downloaded, err, _ := fullnode.DownloadBlockchain(ctx, ipfsAPI, ps)
 						if err != nil {
 							log.Debugf("error downloading the blockchain : %s\n", err)
 							time.Sleep(time.Second * 5)
@@ -259,11 +259,11 @@ func main() {
 						}
 
 						if !integrity {
-							// Blacklist the sender and the cid of the blockchain
-							blacklistMessage := []byte(sender + " " + cidBlockChain.String())
-							if err = blacklistTopic.Publish(ctx, blacklistMessage); err != nil {
-								log.Debugln("Error publishing blacklist message to the network : ", err)
-							}
+							// // Blacklist the sender and the cid of the blockchain
+							// blacklistMessage := []byte(sender + " " + cidBlockChain.String())
+							// if err = blacklistTopic.Publish(ctx, blacklistMessage); err != nil {
+							// 	log.Debugln("Error publishing blacklist message to the network : ", err)
+							// }
 							continue
 						}
 						break // the blockchain is verified
@@ -386,11 +386,11 @@ func main() {
 		log.Debugln("error joining FullNodeAskingForBlockchain topic : ", err)
 	}
 
-	// Join the topic to receive the blockchain
-	fullNodeGivingBlockchainTopic, err := ps.Join("FullNodeGivingBlockchain")
-	if err != nil {
-		log.Debugln("Error joining to FullNodeGivingBlockchain topic : ", err)
-	}
+	// // Join the topic to receive the blockchain
+	// fullNodeGivingBlockchainTopic, err := ps.Join("FullNodeGivingBlockchain")
+	// if err != nil {
+	// 	log.Debugln("Error joining to FullNodeGivingBlockchain topic : ", err)
+	// }
 	// Handle incoming asking blockchain messages from full nodes
 	go func() {
 		for {
@@ -406,13 +406,13 @@ func main() {
 
 			log.Debugln("Blockchain request received")
 
-			// Answer to the request with the last CID of the blockchain
-			if cidBlockChain.RootCid().Defined() {
-				err := fullNodeGivingBlockchainTopic.Publish(ctx, []byte(cidBlockChain.String()))
-				if err != nil {
-					log.Debugln("failed to publish latest blockchain CID: %s", err)
-				}
-			}
+			// // Answer to the request with the last CID of the blockchain
+			// if cidBlockChain.RootCid().Defined() {
+			// 	err := fullNodeGivingBlockchainTopic.Publish(ctx, []byte(cidBlockChain.String()))
+			// 	if err != nil {
+			// 		log.Debugln("failed to publish latest blockchain CID: %s", err)
+			// 	}
+			// }
 		}
 	}()
 

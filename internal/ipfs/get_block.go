@@ -35,7 +35,9 @@ func GetBlock(ctx context.Context, config *config.Config, ipfsAPI icore.CoreAPI,
 		return nil, fmt.Errorf("could not convert the fetched CID to a block: %v", err)
 	}
 
-	os.Remove(blockName)
+	if err := os.Remove(blockName); err != nil {
+		return nil, fmt.Errorf("could not remove the file: %v", err)
+	}
 
 	return b, err
 }
