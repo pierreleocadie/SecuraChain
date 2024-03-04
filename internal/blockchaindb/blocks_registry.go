@@ -79,29 +79,29 @@ func AddBlockMetadataToRegistry(b *block.Block, config *config.Config, fileCid p
 	return nil
 }
 
-func RemoveFileMetadataFromRegistry(config *config.Config, fileCid path.ImmutablePath) error {
-	metadataRegistry, err := ReadBlockDataFromFile(config.BlocksRegistryJSON)
-	if err != nil {
-		log.Printf("Error loading JSON data %v", err)
-		return err
-	}
+// func RemoveFileMetadataFromRegistry(config *config.Config, fileCid path.ImmutablePath) error {
+// 	metadataRegistry, err := ReadBlockDataFromFile(config.BlocksRegistryJSON)
+// 	if err != nil {
+// 		log.Printf("Error loading JSON data %v", err)
+// 		return err
+// 	}
 
-	// Find and delete the metadata
-	for i, file := range metadataRegistry.Blocks {
-		if file.Cid == fileCid.String() {
-			metadataRegistry.Blocks = append(metadataRegistry.Blocks[:i], metadataRegistry.Blocks[i+1:]...)
-			break
-		}
-	}
+// 	// Find and delete the metadata
+// 	for i, file := range metadataRegistry.Blocks {
+// 		if file.Cid == fileCid.String() {
+// 			metadataRegistry.Blocks = append(metadataRegistry.Blocks[:i], metadataRegistry.Blocks[i+1:]...)
+// 			break
+// 		}
+// 	}
 
-	// Save the new metadata
-	if err := saveToJSON(config, config.BlocksRegistryJSON, metadataRegistry); err != nil {
-		log.Fatalf("Error saving JSON data: %v", err)
-		return err
-	}
+// 	// Save the new metadata
+// 	if err := saveToJSON(config, config.BlocksRegistryJSON, metadataRegistry); err != nil {
+// 		log.Fatalf("Error saving JSON data: %v", err)
+// 		return err
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func ConvertToBlock(filePath string) (*block.Block, error) {
 	data, err := os.ReadFile(filepath.Clean(filePath))

@@ -75,8 +75,9 @@ func TestAddBlockToBlockchain(t *testing.T) {
 		t.Errorf("Retrieved block does not match the original block")
 	}
 
-	database.Close()
-	os.RemoveAll("blockchain")
+	if err := os.RemoveAll("blockchain"); err != nil {
+		t.Errorf("Error removing database: %v", err)
+	}
 }
 
 func TestAddBlockToBlockchain_BlockAlreadyStored(t *testing.T) {
@@ -128,6 +129,7 @@ func TestAddBlockToBlockchain_BlockAlreadyStored(t *testing.T) {
 		t.Errorf("Expected message: %s, but got: %s", expectedMessage, message)
 	}
 
-	database.Close()
-	os.RemoveAll("blockchain")
+	if err := os.RemoveAll("blockchain"); err != nil {
+		t.Errorf("Error removing database: %v", err)
+	}
 }
