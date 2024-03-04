@@ -3,6 +3,7 @@ package blockchaindb_test
 import (
 	"bytes"
 	"context"
+	"os"
 	"testing"
 
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
@@ -91,4 +92,10 @@ func TestPublishBlockToIPFS(t *testing.T) {
 		t.Errorf("Expected block to be equal, but it was not equal")
 	}
 
+	if err := os.RemoveAll("blockchain"); err != nil {
+		t.Errorf("Error removing database: %v", err)
+	}
+	if err := os.Remove("blocksRegistry.json"); err != nil {
+		t.Errorf("Error removing database: %v", err)
+	}
 }
