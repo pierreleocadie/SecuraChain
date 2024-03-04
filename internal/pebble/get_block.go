@@ -1,4 +1,4 @@
-package ipfs
+package pebble
 
 import (
 	"context"
@@ -9,10 +9,9 @@ import (
 	"github.com/ipfs/boxo/path"
 	icore "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
-	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 )
 
-func GetBlock(ctx context.Context, ipfsAPI icore.CoreAPI, cidBlock string) (*block.Block, error) {
+func GetBlockFromIPFS(ctx context.Context, ipfsAPI icore.CoreAPI, cidBlock string) (*block.Block, error) {
 
 	cid, err := path.NewPath(cidBlock)
 	if err != nil {
@@ -29,7 +28,7 @@ func GetBlock(ctx context.Context, ipfsAPI icore.CoreAPI, cidBlock string) (*blo
 		return nil, fmt.Errorf("could not write out the fetched CID: %v", err)
 	}
 
-	b, err := pebble.ConvertToBlock("block")
+	b, err := ConvertToBlock("block")
 	if err != nil {
 		return nil, fmt.Errorf("could not convert the fetched CID to a block: %v", err)
 	}

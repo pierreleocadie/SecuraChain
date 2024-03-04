@@ -1,4 +1,4 @@
-package ipfs_test
+package pebble_test
 
 import (
 	"bytes"
@@ -65,7 +65,7 @@ func TestPublishBlockToIPFS(t *testing.T) {
 		t.Errorf("Error spawning IPFS node : %v", err)
 	}
 
-	if err := ipfs.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, genesisBlock); err != nil {
+	if err := pebble.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, genesisBlock); err != nil {
 		t.Errorf("Error publishing block to IPFS : %v", err)
 	}
 
@@ -77,7 +77,7 @@ func TestPublishBlockToIPFS(t *testing.T) {
 	newCidBlock := blockRegister.Blocks[0].Cid
 
 	// Get the block from IPFS
-	blockIPFS, err := ipfs.GetBlock(ctx, ipfsAPI, newCidBlock)
+	blockIPFS, err := pebble.GetBlockFromIPFS(ctx, ipfsAPI, newCidBlock)
 	if err != nil {
 		t.Errorf("Error getting block from IPFS : %v", err)
 	}

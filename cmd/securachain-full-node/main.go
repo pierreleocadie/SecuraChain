@@ -169,7 +169,7 @@ func main() {
 				log.Debugln("Publishing block to the network :", blockPublished)
 
 				// Send the block to IPFS
-				if err := ipfs.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced); err != nil {
+				if err := pebble.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced); err != nil {
 					log.Debugf("error adding the block to IPFS : %s\n", err)
 					continue
 				}
@@ -200,7 +200,7 @@ func main() {
 					log.Debugln("Publishing block to the network :", blockPublished)
 
 					// Send the block to IPFS
-					if err := ipfs.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced); err != nil {
+					if err := pebble.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced); err != nil {
 						log.Debugf("error adding the block to IPFS : %s\n", err)
 						continue
 					}
@@ -319,7 +319,7 @@ func main() {
 				log.Debugln("Publishing block to the network :", published)
 
 				// Send the block to IPFS
-				if err := ipfs.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, nextBlock); err != nil {
+				if err := pebble.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, nextBlock); err != nil {
 					log.Debugf("error adding the block to IPFS : %s\n", err)
 					continue
 				}

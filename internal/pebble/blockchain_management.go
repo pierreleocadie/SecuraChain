@@ -6,7 +6,6 @@ import (
 
 	icore "github.com/ipfs/kubo/core/coreiface"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 )
 
 // // HasABlockchain checks if the blockchain exists and if it is up to date
@@ -79,57 +78,57 @@ func AskTheBlockchainRegistry(ctx context.Context, ps *pubsub.PubSub) ([]byte, e
 
 }
 
-func DownloadBlockchain(ctx context.Context, ipfsAPI icore.CoreAPI, cidBlock string, jsonfile string) (*PebbleDB, error) {
-	if !HasABlockchain() {
-		blockchain, err := NewBlockchainDB("blockchain")
-		if err != nil {
-			fmt.Println("Error creating blockchain database : ", err)
-		}
+// func DownloadBlockchain(ctx context.Context, ipfsAPI icore.CoreAPI, cidBlock string, jsonfile string) (*PebbleDB, error) {
+// 	if !HasABlockchain() {
+// 		blockchain, err := NewBlockchainDB("blockchain")
+// 		if err != nil {
+// 			fmt.Println("Error creating blockchain database : ", err)
+// 		}
 
-		blockRegister, err := ReadBlockDataFromFile(jsonfile)
-		if err != nil {
-			fmt.Println("Error reading block data from file : ", err)
-		}
+// 		blockRegister, err := ReadBlockDataFromFile(jsonfile)
+// 		if err != nil {
+// 			fmt.Println("Error reading block data from file : ", err)
+// 		}
 
-		for {
-			for _, block := range blockRegister.Blocks {
-				// Get the block from IPFS
-				blockIPFS, err := ipfs.GetBlock(ctx, ipfsAPI, block.Cid)
-				if err != nil {
-					fmt.Println("Error getting block from IPFS : ", err)
-				}
+// 		for {
+// 			for _, block := range blockRegister.Blocks {
+// 				// Get the block from IPFS
+// 				blockIPFS, err := ipfs.GetBlock(ctx, ipfsAPI, block.Cid)
+// 				if err != nil {
+// 					fmt.Println("Error getting block from IPFS : ", err)
+// 				}
 
-				// Add the block to the blockchain
-				added, message := AddBlockToBlockchain(blockIPFS, blockchain)
-				fmt.Println(message)
-				if !added {
-					fmt.Println("Error adding block to blockchain")
-				}
+// 				// Add the block to the blockchain
+// 				added, message := AddBlockToBlockchain(blockIPFS, blockchain)
+// 				fmt.Println(message)
+// 				if !added {
+// 					fmt.Println("Error adding block to blockchain")
+// 				}
 
-			}
+// 			}
 
-			lastBlock := blockchain.GetLastBlock()
-			integrity, err := blockchain.VerifyBlockchainIntegrity(lastBlock)
-			if err != nil {
-				fmt.Println("Error verifying blockchain integrity : ", err)
-			}
-			if !integrity {
-				fmt.Println("Blockchain integrity compromised")
-			}
-			break
-		}
-		return blockchain, nil
-	} else {
-		blockchain, err := NewBlockchainDB("blockchain")
-		if err != nil {
-			fmt.Println("Error creating blockchain database : ", err)
-		}
-		// S'il a une blockchain,
-		//on compare le fichier de la nouvelle blockchaain avec le notre et
-		//on met à jour le notre blockchain en vérifiant qu'elle soit toujorus intègre
-		return blockchain, nil
-	}
-}
+// 			lastBlock := blockchain.GetLastBlock()
+// 			integrity, err := blockchain.VerifyBlockchainIntegrity(lastBlock)
+// 			if err != nil {
+// 				fmt.Println("Error verifying blockchain integrity : ", err)
+// 			}
+// 			if !integrity {
+// 				fmt.Println("Blockchain integrity compromised")
+// 			}
+// 			break
+// 		}
+// 		return blockchain, nil
+// 	} else {
+// 		blockchain, err := NewBlockchainDB("blockchain")
+// 		if err != nil {
+// 			fmt.Println("Error creating blockchain database : ", err)
+// 		}
+// 		// S'il a une blockchain,
+// 		//on compare le fichier de la nouvelle blockchaain avec le notre et
+// 		//on met à jour le notre blockchain en vérifiant qu'elle soit toujorus intègre
+// 		return blockchain, nil
+// 	}
+// }
 
 func IntegrityAndUpdate(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.PubSub, database *PebbleDB) bool {
 	for {
@@ -156,8 +155,9 @@ func IntegrityAndUpdate(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.P
 				fmt.Println("Error downloading missing blocks and verifying the blockchain")
 				return false
 			}
+		} else {
+			break // the blockchain is verified
 		}
-		break // the blockchain is verified
 	}
 	return true
 }
@@ -179,7 +179,7 @@ func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsu
 
 	for _, block := range registry.Blocks {
 		// Get the block from IPFS
-		blockIPFS, err := ipfs.GetBlock(ctx, ipfsAPI, block.Cid)
+		blockIPFS, err := GetBlockFromIPFS(ctx, ipfsAPI, block.Cid)
 		if err != nil {
 			fmt.Println("Error getting block from IPFS : ", err)
 		}
@@ -203,7 +203,7 @@ func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsu
 	}
 
 	if !integrity {
-		return false, fmt.Errorf("Blockchain integrity compromised")
+		return false, fmt.Errorf("blockchain integrity compromised")
 	}
 
 	return true, nil

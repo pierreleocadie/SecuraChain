@@ -1,79 +1,71 @@
 package pebble_test
 
-import (
-	"os"
-	"testing"
-	"time"
+// func TestHasABlockchain_BlockchainDoesNotExist(t *testing.T) {
+// 	t.Parallel()
 
-	"github.com/pierreleocadie/SecuraChain/internal/pebble"
-)
+// 	// Remove the blockchain directory if it exists
+// 	os.RemoveAll("blockchain")
 
-func TestHasABlockchain_BlockchainDoesNotExist(t *testing.T) {
-	t.Parallel()
+// 	// Call the HasABlockchain function
+// 	hasBlockchain := pebble.HasABlockchain()
 
-	// Remove the blockchain directory if it exists
-	os.RemoveAll("blockchain")
+// 	// Verify that the function returns false
+// 	if hasBlockchain {
+// 		t.Errorf("Expected HasABlockchain to return false, got true")
+// 	}
+// }
 
-	// Call the HasABlockchain function
-	hasBlockchain := pebble.HasABlockchain()
+// func TestHasABlockchain_BlockchainExistsAndIsUpToDate(t *testing.T) {
+// 	t.Parallel()
 
-	// Verify that the function returns false
-	if hasBlockchain {
-		t.Errorf("Expected HasABlockchain to return false, got true")
-	}
-}
+// 	// Remove the blockchain directory if it exists to make sure it doesn't exist
+// 	os.RemoveAll("./blockchain")
 
-func TestHasABlockchain_BlockchainExistsAndIsUpToDate(t *testing.T) {
-	t.Parallel()
+// 	// Create a dummy blockchain
+// 	pebbleDB, err := pebble.NewBlockchainDB("blockchain")
+// 	if err != nil {
+// 		t.Fatalf("Error creating pebble database: %v", err)
+// 	}
 
-	// Remove the blockchain directory if it exists to make sure it doesn't exist
-	os.RemoveAll("./blockchain")
+// 	// Set the modification time of the blockchain directory to the current time
+// 	currentTime := time.Now()
+// 	os.Chtimes("blockchain", currentTime, currentTime)
 
-	// Create a dummy blockchain
-	pebbleDB, err := pebble.NewBlockchainDB("blockchain")
-	if err != nil {
-		t.Fatalf("Error creating pebble database: %v", err)
-	}
+// 	// Call the HasABlockchain function
+// 	hasBlockchain := pebble.HasABlockchain()
 
-	// Set the modification time of the blockchain directory to the current time
-	currentTime := time.Now()
-	os.Chtimes("blockchain", currentTime, currentTime)
+// 	// Verify that the function returns true
+// 	if !hasBlockchain {
+// 		t.Errorf("Expected HasABlockchain to return true, got false")
+// 	}
 
-	// Call the HasABlockchain function
-	hasBlockchain := pebble.HasABlockchain()
+// 	pebbleDB.Close()
+// 	os.RemoveAll("blockchain")
+// }
 
-	// Verify that the function returns true
-	if !hasBlockchain {
-		t.Errorf("Expected HasABlockchain to return true, got false")
-	}
+// func TestHasABlockchain_BlockchainExistsAndIsNotUpToDate(t *testing.T) {
 
-	pebbleDB.Close()
-	os.RemoveAll("blockchain")
-}
+// 	// Remove the blockchain directory if it exists to make sure it doesn't exist
+// 	os.RemoveAll("blockchain")
 
-func TestHasABlockchain_BlockchainExistsAndIsNotUpToDate(t *testing.T) {
+// 	// Create a dummy blockchain
+// 	pebbleDB, err := pebble.NewBlockchainDB("blockchain")
+// 	if err != nil {
+// 		t.Fatalf("Error creating pebble database: %v", err)
+// 	}
 
-	// Remove the blockchain directory if it exists to make sure it doesn't exist
-	os.RemoveAll("blockchain")
+// 	// Set the modification time of the blockchain directory to more than 1 hour ago
+// 	lastModifiedTime := time.Now().Add(-2 * time.Hour)
+// 	os.Chtimes("blockchain", lastModifiedTime, lastModifiedTime)
 
-	// Create a dummy blockchain
-	pebbleDB, err := pebble.NewBlockchainDB("blockchain")
-	if err != nil {
-		t.Fatalf("Error creating pebble database: %v", err)
-	}
+// 	// Call the HasABlockchain function
+// 	hasBlockchain := pebble.HasABlockchain()
 
-	// Set the modification time of the blockchain directory to more than 1 hour ago
-	lastModifiedTime := time.Now().Add(-2 * time.Hour)
-	os.Chtimes("blockchain", lastModifiedTime, lastModifiedTime)
+// 	// Verify that the function returns false
+// 	if hasBlockchain {
+// 		t.Errorf("Expected HasABlockchain to return false, got true")
+// 	}
 
-	// Call the HasABlockchain function
-	hasBlockchain := pebble.HasABlockchain()
-
-	// Verify that the function returns false
-	if hasBlockchain {
-		t.Errorf("Expected HasABlockchain to return false, got true")
-	}
-
-	pebbleDB.Close()
-	os.RemoveAll("blockchain")
-}
+// 	pebbleDB.Close()
+// 	os.RemoveAll("blockchain")
+// }

@@ -3,28 +3,26 @@ package fullnode
 import (
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 )
 
-// HandleIncomingBlock handles the logic for processing incoming blocks, including conflict resolution.
-func HandleIncomingBlock(incomingBlock *block.Block, blockBuffer map[int64]*block.Block, database *pebble.PebbleDB) (map[int64]*block.Block, error) {
-	var timeToWait = 5 * time.Second
+// // HandleIncomingBlock handles the logic for processing incoming blocks, including conflict resolution.
+// func HandleIncomingBlock(incomingBlock *block.Block, blockBuffer map[int64]*block.Block, database *pebble.PebbleDB) (map[int64]*block.Block, error) {
+// 	var timeToWait = 5 * time.Second
 
-	// Add the block to the buffer based on its timestamp.
-	timestamp := incomingBlock.Timestamp
-	blockBuffer[timestamp] = incomingBlock
-	
-	for time.Sleep(timeToWait) {
-		blockBuffer[]
+// 	// Add the block to the buffer based on its timestamp.
+// 	timestamp := incomingBlock.Timestamp
+// 	blockBuffer[timestamp] = incomingBlock
 
-	}
+// 	for time.Sleep(timeToWait) {
+// 		blockBuffer[]
 
+// 	}
 
-}
+// }
 
 // IsGenesisBlock checks if the block is the genesis block
 func IsGenesisBlock(b *block.Block) bool {
