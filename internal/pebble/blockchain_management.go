@@ -3,38 +3,36 @@ package pebble
 import (
 	"context"
 	"fmt"
-	"os"
-	"time"
 
 	icore "github.com/ipfs/kubo/core/coreiface"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 )
 
-// HasABlockchain checks if the blockchain exists and if it is up to date
-func HasABlockchain() bool {
-	blockChainInfo, err := os.Stat("blockchain")
+// // HasABlockchain checks if the blockchain exists and if it is up to date
+// func HasABlockchain() bool {
+// 	blockChainInfo, err := os.Stat("blockchain")
 
-	if os.IsNotExist(err) {
-		fmt.Println("Blockchain doesn't exist")
-		return false
-	}
+// 	if os.IsNotExist(err) {
+// 		fmt.Println("Blockchain doesn't exist")
+// 		return false
+// 	}
 
-	fmt.Println("Blockchain exists")
-	lastTimeModified := blockChainInfo.ModTime()
-	currentTime := time.Now()
+// 	fmt.Println("Blockchain exists")
+// 	lastTimeModified := blockChainInfo.ModTime()
+// 	currentTime := time.Now()
 
-	// if the blockchain has not been modified for more than 1 hour, we need to fetch the blockchain.
-	if currentTime.Sub(lastTimeModified) > 1*time.Hour {
-		fmt.Println("Blockchain is not up to date")
-		return false
-	}
+// 	// if the blockchain has not been modified for more than 1 hour, we need to fetch the blockchain.
+// 	if currentTime.Sub(lastTimeModified) > 1*time.Hour {
+// 		fmt.Println("Blockchain is not up to date")
+// 		return false
+// 	}
 
-	fmt.Println("Blockchain is up to date")
-	return true
-}
+// 	fmt.Println("Blockchain is up to date")
+// 	return true
+// }
 
-func AskForABlockchain(ctx context.Context, ps *pubsub.PubSub) ([]byte, error) {
+func AskTheBlockchainRegistry(ctx context.Context, ps *pubsub.PubSub) ([]byte, error) {
 	// Join the topic to ask for the json file of the blockchain
 	fullNodeAskingForBlockchainTopic, err := ps.Join("FullNodeAskingForBlockchain")
 	if err != nil {
@@ -136,6 +134,10 @@ func DownloadBlockchain(ctx context.Context, ipfsAPI icore.CoreAPI, cidBlock str
 func IntegrityAndUpdate(database *PebbleDB) bool {
 	for {
 		lastBlock := database.GetLastBlock()
+		if lastBlock == nil {
+			fmt.Println("No block in the blockchain")
+			return true
+		}
 
 		integrity, err := database.VerifyBlockchainIntegrity(lastBlock)
 		if err != nil {
@@ -151,4 +153,52 @@ func IntegrityAndUpdate(database *PebbleDB) bool {
 		break // the blockchain is verified
 	}
 	return true
+}
+
+func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.PubSub, database *PebbleDB) (bool, error) {
+
+	registryBytes, err := AskTheBlockchainRegistry(ctx, ps)
+	if err != nil {
+		fmt.Println("Error asking the blockchain registry : ", err)
+		return false, err
+	}
+
+	// Convert the regustryBytes to blockRegistry
+	registry, err := ConvertByteToBlockRegistry(registryBytes)
+	if err != nil {
+		fmt.Println("Error converting bytes to block registry : ", err)
+		return false, err
+	}
+
+	for _, block := range registry.Blocks {
+		// Get the block from IPFS
+		blockIPFS, err := ipfs.GetBlock(ctx, ipfsAPI, block.Cid)
+		if err != nil {
+			fmt.Println("Error getting block from IPFS : ", err)
+		}
+
+		// Add the block to the blockchain
+		added, message := AddBlockToBlockchain(blockIPFS, database)
+		fmt.Println(message)
+		if !added {
+			if message == "Block already in the blockchain" {
+				continue // on passe au block suivant
+			} else {
+				return false, fmt.Errorf("error adding block to blockchain")
+			}
+		}
+
+	}
+
+	integrity, err := database.VerifyBlockchainIntegrity(database.GetLastBlock())
+	if err != nil {
+		return false, err
+	}
+
+	if !integrity {
+		return false, fmt.Errorf("Blockchain integrity compromised")
+	}
+
+	return true, nil
+
 }

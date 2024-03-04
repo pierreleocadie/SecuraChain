@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"os"
-	"time"
 
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
@@ -128,9 +127,6 @@ func main() {
 
 	// Waiting to receive blocks from the minor nodes
 	go func() {
-		// Check if the node has a blockchain
-		hasBlockchain := pebble.HasABlockchain()
-
 		for {
 			var isPrevBlockStored bool
 			blockReceive := make(map[int64]*block.Block)
@@ -153,16 +149,9 @@ func main() {
 			// Check if the block received is the genesis block
 			genesisBlock := fullnode.IsGenesisBlock(blockAnnounced)
 
-			// If the node doesn't have a blockchain and the block received is the genesis block
-			if !hasBlockchain && genesisBlock {
-				log.Debugln("Blockchain doesn't exist and received genesis block")
-
-				// Start a new blockchain
-				blockchain, err := pebble.NewBlockchainDB("blockchain")
-				if err != nil {
-					log.Debugln("Error creating a new blockchain database : %s\n", err)
-					continue
-				}
+			// If the block received is the genesis block
+			if genesisBlock {
+				log.Debugln("Received genesis block")
 
 				// Proceed to validate and add the block to the blockchain
 				proceed, err := fullnode.ProcessBlock(blockAnnounced, blockchain)
@@ -184,17 +173,8 @@ func main() {
 					log.Debugf("error adding the block to IPFS : %s\n", err)
 					continue
 				}
-			}
-
-			// If the node has a blockchain
-			if hasBlockchain {
-
-				// Get the blockchain from the database
-				blockchain, err := pebble.NewBlockchainDB("blockchain")
-				if err != nil {
-					log.Debugln("Error opening the blockchain database : %s\n", err)
-					continue
-				}
+			} else {
+				// If the block is not the genesis block
 
 				// Verify if the previous block is stored in the database
 				isPrevBlockStored, err = fullnode.PrevBlockStored(blockAnnounced, blockchain)
@@ -204,7 +184,6 @@ func main() {
 				}
 
 				if isPrevBlockStored {
-
 					// Proceed to validate and add the block to the blockchain
 					proceed, err := fullnode.ProcessBlock(blockAnnounced, blockchain)
 					if err != nil {
@@ -228,60 +207,21 @@ func main() {
 				}
 			}
 
-			// If the previous block is not stored in the database and the block is not the genesis block
+			// UNTIL HERE THE CODE IS OK
+
+			// If the previous block is not stored in the database
+			// And the block receive is not the genesis block
 			if !isPrevBlockStored || !genesisBlock {
 
-				for { // Add the receive block in a list
+				for {
+					// Add the receive block in a list
 					blockReceive[blockAnnounced.Timestamp] = blockAnnounced
 					// Artificial delay to allow for more blocks to arrive.
 
-					for {
-
-						// A TESTER FORT // RETURN THE SENDER AND THE CID OF THE BLOCKCHAIN
-						// Download the blockchain from the network
-						downloaded, err, _ := fullnode.DownloadBlockchain(ctx, ipfsAPI, ps)
-						if err != nil {
-							log.Debugf("error downloading the blockchain : %s\n", err)
-							time.Sleep(time.Second * 5)
-							continue
-						}
-
-						if !downloaded {
-							log.Debugln("Blockchain not downloaded")
-							continue // not downloaded so we try again
-						}
-
-						// Get the blockchain from the database
-						blockchain, err := pebble.NewBlockchainDB("blockchain")
-						if err != nil {
-							log.Debugln("Error opening the blockchain database : %s\n", err)
-							continue
-						}
-
-						lastBlock := blockchain.GetLastBlock()
-
-						// Check the integrity of the blockchain downloaded
-						integrity, err := blockchain.VerifyBlockchainIntegrity(lastBlock)
-						if err != nil {
-							log.Debugf("error verifying blockchain integrity : %s\n", err)
-							continue
-						}
-
-						if !integrity {
-							// // Blacklist the sender and the cid of the blockchain
-							// blacklistMessage := []byte(sender + " " + cidBlockChain.String())
-							// if err = blacklistTopic.Publish(ctx, blacklistMessage); err != nil {
-							// 	log.Debugln("Error publishing blacklist message to the network : ", err)
-							// }
-							continue
-						}
-						break // the blockchain is verified
-					}
-
-					// Get the blockchain from the database
-					blockchain, err := pebble.NewBlockchainDB("blockchain")
-					if err != nil {
-						log.Debugln("Error opening the blockchain database : %s\n", err)
+					// Check for the integrity of the actual blockchain
+					integrity := pebble.IntegrityAndUpdate(blockchain)
+					if !integrity {
+						log.Debugln("Blockchain is not integrity")
 						continue
 					}
 
@@ -309,11 +249,8 @@ func main() {
 
 					// If the blockchain isn't verify
 					if !integrity {
-						//  Delete the blockchain and wait for the next block
-						if err = os.RemoveAll("blockchain"); err != nil {
-							log.Debugf("error deleting the blockchain : %s\n", err)
-							continue
-						}
+						// Download missing blocks
+
 					}
 					break
 				}

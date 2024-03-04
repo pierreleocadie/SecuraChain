@@ -116,3 +116,13 @@ func ConvertToBlock(filePath string) (*block.Block, error) {
 
 	return b, nil
 }
+
+func ConvertByteToBlockRegistry(data []byte) (BlockRegistry, error) {
+	var registry BlockRegistry
+
+	if err := json.Unmarshal(data, &registry); err != nil {
+		return registry, err
+	}
+
+	return registry, nil
+}

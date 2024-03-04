@@ -3,39 +3,28 @@ package fullnode
 import (
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 )
 
-// // HandleIncomingBlock handles the logic for processing incoming blocks, including conflict resolution.
-// func HandleIncomingBlock(incomingBlock *block.Block, blockBuffer map[int64]*block.Block, database *pebble.PebbleDB) (map[int64]*block.Block, error) {
-// 	var timeToWait = 10 * time.Second
+// HandleIncomingBlock handles the logic for processing incoming blocks, including conflict resolution.
+func HandleIncomingBlock(incomingBlock *block.Block, blockBuffer map[int64]*block.Block, database *pebble.PebbleDB) (map[int64]*block.Block, error) {
+	var timeToWait = 5 * time.Second
 
-// 	// verify that the blocks got's the same hash before adding it to the buffer
+	// Add the block to the buffer based on its timestamp.
+	timestamp := incomingBlock.Timestamp
+	blockBuffer[timestamp] = incomingBlock
+	
+	for time.Sleep(timeToWait) {
+		blockBuffer[]
 
-// 	// Add the block to the buffer based on its timestamp.
-// 	timestamp := incomingBlock.Timestamp
-// 	blockBuffer[timestamp] = incomingBlock
+	}
 
-// 	// Artificial delay to allow for more blocks with the same timestamp to arrive.
-// 	time.Sleep(timeToWait)
 
-// 	if len(blockBuffer) > 1 {
-// 		// Return all blocks with the same timestamp for the minor node to select based on the longest chain
-// 		return blockBuffer, nil
-// 	}
-
-// 	// Proceed normally if there is only one block.
-
-// 	if processedSuccessfully, err := ProcessBlock(blockBuffer[0], database); processedSuccessfully {
-// 		return nil, nil
-// 	} else {
-// 		fmt.Printf("Error processing block: %s\n", err)
-// 		return nil, err
-// 	}
-// }
+}
 
 // IsGenesisBlock checks if the block is the genesis block
 func IsGenesisBlock(b *block.Block) bool {
