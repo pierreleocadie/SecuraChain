@@ -131,7 +131,7 @@ func DownloadBlockchain(ctx context.Context, ipfsAPI icore.CoreAPI, cidBlock str
 	}
 }
 
-func IntegrityAndUpdate(database *PebbleDB) bool {
+func IntegrityAndUpdate(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.PubSub, database *PebbleDB) bool {
 	for {
 		lastBlock := database.GetLastBlock()
 		if lastBlock == nil {
@@ -145,10 +145,17 @@ func IntegrityAndUpdate(database *PebbleDB) bool {
 		}
 
 		if !integrity {
-			fmt.Prinln("Blockchain not verified")
-			continue
-			// on demande la blockchain pour se mettre à jour
-			// et on re test l'intégrité
+			fmt.Println("Blockchain not verified")
+			// Download the missing blocks and verify the blockchain
+			updated, err := DownloadMissingBlocks(ctx, ipfsAPI, ps, database)
+			if err != nil {
+				fmt.Println("Error downloading missing blocks : ", err)
+				return false
+			}
+			if !updated {
+				fmt.Println("Error downloading missing blocks and verifying the blockchain")
+				return false
+			}
 		}
 		break // the blockchain is verified
 	}

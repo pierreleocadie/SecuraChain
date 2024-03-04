@@ -218,11 +218,19 @@ func main() {
 					blockReceive[blockAnnounced.Timestamp] = blockAnnounced
 					// Artificial delay to allow for more blocks to arrive.
 
-					// Check for the integrity of the actual blockchain
-					integrity := pebble.IntegrityAndUpdate(blockchain)
-					if !integrity {
-						log.Debugln("Blockchain is not integrity")
+					// verify the integrity of the blockchain
+					verified, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
+					if err != nil {
+						log.Debugln("Error verifying blockchain integrity : %s", err)
 						continue
+					}
+					if !verified {
+						log.Debugln("Blockchain is not integrity")
+						integrity := pebble.IntegrityAndUpdate(ctx, ipfsAPI, ps, blockchain)
+						if !integrity {
+							log.Debugln("Blockchain is not integrity")
+							continue
+						}
 					}
 
 					// Compare the blocks received to the blockchain
@@ -376,10 +384,19 @@ func main() {
 			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
 			log.Debugln("Received block message : ", msg.Data)
 
-			integrity := pebble.IntegrityAndUpdate(blockchain)
-			if !integrity {
-				log.Debugln("Blockchain is not integrity")
+			// verify the integrity of the blockchain
+			verified, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
+			if err != nil {
+				log.Debugln("Error verifying blockchain integrity : %s", err)
 				continue
+			}
+			if !verified {
+				log.Debugln("Blockchain is not integrity")
+				integrity := pebble.IntegrityAndUpdate(ctx, ipfsAPI, ps, blockchain)
+				if !integrity {
+					log.Debugln("Blockchain is not integrity")
+					continue
+				}
 			}
 
 			// Deserialize the block announcement
@@ -395,10 +412,19 @@ func main() {
 			}
 			log.Debugln(message)
 
-			integrityTwo := pebble.IntegrityAndUpdate(blockchain)
-			if !integrityTwo {
-				log.Debugln("Blockchain is not integrity")
+			// verify the integrity of the blockchain
+			verified2, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
+			if err != nil {
+				log.Debugln("Error verifying blockchain integrity : %s", err)
 				continue
+			}
+			if !verified2 {
+				log.Debugln("Blockchain is not integrity")
+				integrity := pebble.IntegrityAndUpdate(ctx, ipfsAPI, ps, blockchain)
+				if !integrity {
+					log.Debugln("Blockchain is not integrity")
+					continue
+				}
 			}
 		}
 	}()
