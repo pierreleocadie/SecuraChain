@@ -1,7 +1,6 @@
 package ipfs
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -13,9 +12,9 @@ func DeleteFile(fileName string) error {
 		return err
 	}
 
-	if err != nil {
-		log.Fatal(err)
-	}
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	outputBasePath := filepath.Join(home, ".IPFS_Local_Storage/")
 	outputBaseFile := filepath.Join(outputBasePath, fileName)

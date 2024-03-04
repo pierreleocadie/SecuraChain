@@ -37,6 +37,14 @@ import (
 // 	}
 // }
 
+// IsGenesisBlock checks if the block is the genesis block
+func IsGenesisBlock(b *block.Block) bool {
+	if b.PrevBlock == nil && b.Header.Height == 1 {
+		return true
+	}
+	return false
+}
+
 // ProcessBlock validates and adds a block to the blockchain.
 func ProcessBlock(b *block.Block, database *pebble.PebbleDB) (bool, error) {
 	if IsGenesisBlock(b) {

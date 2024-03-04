@@ -1,4 +1,4 @@
-package fullnode_test
+package ipfs_test
 
 import (
 	"bytes"
@@ -8,7 +8,6 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
-	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
@@ -66,7 +65,7 @@ func TestPublishBlockToIPFS(t *testing.T) {
 		t.Errorf("Error spawning IPFS node : %v", err)
 	}
 
-	if err := fullnode.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, genesisBlock); err != nil {
+	if err := ipfs.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, genesisBlock); err != nil {
 		t.Errorf("Error publishing block to IPFS : %v", err)
 	}
 
@@ -78,7 +77,7 @@ func TestPublishBlockToIPFS(t *testing.T) {
 	newCidBlock := blockRegister.Blocks[0].Cid
 
 	// Get the block from IPFS
-	blockIPFS, err := ipfs.GetBlock(ctx, cfg, ipfsAPI, newCidBlock, "block1")
+	blockIPFS, err := ipfs.GetBlock(ctx, ipfsAPI, newCidBlock)
 	if err != nil {
 		t.Errorf("Error getting block from IPFS : %v", err)
 	}

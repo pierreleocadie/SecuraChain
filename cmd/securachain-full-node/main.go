@@ -75,6 +75,15 @@ func main() {
 	log.Debugf("Memory used: %v", memoryUsedGB)
 
 	/*
+	* BLOCKCHAIN DATABASE
+	 */
+
+	blockchain, err := pebble.NewBlockchainDB("blockchain")
+	if err != nil {
+		log.Debugln("Error creating or opening a database : %s\n", err)
+	}
+
+	/*
 	* NODE LIBP2P
 	 */
 	// Initialize the node
@@ -171,7 +180,7 @@ func main() {
 				log.Debugln("Publishing block to the network :", blockPublished)
 
 				// Send the block to IPFS
-				if err := fullnode.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced); err != nil {
+				if err := ipfs.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced); err != nil {
 					log.Debugf("error adding the block to IPFS : %s\n", err)
 					continue
 				}
@@ -212,7 +221,7 @@ func main() {
 					log.Debugln("Publishing block to the network :", blockPublished)
 
 					// Send the block to IPFS
-					if err := fullnode.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced); err != nil {
+					if err := ipfs.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced); err != nil {
 						log.Debugf("error adding the block to IPFS : %s\n", err)
 						continue
 					}
@@ -365,7 +374,7 @@ func main() {
 				log.Debugln("Publishing block to the network :", published)
 
 				// Send the block to IPFS
-				if err := fullnode.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, nextBlock); err != nil {
+				if err := ipfs.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, nextBlock); err != nil {
 					log.Debugf("error adding the block to IPFS : %s\n", err)
 					continue
 				}
@@ -413,6 +422,47 @@ func main() {
 			// 		log.Debugln("failed to publish latest blockchain CID: %s", err)
 			// 	}
 			// }
+		}
+	}()
+
+	/*
+	* RECEIVE BLOCK ANNOUNCEMENT
+	 */
+	// Handle valid block announcements and reliable additons to the blockchain
+	go func() {
+		for {
+			msg, err := subBlockAnnouncement.Next(ctx)
+			if err != nil {
+				log.Debugln("Error getting block announcement message : ", err)
+			}
+
+			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
+			log.Debugln("Received block message : ", msg.Data)
+
+			integrity := pebble.IntegrityAndUpdate(blockchain)
+			if !integrity {
+				log.Debugln("Blockchain is not integrity")
+				continue
+			}
+
+			// Deserialize the block announcement
+			blockAnnounced, err := block.DeserializeBlock(msg.Data)
+			if err != nil {
+				log.Debugln("Error deserializing block announcement : %s", err)
+				continue
+			}
+
+			added, message := pebble.AddBlockToBlockchain(blockAnnounced, blockchain)
+			if !added {
+				log.Debugln(message)
+			}
+			log.Debugln(message)
+
+			integrityTwo := pebble.IntegrityAndUpdate(blockchain)
+			if !integrityTwo {
+				log.Debugln("Blockchain is not integrity")
+				continue
+			}
 		}
 	}()
 

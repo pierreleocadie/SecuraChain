@@ -501,3 +501,55 @@ func TestCompareBlocksToBlockchain(t *testing.T) {
 
 // 	// Add your assertions here
 // }
+
+func TestIsGenesisBlock(t *testing.T) {
+	t.Parallel()
+
+	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
+	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
+
+	/*
+	* FIRST BLOCK
+	 */
+
+	// Create a genesis block
+	genesisBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
+
+	// Call the IsGenesisBlock function
+	isGenesis := fullnode.IsGenesisBlock(genesisBlock)
+
+	// Verify that the function returns true
+	if !isGenesis {
+		t.Errorf("Expected IsGenesisBlock to return true, got false")
+	}
+}
+
+func TestIsNotGenesisBlock(t *testing.T) {
+	t.Parallel()
+
+	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
+	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
+
+	/*
+	* FIRST BLOCK
+	 */
+
+	// Create a genesis block
+	genesisBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
+	key := block.ComputeHash(genesisBlock)
+
+	/*
+	* SECOND BLOCK
+	 */
+
+	// Create a second block
+	secondBlock := block.NewBlock(transactions, key, 2, minerKeyPair)
+
+	// Call the IsGenesisBlock function
+	isGenesis := fullnode.IsGenesisBlock(secondBlock)
+
+	// Verify that the function returns false
+	if isGenesis {
+		t.Errorf("Expected IsGenesisBlock to return false, got true")
+	}
+}
