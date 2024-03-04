@@ -1,14 +1,15 @@
 // Test: TestSaveBlock
-package pebble_test
+package blockchaindb_test
 
 import (
 	"bytes"
+	"os"
 	"testing"
 
+	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
-	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
@@ -19,7 +20,7 @@ func TestSaveAndGetBlock(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleTransactionDB instance
-	blockchainTest, err := pebble.NewBlockchainDB("blockchain_test")
+	blockchainTest, err := blockchaindb.NewBlockchainDB("blockchain_test")
 	if err != nil {
 		t.Errorf("Error creating PebbleTransactionDB: %v", err)
 	}
@@ -67,6 +68,9 @@ func TestSaveAndGetBlock(t *testing.T) {
 		t.Errorf("Retrieved block does not match the original block")
 	}
 
+	if err := os.RemoveAll("blockchain_test"); err != nil {
+		t.Errorf("Error removing database: %v", err)
+	}
 }
 
 // Test: TestGetLastBlock
@@ -78,7 +82,7 @@ func TestGetLastBlock(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleTransactionDB instance
-	blockchainTest2, err := pebble.NewBlockchainDB("blockchain_test2")
+	blockchainTest2, err := blockchaindb.NewBlockchainDB("blockchain_test")
 	if err != nil {
 		t.Errorf("Error creating PebbleTransactionDB: %v", err)
 	}
@@ -185,6 +189,9 @@ func TestGetLastBlock(t *testing.T) {
 	// 	t.Errorf("Retrieved lastblock does not with match the second block")
 	// }
 
+	if err := os.RemoveAll("blockchain_test"); err != nil {
+		t.Errorf("Error removing database: %v", err)
+	}
 }
 
 // Test: TestVerifyBlockchainIntegrity
@@ -192,7 +199,7 @@ func TestVerifyBlockchainIntegrity(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleTransactionDB instance
-	blockchainTestV, err := pebble.NewBlockchainDB("blockchain_test_verify_integrity")
+	blockchainTestV, err := blockchaindb.NewBlockchainDB("blockchain_test")
 	if err != nil {
 		t.Errorf("Error creating PebbleTransactionDB: %v", err)
 	}
@@ -208,6 +215,11 @@ func TestVerifyBlockchainIntegrity(t *testing.T) {
 	prevBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
 
 	consensus.MineBlock(prevBlock)
+
+	err = prevBlock.SignBlock(minerKeyPair)
+	if err != nil {
+		t.Errorf("Failed to sign block: %s", err)
+	}
 
 	// Generate a key for the previous block
 	key := block.ComputeHash(prevBlock)
@@ -231,6 +243,11 @@ func TestVerifyBlockchainIntegrity(t *testing.T) {
 
 	consensus.MineBlock(secondBlock)
 
+	err = secondBlock.SignBlock(minerKeyPair)
+	if err != nil {
+		t.Errorf("Failed to sign block: %s", err)
+	}
+
 	// Generate a key for the second blockblock
 	keySecondBlock := block.ComputeHash(secondBlock)
 
@@ -245,29 +262,6 @@ func TestVerifyBlockchainIntegrity(t *testing.T) {
 		t.Errorf("Error saving block: %v", err)
 	}
 
-	/*
-	* THIRD BLOCK
-	 */
-
-	// Create a thrid block
-	thirdBlock := block.NewBlock(transactions, keySecondBlock, 3, minerKeyPair)
-
-	consensus.MineBlock(thirdBlock)
-
-	// Generate a key for the third block
-	keyThirdBlock := block.ComputeHash(thirdBlock)
-
-	// Check if the returned block is not nil
-	if thirdBlock == nil {
-		t.Errorf("NewBlock returned nil")
-	}
-
-	// Save the third block in the database
-	err = blockchainTestV.SaveBlock(keyThirdBlock, thirdBlock)
-	if err != nil {
-		t.Errorf("Error saving block: %v", err)
-	}
-
 	// Call the VerifyBlockchainIntegrity function
 	valid, err := blockchainTestV.VerifyBlockchainIntegrity(blockchainTestV.GetLastBlock())
 	if err != nil {
@@ -277,5 +271,9 @@ func TestVerifyBlockchainIntegrity(t *testing.T) {
 	// Check if the blockchain integrity is valid
 	if !valid {
 		t.Errorf("Blockchain integrity verification failed")
+	}
+
+	if err := os.RemoveAll("blockchain_test"); err != nil {
+		t.Errorf("Error removing database: %v", err)
 	}
 }

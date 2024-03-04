@@ -5,13 +5,13 @@ import (
 	"flag"
 	"os"
 
+	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
-	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -77,7 +77,7 @@ func main() {
 	* BLOCKCHAIN DATABASE
 	 */
 
-	blockchain, err := pebble.NewBlockchainDB("blockchain")
+	blockchain, err := blockchaindb.NewBlockchainDB("blockchain")
 	if err != nil {
 		log.Debugln("Error creating or opening a database : %s\n", err)
 	}
@@ -169,7 +169,7 @@ func main() {
 				log.Debugln("Publishing block to the network :", blockPublished)
 
 				// Send the block to IPFS
-				if err := pebble.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced); err != nil {
+				if err := blockchaindb.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced); err != nil {
 					log.Debugf("error adding the block to IPFS : %s\n", err)
 					continue
 				}
@@ -200,7 +200,7 @@ func main() {
 					log.Debugln("Publishing block to the network :", blockPublished)
 
 					// Send the block to IPFS
-					if err := pebble.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced); err != nil {
+					if err := blockchaindb.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced); err != nil {
 						log.Debugf("error adding the block to IPFS : %s\n", err)
 						continue
 					}
@@ -226,7 +226,7 @@ func main() {
 					}
 					if !verified {
 						log.Debugln("Blockchain is not integrity")
-						integrity := pebble.IntegrityAndUpdate(ctx, ipfsAPI, ps, blockchain)
+						integrity := blockchaindb.IntegrityAndUpdate(ctx, ipfsAPI, ps, blockchain)
 						if !integrity {
 							log.Debugln("Blockchain is not integrity")
 							continue
@@ -279,7 +279,7 @@ func main() {
 					continue
 				}
 
-				blockchain, err := pebble.NewBlockchainDB("blockchain")
+				blockchain, err := blockchaindb.NewBlockchainDB("blockchain")
 				if err != nil {
 					log.Debugln("Error opening the blockchain database : %s\n", err)
 					continue
@@ -305,7 +305,7 @@ func main() {
 				}
 
 				// Proceed to validate and add the block to the blockchain
-				added, message := pebble.AddBlockToBlockchain(nextBlock, blockchain)
+				added, message := blockchaindb.AddBlockToBlockchain(nextBlock, blockchain)
 				if !added {
 					log.Debugln(message)
 				}
@@ -319,7 +319,7 @@ func main() {
 				log.Debugln("Publishing block to the network :", published)
 
 				// Send the block to IPFS
-				if err := pebble.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, nextBlock); err != nil {
+				if err := blockchaindb.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, nextBlock); err != nil {
 					log.Debugf("error adding the block to IPFS : %s\n", err)
 					continue
 				}
@@ -392,7 +392,7 @@ func main() {
 			}
 			if !verified {
 				log.Debugln("Blockchain is not integrity")
-				integrity := pebble.IntegrityAndUpdate(ctx, ipfsAPI, ps, blockchain)
+				integrity := blockchaindb.IntegrityAndUpdate(ctx, ipfsAPI, ps, blockchain)
 				if !integrity {
 					log.Debugln("Blockchain is not integrity")
 					continue
@@ -406,7 +406,7 @@ func main() {
 				continue
 			}
 
-			added, message := pebble.AddBlockToBlockchain(blockAnnounced, blockchain)
+			added, message := blockchaindb.AddBlockToBlockchain(blockAnnounced, blockchain)
 			if !added {
 				log.Debugln(message)
 			}
@@ -420,7 +420,7 @@ func main() {
 			}
 			if !verified2 {
 				log.Debugln("Blockchain is not integrity")
-				integrity := pebble.IntegrityAndUpdate(ctx, ipfsAPI, ps, blockchain)
+				integrity := blockchaindb.IntegrityAndUpdate(ctx, ipfsAPI, ps, blockchain)
 				if !integrity {
 					log.Debugln("Blockchain is not integrity")
 					continue

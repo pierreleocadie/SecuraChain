@@ -1,4 +1,4 @@
-package pebble
+package blockchaindb
 
 import (
 	"fmt"
@@ -8,31 +8,31 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 )
 
-// BlockDatabase defines an interface for interacing with the transaction database.
-type BlockDatabase interface {
-	SaveBlock(key []byte, b block.Block) error
-	GetBlock(key []byte) (block.Block, error)
+// BlockchainStorage defines an interface for interacing with the transaction database.
+type BlockchainStorage interface {
+	SaveBlock(key []byte, b *block.Block) error
+	GetBlock(key []byte) (*block.Block, error)
 	VerifyBlockchainIntegrity(lastestBlock *block.Block) (bool, error)
-	GetLastBlock() block.Block
+	GetLastBlock() *block.Block
 	Close() error
 }
 
-// PebbleDB implements the BlockDatabase interface using the Pebble library.
-type PebbleDB struct {
+// BlockchainDB implements the BlockchainStorage interface using the Pebble library.
+type BlockchainDB struct {
 	db *pebble.DB
 }
 
 // NewBlockchainDB creates a new instance of PebbleDB.
-func NewBlockchainDB(dbPath string) (*PebbleDB, error) {
+func NewBlockchainDB(dbPath string) (*BlockchainDB, error) {
 	db, err := pebble.Open(dbPath, &pebble.Options{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open pebble database : %v", err)
 	}
-	return &PebbleDB{db: db}, nil
+	return &BlockchainDB{db: db}, nil
 }
 
 // SaveBlock stores a block in the database.
-func (pdb *PebbleDB) SaveBlock(key []byte, b *block.Block) error {
+func (pdb *BlockchainDB) SaveBlock(key []byte, b *block.Block) error {
 	blockBytes, err := b.Serialize()
 	if err != nil {
 		return fmt.Errorf("error serializing block: %v", err)
@@ -47,7 +47,7 @@ func (pdb *PebbleDB) SaveBlock(key []byte, b *block.Block) error {
 }
 
 // GetBlock retrives a block from the database using its key.
-func (pdb *PebbleDB) GetBlock(key []byte) (*block.Block, error) {
+func (pdb *BlockchainDB) GetBlock(key []byte) (*block.Block, error) {
 	blockBytes, closer, err := pdb.db.Get(key)
 	if err != nil {
 		if err == pebble.ErrNotFound {
@@ -67,7 +67,7 @@ func (pdb *PebbleDB) GetBlock(key []byte) (*block.Block, error) {
 }
 
 // VerifyBlockchainIntegrity checks the integrity of the blockchain starting from the latest added block.
-func (pdb *PebbleDB) VerifyBlockchainIntegrity(lastestBlock *block.Block) (bool, error) {
+func (pdb *BlockchainDB) VerifyBlockchainIntegrity(lastestBlock *block.Block) (bool, error) {
 	currentBlockKey := lastestBlock.PrevBlock
 
 	for currentBlockKey != nil {
@@ -92,7 +92,7 @@ func (pdb *PebbleDB) VerifyBlockchainIntegrity(lastestBlock *block.Block) (bool,
 }
 
 // saveLastBlock updates the reference to the last block in the blockchain.
-func (pdb *PebbleDB) saveLastBlock(lastBlock *block.Block) error {
+func (pdb *BlockchainDB) saveLastBlock(lastBlock *block.Block) error {
 	lastBlockBytes, err := lastBlock.Serialize()
 	if err != nil {
 		return fmt.Errorf("error serializing block: %v", err)
@@ -107,7 +107,7 @@ func (pdb *PebbleDB) saveLastBlock(lastBlock *block.Block) error {
 }
 
 // GetLastBlock retrieves the most recently added block from the database.
-func (pdb *PebbleDB) GetLastBlock() *block.Block {
+func (pdb *BlockchainDB) GetLastBlock() *block.Block {
 	lastBlock, err := pdb.GetBlock([]byte("lastBlockKey"))
 	if err != nil {
 		return nil
@@ -116,6 +116,6 @@ func (pdb *PebbleDB) GetLastBlock() *block.Block {
 }
 
 // Close closes the database connection.
-func (pdb *PebbleDB) Close() error {
+func (pdb *BlockchainDB) Close() error {
 	return pdb.db.Close()
 }

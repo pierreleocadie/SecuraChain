@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
-	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 )
 
 // // HandleIncomingBlock handles the logic for processing incoming blocks, including conflict resolution.
@@ -33,12 +33,12 @@ func IsGenesisBlock(b *block.Block) bool {
 }
 
 // ProcessBlock validates and adds a block to the blockchain.
-func ProcessBlock(b *block.Block, database *pebble.PebbleDB) (bool, error) {
+func ProcessBlock(b *block.Block, database *blockchaindb.BlockchainDB) (bool, error) {
 	if IsGenesisBlock(b) {
 		// Handle the genesis block.
 		if consensus.ValidateBlock(b, nil) {
 			// Block is valid, attempt to add it to the blockchain.
-			added, message := pebble.AddBlockToBlockchain(b, database)
+			added, message := blockchaindb.AddBlockToBlockchain(b, database)
 			fmt.Println(message)
 			return added, nil
 		}
@@ -54,7 +54,7 @@ func ProcessBlock(b *block.Block, database *pebble.PebbleDB) (bool, error) {
 
 	if consensus.ValidateBlock(b, prevBlock) {
 		// Block is valid, attempt to add it to the blockchain.
-		added, message := pebble.AddBlockToBlockchain(b, database)
+		added, message := blockchaindb.AddBlockToBlockchain(b, database)
 		fmt.Println(message)
 		return added, nil
 	}
@@ -63,7 +63,7 @@ func ProcessBlock(b *block.Block, database *pebble.PebbleDB) (bool, error) {
 }
 
 // PrevBlockStored checks if the previous block is stored in the database.
-func PrevBlockStored(b *block.Block, database *pebble.PebbleDB) (bool, error) {
+func PrevBlockStored(b *block.Block, database *blockchaindb.BlockchainDB) (bool, error) {
 	// Check if the previous block is stored in the database
 	prevBlockStored, err := database.GetBlock(b.PrevBlock)
 	if err != nil {
@@ -79,7 +79,7 @@ func PrevBlockStored(b *block.Block, database *pebble.PebbleDB) (bool, error) {
 
 // CompareBlocksToBlockchain compares the blocks in the buffer to the blockchain and remove those that are already stored.
 // Sort the blocks in the buffer by timestamp and return the sorted buffer.
-func CompareBlocksToBlockchain(blockBuffer map[int64]*block.Block, database *pebble.PebbleDB) []*block.Block {
+func CompareBlocksToBlockchain(blockBuffer map[int64]*block.Block, database *blockchaindb.BlockchainDB) []*block.Block {
 	// Iterate through the blocks in the buffer
 	for timestamp, blocks := range blockBuffer {
 		blockKey := block.ComputeHash(blocks)

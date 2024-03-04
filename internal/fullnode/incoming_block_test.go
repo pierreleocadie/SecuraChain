@@ -4,11 +4,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
-	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
@@ -16,7 +16,7 @@ func TestProcessBlock_GenesisBlock_Valid(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleDB instance
-	database, err := pebble.NewBlockchainDB("blockchainDB")
+	database, err := blockchaindb.NewBlockchainDB("blockchainDB")
 	if err != nil {
 		t.Fatalf("Error creating PebbleDB: %v", err)
 	}
@@ -54,7 +54,7 @@ func TestProcessBlock_GenesisBlock_Invalid(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleDB instance
-	database, err := pebble.NewBlockchainDB("blockchainDB")
+	database, err := blockchaindb.NewBlockchainDB("blockchainDB")
 	if err != nil {
 		t.Fatalf("Error creating PebbleDB: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestProcessBlock_NonGenesisBlock_Valid(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleDB instance
-	database, err := pebble.NewBlockchainDB("blockchainDB")
+	database, err := blockchaindb.NewBlockchainDB("blockchainDB")
 	if err != nil {
 		t.Fatalf("Error creating PebbleDB: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestProcessBlock_NonGenesisBlock_Invalid(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleDB instance
-	database, err := pebble.NewBlockchainDB("blockchainDB")
+	database, err := blockchaindb.NewBlockchainDB("blockchainDB")
 	if err != nil {
 		t.Fatalf("Error creating PebbleDB: %v", err)
 	}
@@ -245,7 +245,7 @@ func TestPrevBlockStored_BlockStored(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleDB instance
-	database, err := pebble.NewBlockchainDB("blockchainDB")
+	database, err := blockchaindb.NewBlockchainDB("blockchainDB")
 	if err != nil {
 		t.Fatalf("Error creating PebbleDB: %v", err)
 	}
@@ -313,7 +313,7 @@ func TestPrevBlockStored_BlockNotStored(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleDB instance
-	database, err := pebble.NewBlockchainDB("blockchainDB")
+	database, err := blockchaindb.NewBlockchainDB("blockchainDB")
 	if err != nil {
 		t.Fatalf("Error creating PebbleDB: %v", err)
 	}
@@ -379,7 +379,7 @@ func TestCompareBlocksToBlockchain(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleDB instance
-	database, err := pebble.NewBlockchainDB("blockchainDB")
+	database, err := blockchaindb.NewBlockchainDB("blockchainDB")
 	if err != nil {
 		t.Fatalf("Error creating PebbleDB: %v", err)
 	}

@@ -1,13 +1,13 @@
-package pebble_test
+package blockchaindb_test
 
 import (
 	"bytes"
 	"os"
 	"testing"
 
+	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
-	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
@@ -18,7 +18,7 @@ func TestAddBlockToBlockchain(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleTransactionDB instance
-	database, err := pebble.NewBlockchainDB("blockchain")
+	database, err := blockchaindb.NewBlockchainDB("blockchain")
 	if err != nil {
 		t.Fatalf("Error creating PebbleTransactionDB: %v", err)
 	}
@@ -39,7 +39,7 @@ func TestAddBlockToBlockchain(t *testing.T) {
 	}
 
 	// Call the AddBlockToBlockchain function
-	added, message := pebble.AddBlockToBlockchain(genesisBlock, database)
+	added, message := blockchaindb.AddBlockToBlockchain(genesisBlock, database)
 
 	// Verify the result
 	if !added {
@@ -83,7 +83,7 @@ func TestAddBlockToBlockchain_BlockAlreadyStored(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleTransactionDB instance
-	database, err := pebble.NewBlockchainDB("blockchain")
+	database, err := blockchaindb.NewBlockchainDB("blockchain")
 	if err != nil {
 		t.Fatalf("Error creating PebbleTransactionDB: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestAddBlockToBlockchain_BlockAlreadyStored(t *testing.T) {
 	}
 
 	// Call the AddBlockToBlockchain function
-	added, message := pebble.AddBlockToBlockchain(genesisBlock, database)
+	added, message := blockchaindb.AddBlockToBlockchain(genesisBlock, database)
 
 	// Verify the result
 	if !added {
@@ -116,7 +116,7 @@ func TestAddBlockToBlockchain_BlockAlreadyStored(t *testing.T) {
 	}
 
 	// Call the AddBlockToBlockchain function again
-	added, message = pebble.AddBlockToBlockchain(genesisBlock, database)
+	added, message = blockchaindb.AddBlockToBlockchain(genesisBlock, database)
 
 	// Verify the result
 	if added {

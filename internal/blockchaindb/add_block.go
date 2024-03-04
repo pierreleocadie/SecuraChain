@@ -1,4 +1,4 @@
-package pebble
+package blockchaindb
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 
 // AddBlockToBlockchain adds a block to the blockchain if it is not already present.
 // It returns a boolean indicating whether the block was added, and a message.
-func AddBlockToBlockchain(b *block.Block, database *PebbleDB) (bool, string) {
+func AddBlockToBlockchain(b *block.Block, database *BlockchainDB) (bool, string) {
 	// Use the block's signature as a unique key for storage.
 	key := block.ComputeHash(b)
 

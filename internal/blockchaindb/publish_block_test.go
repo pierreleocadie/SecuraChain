@@ -1,15 +1,15 @@
-package pebble_test
+package blockchaindb_test
 
 import (
 	"bytes"
 	"context"
 	"testing"
 
+	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
-	"github.com/pierreleocadie/SecuraChain/internal/pebble"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
@@ -17,7 +17,7 @@ func TestPublishBlockToIPFS(t *testing.T) {
 	t.Parallel()
 
 	// Create a new PebbleTransactionDB instance
-	database, err := pebble.NewBlockchainDB("blockchain")
+	database, err := blockchaindb.NewBlockchainDB("blockchain")
 	if err != nil {
 		t.Fatalf("Error creating PebbleTransactionDB: %v", err)
 	}
@@ -42,7 +42,7 @@ func TestPublishBlockToIPFS(t *testing.T) {
 	}
 
 	// Call the AddBlockToBlockchain function
-	added, message := pebble.AddBlockToBlockchain(genesisBlock, database)
+	added, message := blockchaindb.AddBlockToBlockchain(genesisBlock, database)
 
 	// Verify the result
 	if !added {
@@ -65,11 +65,11 @@ func TestPublishBlockToIPFS(t *testing.T) {
 		t.Errorf("Error spawning IPFS node : %v", err)
 	}
 
-	if err := pebble.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, genesisBlock); err != nil {
+	if err := blockchaindb.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, genesisBlock); err != nil {
 		t.Errorf("Error publishing block to IPFS : %v", err)
 	}
 
-	blockRegister, err := pebble.ReadBlockDataFromFile("blocksRegistry.json")
+	blockRegister, err := blockchaindb.ReadBlockDataFromFile("blocksRegistry.json")
 	if err != nil {
 		t.Errorf("Error reading block data from file : %v", err)
 	}
@@ -77,7 +77,7 @@ func TestPublishBlockToIPFS(t *testing.T) {
 	newCidBlock := blockRegister.Blocks[0].Cid
 
 	// Get the block from IPFS
-	blockIPFS, err := pebble.GetBlockFromIPFS(ctx, ipfsAPI, newCidBlock)
+	blockIPFS, err := blockchaindb.GetBlockFromIPFS(ctx, ipfsAPI, newCidBlock)
 	if err != nil {
 		t.Errorf("Error getting block from IPFS : %v", err)
 	}

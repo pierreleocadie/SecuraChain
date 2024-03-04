@@ -1,4 +1,4 @@
-package pebble
+package blockchaindb
 
 import (
 	"context"
@@ -130,7 +130,7 @@ func AskTheBlockchainRegistry(ctx context.Context, ps *pubsub.PubSub) ([]byte, e
 // 	}
 // }
 
-func IntegrityAndUpdate(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.PubSub, database *PebbleDB) bool {
+func IntegrityAndUpdate(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.PubSub, database *BlockchainDB) bool {
 	for {
 		lastBlock := database.GetLastBlock()
 		if lastBlock == nil {
@@ -162,7 +162,7 @@ func IntegrityAndUpdate(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.P
 	return true
 }
 
-func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.PubSub, database *PebbleDB) (bool, error) {
+func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.PubSub, database *BlockchainDB) (bool, error) {
 
 	registryBytes, err := AskTheBlockchainRegistry(ctx, ps)
 	if err != nil {

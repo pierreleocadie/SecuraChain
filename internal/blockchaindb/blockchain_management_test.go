@@ -1,4 +1,4 @@
-package pebble_test
+package blockchaindb_test
 
 // func TestHasABlockchain_BlockchainDoesNotExist(t *testing.T) {
 // 	t.Parallel()
