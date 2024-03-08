@@ -3,6 +3,7 @@
 .DS_Store
 bin/
 *.pem
+/temp
 
 ssh-keys/
 hosts.ini
