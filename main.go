@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"time"
 
@@ -17,28 +15,34 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
-	"github.com/multiformats/go-multiaddr"
-	ecdsaSC "github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
+	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
+	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
+	mdns "github.com/pierreleocadie/SecuraChain/internal/network"
+	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
+	poccontext "github.com/pierreleocadie/SecuraChain/poc-context"
 )
 
 const RefreshInterval = 10 * time.Second
 
 var (
-	ignoredPeers             map[peer.ID]bool = make(map[peer.ID]bool)
-	rendezvousStringFlag     *string          = flag.String("rendezvousString", "SecuraChain", "Unique string to identify group of nodes. Share this with your friends to let them connect with you")
-	networkRoleFlag          *string          = flag.String("networkRole", os.Args[1], "network role of the node")
-	transactionTopicNameFlag *string          = flag.String("transactionTopicName", "NewTransaction", "name of topic to join")
-	blockTopicNameFlag       *string          = flag.String("blockTopicName", "NewBlock", "name of topic to join")
-	chainTopicNameFlag       *string          = flag.String("chainTopicName", "NewChainVersion", "name of topic to join")
-	ip4tcp                   string           = fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", 0)
-	ip6tcp                   string           = fmt.Sprintf("/ip6/::/tcp/%d", 0)
-	ip4quic                  string           = fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", 0)
-	ip6quic                  string           = fmt.Sprintf("/ip6/::/udp/%d/quic-v1", 0)
+	rendezvousStringFlag *string = flag.String("rendezvousString", "SecuraChain", "Unique string to identify group of nodes. Share this with your friends to let them connect with you")
+	networkRoleFlag      *string = flag.String("networkRole", os.Args[1], "network role of the node")
+	ip4tcp               string  = fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", 0)
+	ip6tcp               string  = fmt.Sprintf("/ip6/::/tcp/%d", 0)
+	ip4quic              string  = fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", 0)
+	ip6quic              string  = fmt.Sprintf("/ip6/::/udp/%d/quic-v1", 0)
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	minerKeyPair, err := ecdsa.NewECDSAKeyPair()
+	if err != nil {
+		log.Fatalln("Failed to create ECDSA key pair:", err)
+		return
+	}
 
 	/*
 	* ROLE VALIDATION
@@ -49,23 +53,11 @@ func main() {
 	}
 
 	/*
-	* GENERATE ECDSA KEY PAIR FOR NODE IDENTITY
-	 */
-	// Generate a pair of ecdsa keys
-	keyPair, err := ecdsaSC.NewECDSAKeyPair()
-	if err != nil {
-		log.Println("Failed to generate ecdsa key pair:", err)
-	}
-
-	/*
 	* NODE INITIALIZATION
 	 */
 	host, err := libp2p.New(
 		libp2p.UserAgent("SecuraChain"),
 		libp2p.ProtocolVersion("0.0.1"),
-		libp2p.EnableNATService(),
-		libp2p.NATPortMap(),
-		libp2p.EnableHolePunching(),
 		libp2p.ListenAddrStrings(ip4tcp, ip6tcp, ip4quic, ip6quic),
 		libp2p.Transport(tcp.NewTCPTransport),
 		libp2p.Transport(libp2pquic.NewTransport),
@@ -99,28 +91,13 @@ func main() {
 	}
 
 	/*
-	* NETWORK PEER DISCOVERY WITH DHT
+	* NETWORK PEER DISCOVERY WITH mDNS
 	 */
-	// Initialize DHT
-	dhtConfig := &DHT{
-		RendezvousString:          rendezvousStringFlag,
-		DiscorveryRefreshInterval: RefreshInterval,
-		Bootstrap:                 true,
-	}
-	if len(os.Args) > 2 {
-		bootstrapPeer, _ := multiaddr.NewMultiaddr(os.Args[2])
-		dhtConfig = &DHT{
-			RendezvousString:          rendezvousStringFlag,
-			BootstrapPeers:            []multiaddr.Multiaddr{bootstrapPeer},
-			DiscorveryRefreshInterval: RefreshInterval,
-			Bootstrap:                 false,
-		}
-	}
+	// Initialize mDNS
+	mdnsConfig := mdns.NewMDNSDiscovery(*rendezvousStringFlag)
 
-	// Run DHT
-	if err := dhtConfig.Run(ctx, host); err != nil {
-		log.Fatal("Failed to run DHT:", err)
-	}
+	// Run MDNS
+	mdnsConfig.Run(host)
 
 	/*
 	* PUBLISH AND SUBSCRIBE TO TOPICS
@@ -132,192 +109,155 @@ func main() {
 	}
 
 	if *networkRoleFlag == "storer" {
-		// Join the topic
-		topicTrx, err := ps.Join(*transactionTopicNameFlag)
+		// Join the NewTransaction topic and generate fake transaction every random time between 5 and 10s
+		newTransactionTopic, err := ps.Join("NewTransaction")
 		if err != nil {
-			log.Println("Failed to join topic:", err)
+			log.Panicf("Failed to join NewTransaction topic: %s", err)
 		}
 
-		subTrx, err := topicTrx.Subscribe()
-		if err != nil {
-			log.Println("Failed to subscribe to topic:", err)
-		}
-
-		// Every X seconds, publish a new transaction - random interval between 1 and 10 seconds
 		go func() {
 			for {
-				time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second)
-				// Publish the transaction
-				if err := topicTrx.Publish(ctx, generateTransaction(host.ID())); err != nil {
-					log.Println("Failed to publish transaction:", err)
-				}
-			}
-		}()
-
-		// Handle incoming transactions in a separate goroutine
-		go func() {
-			for {
-				msg, err := subTrx.Next(ctx)
+				time.Sleep(5 * time.Second)
+				fakeTrx, err := poccontext.GenFakeTransaction()
 				if err != nil {
-					log.Println("Failed to get next transaction:", err)
+					log.Println("Failed to generate fake transaction:", err)
+					continue
 				}
-				log.Println(string(msg.Data))
+				serializedTrx, err := fakeTrx.Serialize()
+				if err != nil {
+					log.Println("Failed to serialize fake transaction:", err)
+					continue
+				}
+				if err = newTransactionTopic.Publish(ctx, serializedTrx); err != nil {
+					log.Println("Failed to publish fake transaction:", err)
+				}
 			}
 		}()
 	} else if *networkRoleFlag == "miner" {
-		// Join the topic for transactions
-		topicTrx, err := ps.Join(*transactionTopicNameFlag)
+		// Join the NewBlock topic
+		newBlockTopic, err := ps.Join("NewBlock")
 		if err != nil {
-			log.Println("Failed to join topic:", err)
+			log.Panicf("Failed to join NewBlock topic: %s", err)
 		}
 
-		// Join the topic for blocks
-		topicBlock, err := ps.Join(*blockTopicNameFlag)
+		subNewBlock, err := newBlockTopic.Subscribe()
 		if err != nil {
-			log.Println("Failed to join topic:", err)
+			log.Panicf("Failed to subscribe to NewBlock topic: %s", err)
 		}
 
-		// Subscribe to the topic for transactions
-		subTrx, err := topicTrx.Subscribe()
+		// Subscribe to NewTransaction topic
+		newTransactionTopic, err := ps.Join("NewTransaction")
 		if err != nil {
-			log.Println("Failed to subscribe to topic:", err)
+			log.Panicf("Failed to subscribe to NewTransaction topic: %s", err)
 		}
 
-		// Subscribe to the topic for blocks
-		subBlock, err := topicBlock.Subscribe()
+		subNewTransaction, err := newTransactionTopic.Subscribe()
 		if err != nil {
-			log.Println("Failed to subscribe to topic:", err)
+			log.Panicf("Failed to subscribe to NewTransaction topic: %s", err)
 		}
 
-		// Define a transaction pool
-		var trxPool []Transaction
+		trxPool := []transaction.Transaction{}
 
-		// Every X seconds, generate a new block - random interval between 1 and 10 seconds
+		// Handle NewTransaction events in a separate goroutine
+		// Add new transactions to the transaction pool
 		go func() {
 			for {
-				time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second)
-				// Generate the block
-				block := generateBlock(&trxPool, host.ID(), keyPair)
-				if block != nil {
-					// Publish the block
-					if err := topicBlock.Publish(ctx, block); err != nil {
-						log.Println("Failed to publish block:", err)
-					}
-				}
-			}
-		}()
-
-		// Handle incoming transactions in a separate goroutine
-		go func() {
-			for {
-				msg, err := subTrx.Next(ctx)
+				msg, err := subNewTransaction.Next(ctx)
 				if err != nil {
-					log.Println("Failed to get next transaction:", err)
+					log.Println("Failed to get next message from NewTransaction topic:", err)
+					continue
 				}
-				// Add the transaction to the pool
-				addTrxToPool(msg.Data, &trxPool)
+				transactionFactory := transaction.AddFileTransactionFactory{}
+				trx, err := transaction.DeserializeTransaction(msg.Data, transactionFactory)
+				if err != nil {
+					log.Println("Failed to deserialize transaction:", err)
+					continue
+				}
+				if !consensus.ValidateTransaction(trx) {
+					log.Println("Invalid transaction")
+					continue
+				}
+				trxPool = append(trxPool, trx)
+				log.Println("Transaction added to pool")
+				log.Println("Transaction pool size:", len(trxPool))
 			}
 		}()
 
-		// Handle incoming blocks in a separate goroutine
+		blockPool := []*block.Block{}
+		var previousBlock *block.Block = nil
+		currentBlock := block.NewBlock(trxPool, []byte("GenesisBlock"), 1, minerKeyPair)
 		go func() {
 			for {
-				msg, err := subBlock.Next(ctx)
+				log.Println("MINING A NEW BLOCK")
+				consensus.MineBlock(currentBlock)
+				err = currentBlock.SignBlock(minerKeyPair)
 				if err != nil {
-					log.Println("Failed to get next block:", err)
+					log.Println("Failed to sign block:", err)
+					continue
 				}
-				receivedBlock := Block{}
-				e := json.Unmarshal(msg.Data, &receivedBlock)
-				if e != nil {
-					log.Printf("Error unmarshalling block: %v", err)
-					return
+				if !consensus.ValidateBlock(currentBlock, previousBlock) {
+					log.Println("Invalid block")
+					continue
 				}
-				if ValidateBlock(msg.Data) {
-					if receivedBlock.Header.MinedBy == host.ID() {
-						log.Println("Valid block emitted")
-					} else {
-						log.Println("Valid block received")
-					}
-					resetPool(&trxPool)
-				} else {
-					if receivedBlock.Header.MinedBy == host.ID() {
-						log.Println("Invalid block emitted")
-					} else {
-						log.Println("Invalid block received")
-					}
+				blockPool = append(blockPool, currentBlock)
+				log.Println("Block added to pool")
+				log.Println("Block pool size:", len(blockPool))
+				previousBlock = currentBlock
+				serializedBlock, err := currentBlock.Serialize()
+				if err != nil {
+					log.Println("Failed to serialize block:", err)
+					continue
 				}
+				if err = newBlockTopic.Publish(ctx, serializedBlock); err != nil {
+					log.Println("Failed to publish block:", err)
+				}
+				// Add the block to a file and append each new block to the file
+				// testFile, err := os.OpenFile("./temp/testFile.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+				// if err != nil {
+				// 	log.Println("Failed to open file:", err)
+				// 	continue
+				// }
+				// serializedBlock, err := currentBlock.Serialize()
+				// if err != nil {
+				// 	log.Println("Failed to serialize block:", err)
+				// 	continue
+				// }
+				// _, err = testFile.Write(serializedBlock)
+				// if err != nil {
+				// 	log.Println("Failed to write block to file:", err)
+				// 	continue
+				// }
+				// testFile.Close()
+				// log.Println("Block written to file")
+				currentBlock = block.NewBlock(trxPool, block.ComputeHash(previousBlock), previousBlock.Header.Height+1, minerKeyPair)
+				trxPool = []transaction.Transaction{}
 			}
 		}()
-	} else if *networkRoleFlag == "chainer" {
-		// Join the topic for blocks
-		topicBlock, err := ps.Join(*blockTopicNameFlag)
-		if err != nil {
-			log.Println("Failed to join topic:", err)
-		}
 
-		// Join the topic for chain versions
-		topicChain, err := ps.Join(*chainTopicNameFlag)
-		if err != nil {
-			log.Println("Failed to join topic:", err)
-		}
-
-		// Subscribe to the topic for blocks
-		subBlock, err := topicBlock.Subscribe()
-		if err != nil {
-			log.Println("Failed to subscribe to topic:", err)
-		}
-
-		// Subscribe to the topic for chain versions
-		subChain, err := topicChain.Subscribe()
-		if err != nil {
-			log.Println("Failed to subscribe to topic:", err)
-		}
-
-		// Define a chain
-		var chain *Chain = &Chain{
-			ChainVersion: 1,
-			Chain:        []Block{},
-		}
-
-		// Handle incoming blocks in a separate goroutine
+		// Handle NewBlock events in a separate goroutine
 		go func() {
 			for {
-				msg, err := subBlock.Next(ctx)
+				msg, err := subNewBlock.Next(ctx)
 				if err != nil {
-					log.Println("Failed to get next block:", err)
+					log.Println("Failed to get next message from NewBlock topic:", err)
+					continue
 				}
-				if ValidateBlock(msg.Data) {
-					// Add the block to the chain
-					addBlockToChain(msg.Data, chain)
-					b, _ := json.Marshal(chain)
-					fmt.Println(string(b))
-				} else {
-					log.Println("Invalid block received")
+				if msg.ReceivedFrom == host.ID() {
+					continue
+				}
+				newBlock, err := block.DeserializeBlock(msg.Data)
+				if err != nil {
+					log.Println("Failed to deserialize block:", err)
+					continue
+				}
+				if consensus.ValidateBlock(newBlock, previousBlock) {
+					blockPool = append(blockPool, newBlock)
+					log.Println("Block added to pool")
+					log.Println("Block pool size:", len(blockPool))
+					previousBlock = newBlock
 				}
 			}
 		}()
-
-		// Handle incoming chain versions in a separate goroutine
-		go func() {
-			for {
-				msg, err := subChain.Next(ctx)
-				if err != nil {
-					log.Println("Failed to get next chain version:", err)
-				}
-				log.Println(string(msg.Data))
-			}
-		}()
-
-		// Every X seconds, publish a new chain version - random interval between 1 and 10 seconds - To sync the chain all over the network
-		/* go func() {
-			for {
-				time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second)
-				// Publish the chain version
-				if err := topicChain.Publish(ctx, []byte(chain)); err != nil {
-					log.Println("Failed to publish chain version:", err)
-				}
-			}
-		}() */
 	}
 
 	/*

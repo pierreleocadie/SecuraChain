@@ -14,7 +14,7 @@ import (
 // AddFileTransactionFactory implements the TransactionFactory interface
 type AddFileTransactionFactory struct{}
 
-func (f *AddFileTransactionFactory) CreateTransaction(data []byte) (Transaction, error) {
+func (f AddFileTransactionFactory) CreateTransaction(data []byte) (Transaction, error) {
 	return DeserializeAddFileTransaction(data)
 }
 
