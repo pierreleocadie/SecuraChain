@@ -211,7 +211,7 @@ func main() {
 
 			// If the previous block is not stored in the database
 			// And the block receive is not the genesis block
-			if !isPrevBlockStored || !genesisBlock {
+			if !isPrevBlockStored && !genesisBlock {
 
 				for {
 					// Add the receive block in a list
@@ -328,47 +328,10 @@ func main() {
 		}
 	}()
 
-	// Join the topic to ask for the blockchain
-	fullNodeAskingForBlockchainTopic, err := ps.Join("FullNodeAskingForBlockchain")
+	subfullNodeAnnouncementTopic, err := fullNodeAnnouncementTopic.Subscribe()
 	if err != nil {
-		log.Debugln("error joining FullNodeAskingForBlockchain topic : ", err)
+		log.Panicf("Failed to subscribe to full node announcement topic : %s\n", err)
 	}
-
-	// Join the topic to ask for the blockchain
-	subFullNodeAskingForBlockchain, err := fullNodeAskingForBlockchainTopic.Subscribe()
-	if err != nil {
-		log.Debugln("error joining FullNodeAskingForBlockchain topic : ", err)
-	}
-
-	// // Join the topic to receive the blockchain
-	// fullNodeGivingBlockchainTopic, err := ps.Join("FullNodeGivingBlockchain")
-	// if err != nil {
-	// 	log.Debugln("Error joining to FullNodeGivingBlockchain topic : ", err)
-	// }
-	// Handle incoming asking blockchain messages from full nodes
-	go func() {
-		for {
-			msg, err := subFullNodeAskingForBlockchain.Next(ctx)
-			if err != nil {
-				log.Debugf("error getting blockchain request message : %s\n", err)
-			}
-
-			// Ignore self messages
-			if msg.ReceivedFrom == host.ID() {
-				continue
-			}
-
-			log.Debugln("Blockchain request received")
-
-			// // Answer to the request with the last CID of the blockchain
-			// if cidBlockChain.RootCid().Defined() {
-			// 	err := fullNodeGivingBlockchainTopic.Publish(ctx, []byte(cidBlockChain.String()))
-			// 	if err != nil {
-			// 		log.Debugln("failed to publish latest blockchain CID: %s", err)
-			// 	}
-			// }
-		}
-	}()
 
 	/*
 	* RECEIVE BLOCK ANNOUNCEMENT
@@ -376,13 +339,19 @@ func main() {
 	// Handle valid block announcements and reliable additons to the blockchain
 	go func() {
 		for {
-			msg, err := subBlockAnnouncement.Next(ctx)
+			msg, err := subfullNodeAnnouncementTopic.Next(ctx)
 			if err != nil {
 				log.Debugln("Error getting block announcement message : ", err)
 			}
 
 			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
 			log.Debugln("Received block message : ", msg.Data)
+
+			// If the block announcement is from self, ignore it
+			if msg.GetFrom().String() == host.ID().String() {
+				log.Debugln("Received block announcement from self")
+				continue
+			}
 
 			// verify the integrity of the blockchain
 			verified, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
