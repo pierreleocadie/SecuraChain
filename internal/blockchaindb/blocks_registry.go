@@ -61,6 +61,7 @@ func AddBlockMetadataToRegistry(b *block.Block, config *config.Config, fileCid p
 			log.Printf("Error saving JSON data %v", err)
 			return err
 		}
+		return nil
 	}
 
 	metadataRegistry, err := ReadBlockDataFromFile(config.BlocksRegistryJSON)
@@ -71,10 +72,10 @@ func AddBlockMetadataToRegistry(b *block.Block, config *config.Config, fileCid p
 
 	metadataRegistry.Blocks = append(metadataRegistry.Blocks, fileMetadata)
 
-	// if err := saveToJSON(config, config.BlocksRegistryJSON, metadataRegistry); err != nil {
-	// 	log.Printf("Error saving JSON data %v", err)
-	// 	return err
-	// }
+	if err := saveToJSON(config, config.BlocksRegistryJSON, metadataRegistry); err != nil {
+		log.Printf("Error saving JSON data %v", err)
+		return err
+	}
 
 	return nil
 }
