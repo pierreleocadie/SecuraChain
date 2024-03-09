@@ -153,7 +153,7 @@ func IntegrityAndUpdate(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.P
 			}
 			if !updated {
 				fmt.Println("Error downloading missing blocks and verifying the blockchain")
-				return false
+				continue
 			}
 		} else {
 			break // the blockchain is verified
