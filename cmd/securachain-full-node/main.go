@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"time"
 
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
@@ -118,18 +119,9 @@ func main() {
 		for {
 			blockReceive := make(map[int64]*block.Block)
 
-			msg, err := subBlockAnnouncement.Next(ctx)
+			blockAnnounced, err := fullnode.ReceiveBlock(ctx, subBlockAnnouncement)
 			if err != nil {
-				log.Panic("Error getting block announcement message : ", err)
-			}
-
-			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
-			log.Debugln("Received block : ", msg.Data)
-
-			// Deserialize the block announcement
-			blockAnnounced, err := block.DeserializeBlock(msg.Data)
-			if err != nil {
-				log.Debugln("Error deserializing block announcement : %s", err)
+				log.Debugln("Error waiting for the next block : %s\n", err)
 				continue
 			}
 
@@ -143,114 +135,97 @@ func main() {
 			// If the previous block is not stored in the database and the block is not the genesis block
 			if !handleBlock {
 
-				for {
-					// Add the receive block in a list
+				// Waiting 2sec to add the block received to the buffer
+				endTime := time.Now().Add(2 * time.Second)
+				for time.Now().Before(endTime) {
 					blockReceive[blockAnnounced.Timestamp] = blockAnnounced
+					log.Debugln("Block added to the buffer")
+				}
 
-					// verify the integrity of the blockchain
-					verified, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
-					if err != nil {
-						log.Debugln("Error verifying blockchain integrity : %s", err)
-						continue
-					}
-					if !verified {
-						log.Debugln("Blockchain is not integrity")
-						integrity := blockchaindb.IntegrityAndUpdate(ctx, ipfsAPI, ps, blockchain)
-						if !integrity {
-							log.Debugln("Blockchain is not integrity")
-							continue
-						}
-					}
+				// verify the integrity of the blockchain
+				verified, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
+				if err != nil {
+					log.Debugln("Error verifying blockchain integrity : %s", err)
+					continue
+				}
 
-					// Compare the blocks received to the blockchain
-					blockLists := fullnode.CompareBlocksToBlockchain(blockReceive, blockchain)
-
-					// Verify the validy of the blocks list
-					for _, b := range blockLists {
-						isProcessed, err := fullnode.ProcessBlock(b, blockchain)
-						if err != nil {
-							log.Debugf("error processing block : %s\n", err)
-							continue
-						}
-						if !isProcessed {
-							log.Debugln("Block not processed")
-						}
-					}
-
-					lastBlock := blockchain.GetLastBlock()
-					integrity, err := blockchain.VerifyBlockchainIntegrity(lastBlock)
-					if err != nil {
-						log.Debugf("error verifying blockchain integrity : %s\n", err)
-						continue
-					}
-
-					// If the blockchain isn't verify
+				if !verified {
+					log.Debugln("Blockchain is not integrity")
+					integrity := blockchaindb.IntegrityAndUpdate(ctx, ipfsAPI, ps, blockchain)
 					if !integrity {
-						// Download missing blocks
-
+						log.Debugln("Blockchain is not integrity")
+						continue
 					}
-					break
 				}
 
-				// wait for the next block
-				msg, err := subBlockAnnouncement.Next(ctx)
-				if err != nil {
-					log.Panic("Error getting block announcement message : ", err)
+				// Compare the blocks received to the blockchain and sort by timestamp
+				blockLists := fullnode.CompareBlocksToBlockchain(blockReceive, blockchain)
+
+				// Valid and add the blocks to the blockchain
+				for _, b := range blockLists {
+					isProcessed, err := fullnode.ProcessBlock(b, blockchain)
+					if err != nil {
+						log.Debugf("error processing block : %s\n", err)
+						continue
+					}
+					if !isProcessed {
+						log.Debugln("Block not processed")
+					}
 				}
 
-				log.Debugln("Received block announcement message from ", msg.GetFrom().String())
-				log.Debugln("Received block message : ", msg.Data)
-
-				// Deserialize the block announcement
-				nextBlock, err := block.DeserializeBlock(msg.Data)
-				if err != nil {
-					log.Debugln("Error deserializing block announcement : %s", err)
-					continue
-				}
-
-				blockchain, err := blockchaindb.NewBlockchainDB("blockchain")
-				if err != nil {
-					log.Debugln("Error opening the blockchain database : %s\n", err)
-					continue
-				}
-
-				lastBlock := blockchain.GetLastBlock()
-
-				validate := consensus.ValidateBlock(nextBlock, lastBlock)
-				if !validate {
-					log.Debugln("Block not validated")
-					continue
-				}
-
-				isVerified, err := blockchain.VerifyBlockchainIntegrity(nextBlock)
+				verified2, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
 				if err != nil {
 					log.Debugf("error verifying blockchain integrity : %s\n", err)
 					continue
 				}
 
-				if !isVerified {
-					log.Debugln("Blockchain not verified")
+				// If the blockchain isn't verify
+				if !verified2 {
+					// Download missing blocks
+					integrity := blockchaindb.IntegrityAndUpdate(ctx, ipfsAPI, ps, blockchain)
+					if !integrity {
+						log.Debugln("Blockchain is not integrity")
+						continue
+					}
+				}
+
+				nextBlockReceive := make(chan *block.Block)
+				for {
+					nextBlock, err := fullnode.ReceiveBlock(ctx, subBlockAnnouncement)
+					if err != nil {
+						log.Debugln("Error waiting for the next block : %s\n", err)
+						continue
+					}
+					nextBlockReceive <- nextBlock
+
+					validate := consensus.ValidateBlock(nextBlock, blockchain.GetLastBlock())
+					if !validate {
+						log.Debugln("Block not validated")
+						continue
+					}
+
+					isVerified, err := blockchain.VerifyBlockchainIntegrity(nextBlock)
+					if err != nil {
+						log.Debugf("error verifying blockchain integrity : %s\n", err)
+						continue
+					}
+
+					if !isVerified {
+						log.Debugln("Blockchain not verified")
+						continue
+					}
+					break
+				}
+				nextBlock := <-nextBlockReceive
+
+				handleNextBlock, err := fullnode.HandleIncomingBlock(ctx, cfg, nodeIpfs, ipfsAPI, nextBlock, blockchain)
+				if err != nil {
+					log.Debugf("error handling incoming block : %s\n", err)
 					continue
 				}
 
-				// Proceed to validate and add the block to the blockchain
-				added, message := blockchaindb.AddBlockToBlockchain(nextBlock, blockchain)
-				if !added {
-					log.Debugln(message)
-				}
-				log.Debugln(message)
-
-				// published, err := fullnode.PublishBlockToNetwork(ctx, nextBlock, fullNodeAnnouncementTopic)
-				// if err != nil {
-				// 	log.Debugln("Error publishing block to the network : %s\n", err)
-				// 	continue
-				// }
-				// log.Debugln("Publishing block to the network :", published)
-
-				// Send the block to IPFS
-				if err := blockchaindb.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, nextBlock); err != nil {
-					log.Debugf("error adding the block to IPFS : %s\n", err)
-					continue
+				if !handleNextBlock {
+					log.Debugln("Block not handled")
 				}
 
 			}
