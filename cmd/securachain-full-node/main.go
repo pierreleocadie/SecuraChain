@@ -139,6 +139,12 @@ func main() {
 		}
 	}()
 
+	// Service 2 : Handle the block received
+	go func() {
+		for {
+		}
+	}()
+
 	// Service 2: Handle the block received
 	go func() {
 		for {
@@ -224,6 +230,7 @@ func main() {
 
 	// Service 3 : Syncronization
 	go func() {
+
 		// create a list of blacklisted nodes
 		blackListNode := []string{}
 		for needSync {
@@ -290,12 +297,6 @@ func main() {
 				}
 				log.Debugln(message)
 
-				// Send the block to IPFS
-				if err := blockchaindb.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, b); err != nil {
-					log.Debugln("error adding the block to IPFS : %s", err)
-
-				}
-
 				// 4.2  Verify the integrity of the blockchain
 				verified, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
 				if err != nil {
@@ -306,6 +307,12 @@ func main() {
 					log.Debugln("Blockchain is not verified")
 					blackListNode = append(blackListNode, sender)
 					continue
+				}
+
+				// Send the block to IPFS
+				if err := blockchaindb.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, b); err != nil {
+					log.Debugln("error adding the block to IPFS : %s", err)
+
 				}
 				break
 
@@ -320,6 +327,75 @@ func main() {
 				inSync = false
 				Synced = true
 				break
+			}
+		}
+	}()
+
+	// Service 4 : Post-syncronization
+	go func() {
+		for {
+			// 1. Sort the waiting list by height of the block
+			sortedList := fullnode.SortBlockByHeight(waitingList)
+
+			for _, b := range sortedList {
+				// 2 . Verify if the previous block is stored in the database
+				isPrevBlockStored, err := fullnode.PrevBlockStored(b, blockchain)
+				if err != nil {
+					log.Debugln("Error checking if previous block is stored : %s", err)
+				}
+
+				if !isPrevBlockStored {
+					waitingList = []*block.Block{}
+					needSync = true // This will call the process of synchronizing the blockchain with the network
+					Synced = false
+					break
+				}
+
+				// 3 . Validation of the block
+				prevBlock, err := block.DeserializeBlock(b.PrevBlock)
+				if err != nil {
+					log.Debugln("Error deserializing the previous block : %s\n", err)
+				}
+
+				if fullnode.IsGenesisBlock(b) {
+					if !consensus.ValidateBlock(b, nil) {
+						log.Debugln("Genesis block is invalid")
+						break
+					}
+				} else {
+					if !consensus.ValidateBlock(b, prevBlock) {
+						log.Debugln("Block is invalid")
+						break
+					}
+				}
+
+				// 4 . Add the block to the blockchain
+				added, message := blockchaindb.AddBlockToBlockchain(b, blockchain)
+				if !added {
+					log.Debugln("Block not added to the blockchain : %s\n", message)
+					continue
+				}
+				log.Debugln(message)
+
+				// 5 .  Verify the integrity of the blockchain
+				verified, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
+				if err != nil {
+					log.Debugln("Error verifying blockchain integrity : %s\n", err)
+				}
+
+				if !verified {
+					waitingList = []*block.Block{}
+					needSync = true // This will call the process of synchronizing the blockchain with the network
+					Synced = false
+					break
+				}
+
+				// Send the block to IPFS
+				if err := blockchaindb.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, b); err != nil {
+					log.Debugln("error adding the block to IPFS : %s", err)
+				}
+				break
+
 			}
 		}
 	}()
