@@ -36,7 +36,7 @@ func handleGenesisBlock(ctx context.Context, config *config.Config, nodeIpfs *co
 	return proceed, nil
 }
 
-func handleNormalBlock(ctx context.Context, config *config.Config, nodeIpfs *core.IpfsNode, ipfsApi icore.CoreAPI, b *block.Block, database *blockchaindb.BlockchainDB) (bool, error) {
+func HandleNormalBlock(ctx context.Context, config *config.Config, nodeIpfs *core.IpfsNode, ipfsApi icore.CoreAPI, b *block.Block, database *blockchaindb.BlockchainDB) (bool, error) {
 	proceed := false
 
 	// Verify if the previous block is stored in the database

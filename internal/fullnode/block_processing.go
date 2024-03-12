@@ -102,3 +102,12 @@ func sortBlocksByTimestamp(blockBuffer map[int64]*block.Block) []*block.Block {
 
 	return blocks
 }
+
+// sortBlockByHeight sorts the blocks in the waitingList by height and returns the sorted waitingList.
+func SortBlockByHeight(waitingList []*block.Block) []*block.Block {
+	sort.SliceStable(waitingList, func(i, j int) bool {
+		return waitingList[i].Height < waitingList[i].Height
+	})
+
+	return waitingList
+}

@@ -9,7 +9,6 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
-	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
@@ -23,6 +22,9 @@ import (
 
 var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
 var needSync = false
+var inSync = false
+var waitingList = []*block.Block{}
+var Synced = false
 
 func main() {
 	log := ipfsLog.Logger("full-node")
@@ -115,132 +117,8 @@ func main() {
 		log.Panicf("Failed to subscribe to block announcement topic : %s\n", err)
 	}
 
-	// Waiting to receive blocks from the minor nodes
-	go func() {
-		for {
-			blockReceive := make(map[int64]*block.Block)
-
-			blockAnnounced, err := fullnode.ReceiveBlock(ctx, subBlockAnnouncement)
-			if err != nil {
-				log.Debugln("Error waiting for the next block : %s\n", err)
-				continue
-			}
-
-			// validty of the block before adding it to the buffer
-			//timestamp +- 1 sec
-			//go rountine
-			// +- 5 sec le timestamp actuel si oui on ajoute le block au buffer
-			// si on recoit un seul block on switch sur la wiating list instead of the conccurence liste
-
-			// Handle incoming block
-			handleBlock, err := fullnode.HandleIncomingBlock(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced, blockchain)
-			if err != nil {
-				log.Debugln("Error handling incoming block : %s\n", err)
-				continue
-			}
-
-			// If the previous block is not stored in the database and the block is not the genesis block
-			if !handleBlock {
-
-				// Waiting 2sec to add the block received to the buffer
-				endTime := time.Now().Add(2 * time.Second)
-				for time.Now().Before(endTime) {
-					blockReceive[blockAnnounced.Timestamp] = blockAnnounced
-					log.Debugln("Block added to the buffer")
-				}
-
-				// verify the integrity of the blockchain
-				verified, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
-				if err != nil {
-					log.Debugln("Error verifying blockchain integrity : %s", err)
-					continue
-				}
-
-				if !verified {
-					log.Debugln("Blockchain is not integrity")
-					integrity := blockchaindb.IntegrityAndUpdate(ctx, ipfsAPI, ps, blockchain)
-					if !integrity {
-						log.Debugln("Blockchain is not integrity")
-						continue
-					}
-				}
-
-				// Compare the blocks received to the blockchain and sort by timestamp
-				blockLists := fullnode.CompareBlocksToBlockchain(blockReceive, blockchain)
-
-				// Valid and add the blocks to the blockchain
-				for _, b := range blockLists {
-					isProcessed, err := fullnode.ProcessBlock(b, blockchain)
-					if err != nil {
-						log.Debugf("error processing block : %s\n", err)
-						continue
-					}
-					if !isProcessed {
-						log.Debugln("Block not processed")
-					}
-				}
-
-				verified2, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
-				if err != nil {
-					log.Debugf("error verifying blockchain integrity : %s\n", err)
-					continue
-				}
-
-				// If the blockchain isn't verify
-				if !verified2 {
-					// Download missing blocks
-					integrity := blockchaindb.IntegrityAndUpdate(ctx, ipfsAPI, ps, blockchain)
-					if !integrity {
-						log.Debugln("Blockchain is not integrity")
-						continue
-					}
-				}
-
-				nextBlockReceive := make(chan *block.Block)
-				for {
-					nextBlock, err := fullnode.ReceiveBlock(ctx, subBlockAnnouncement)
-					if err != nil {
-						log.Debugln("Error waiting for the next block : %s\n", err)
-						continue
-					}
-					nextBlockReceive <- nextBlock
-
-					validate := consensus.ValidateBlock(nextBlock, blockchain.GetLastBlock())
-					if !validate {
-						log.Debugln("Block not validated")
-						continue
-					}
-
-					isVerified, err := blockchain.VerifyBlockchainIntegrity(nextBlock)
-					if err != nil {
-						log.Debugf("error verifying blockchain integrity : %s\n", err)
-						continue
-					}
-
-					if !isVerified {
-						log.Debugln("Blockchain not verified")
-						continue
-					}
-					break
-				}
-				nextBlock := <-nextBlockReceive
-
-				handleNextBlock, err := fullnode.HandleIncomingBlock(ctx, cfg, nodeIpfs, ipfsAPI, nextBlock, blockchain)
-				if err != nil {
-					log.Debugf("error handling incoming block : %s\n", err)
-					continue
-				}
-
-				if !handleNextBlock {
-					log.Debugln("Block not handled")
-				}
-
-			}
-		}
-	}()
-
 	// Service 1 : Receipt of the block from the minor nodes
-	blockReceieved := make(chan *block.Block)
+	blockReceieved := make(chan *block.Block, 15)
 	go func() {
 		for {
 			blockAnnounced, err := fullnode.ReceiveBlock(ctx, subBlockAnnouncement)
@@ -248,13 +126,81 @@ func main() {
 				log.Debugln("Error waiting for the next block : %s\n", err)
 				continue
 			}
+			// If the node is synchronizing with the network
+			// we add the block to the waiting list instead of the buffer
+			if inSync {
+
+				waitingList = append(waitingList, blockAnnounced)
+				continue
+			}
+
 			blockReceieved <- blockAnnounced
 		}
 	}()
 
 	// Service 2: Handle the block received
 	go func() {
+		for {
+			if Synced {
+				// 1. Sort the waiting list by height of the block
+				sortedList := fullnode.SortBlockByHeight(waitingList)
 
+				// 2. Valid, add, publish and verify the blockchain for everyblock in the list
+				for _, blockInList := range sortedList {
+
+					handled, err := fullnode.HandleIncomingBlock(ctx, cfg, nodeIpfs, ipfsAPI, blockInList, blockchain)
+					if err != nil {
+						log.Debugln("Error handling incoming block : %s", err)
+					}
+
+					if !handled {
+						waitingList = []*block.Block{}
+						needSync = true // This will call the process of synchronizing the blockchain with the network
+						Synced = false
+						break
+					}
+					verified, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
+					if err != nil {
+						log.Debugln("Error verifying blockchain integrity : %s", err)
+					}
+
+					if !verified {
+						waitingList = []*block.Block{}
+						needSync = true // This will call the process of synchronizing the blockchain with the network
+						Synced = false
+						break
+					}
+					log.Debugln("Block handle")
+					break
+				}
+				// clear the waiting list
+				log.Debugln("All blocks handled")
+			} else {
+				// Handle incoming block
+				handleBlock, err := fullnode.HandleIncomingBlock(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced, blockchain)
+				if err != nil {
+					log.Debugln("Error handling incoming block : %s\n", err)
+					continue
+				}
+
+				if !handleBlock {
+					log.Debugln("Block not handled")
+					needSync = true // This will call the process of synchronizing the blockchain with the network
+				}
+
+				// As long the blockchain is not sync or is in sync we wait
+				for needSync && inSync {
+					time.Sleep(10 * time.Second)
+					if !needSync && !inSync {
+						break
+					}
+				}
+				verified, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
+				if err != nil {
+					log.Debugln("Error verifying blockchain integrity : %s", err)
+				}
+			}
+		}
 	}()
 
 	// Join the topic to ask for the json file of the blockchain
@@ -281,6 +227,7 @@ func main() {
 		blackListNode := []string{}
 		for needSync {
 			log.Debugln("Syncronizing the blockchain with the network")
+			inSync = true
 
 			//1 . Ask fot the registry of the blockchain
 			registryBytes, sender, err := blockchaindb.AskTheBlockchainRegistry(ctx, askingBlockchainTopic, subReceiveBlockchain)
@@ -337,6 +284,8 @@ func main() {
 			// 5 . Change the state of needSync to false and break the loop
 			needSync = false
 			if !needSync {
+				inSync = false
+				Synced = true
 				break
 			}
 		}
