@@ -22,6 +22,7 @@ import (
 )
 
 var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
+var needSync = false
 
 func main() {
 	log := ipfsLog.Logger("full-node")
@@ -124,6 +125,12 @@ func main() {
 				log.Debugln("Error waiting for the next block : %s\n", err)
 				continue
 			}
+
+			// validty of the block before adding it to the buffer
+			//timestamp +- 1 sec
+			//go rountine
+			// +- 5 sec le timestamp actuel si oui on ajoute le block au buffer
+			// si on recoit un seul block on switch sur la wiating list instead of the conccurence liste
 
 			// Handle incoming block
 			handleBlock, err := fullnode.HandleIncomingBlock(ctx, cfg, nodeIpfs, ipfsAPI, blockAnnounced, blockchain)
@@ -228,6 +235,109 @@ func main() {
 					log.Debugln("Block not handled")
 				}
 
+			}
+		}
+	}()
+
+	// Service 1 : Receipt of the block from the minor nodes
+	blockReceieved := make(chan *block.Block)
+	go func() {
+		for {
+			blockAnnounced, err := fullnode.ReceiveBlock(ctx, subBlockAnnouncement)
+			if err != nil {
+				log.Debugln("Error waiting for the next block : %s\n", err)
+				continue
+			}
+			blockReceieved <- blockAnnounced
+		}
+	}()
+
+	// Service 2: Handle the block received
+	go func() {
+
+	}()
+
+	// Join the topic to ask for the json file of the blockchain
+	askingBlockchainTopic, err := ps.Join(cfg.AskingBlockchainStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join AskingBlockchain topic : %s\n", err)
+	}
+
+	// Join the topic to receive the json file of the blockchain
+	receiveBlockchainTopic, err := ps.Join(cfg.ReceiveBlockchainStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join ReceiveBlockchain topic : %s\n", err)
+	}
+
+	// Subscribe to the topic to receive the json file of the blockchain
+	subReceiveBlockchain, err := receiveBlockchainTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to ReceiveBlockchain topic : %s\n", err)
+	}
+
+	// Service 3 : Syncronize the blockchain with the network
+	go func() {
+		// create a list of blacklisted nodes
+		blackListNode := []string{}
+		for needSync {
+			log.Debugln("Syncronizing the blockchain with the network")
+
+			//1 . Ask fot the registry of the blockchain
+			registryBytes, sender, err := blockchaindb.AskTheBlockchainRegistry(ctx, askingBlockchainTopic, subReceiveBlockchain)
+			if err != nil {
+				log.Debugln("Error asking the blockchain registry : %s\n", err)
+				continue
+			}
+
+			// 1.1 Check if the sender is blacklisted
+			if blockchaindb.NodeBlackListed(blackListNode, sender) {
+				continue
+			}
+
+			// 2 . Verify the integrity of the actual blockchain
+			_, err = blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
+			if err != nil {
+				log.Debugln("Error verifying blockchain integrity : %s\n", err)
+				continue
+			}
+
+			// // 2.1 Verify the integrity of the blockchain with the last block received
+			// verified2, err := blockchain.VerifyBlockchainIntegrity()
+			// if err != nil {
+			// 	log.Debugln("Error verifying blockchain integrity on the last block received: %s\n", err)
+			// 	continue
+			// }
+
+			// 3 . Dowlnoad the missing blocks
+			downloaded, err := blockchaindb.DownloadMissingBlocks(ctx, ipfsAPI, registryBytes, blockchain)
+			if err != nil {
+			}
+
+			// 3.1 if something append we add the sender to the black list
+			if !downloaded {
+				blackListNode = append(blackListNode, sender)
+				continue
+			}
+
+			// 4 . Verify the integrity of the blockchain
+			verified3, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
+			if err != nil {
+				log.Debugln("Error verifying blockchain integrity : %s\n", err)
+			}
+
+			// 4.1 if the blockchain is not verified we add the sender to the black list
+			if !verified3 {
+				blackListNode = append(blackListNode, sender)
+				continue
+			}
+
+			// 4.2 if the blockchain is verified, we clear the black list
+			blackListNode = []string{}
+
+			// 5 . Change the state of needSync to false and break the loop
+			needSync = false
+			if !needSync {
+				break
 			}
 		}
 	}()

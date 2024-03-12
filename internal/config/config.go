@@ -55,6 +55,8 @@ type Config struct {
 	BlockAnnouncementStringFlag        string `yaml:"blockAnnouncementStringFlag"`
 	FullNodeAnnouncementStringFlag     string `yaml:"fullNodeAnnouncementStringFlag"`
 	BlacklistStringFlag                string `yaml:"blacklistStringFlag"`
+	AskingBlockchainStringFlag         string `yaml:"askingBlockchainStringFlag"`
+	ReceiveBlockchainStringFlag        string `yaml:"receiveBlockchainStringFlag"`
 
 	// Embedded IPFS node
 	FileRights               int    `yaml:"fileRights"`
