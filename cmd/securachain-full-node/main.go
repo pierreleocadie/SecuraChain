@@ -9,6 +9,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
@@ -117,7 +118,7 @@ func main() {
 		log.Panicf("Failed to subscribe to block announcement topic : %s\n", err)
 	}
 
-	// Service 1 : Receipt of the block from the minor nodes
+	// Service 1 : Receiption of blocks
 	blockReceieved := make(chan *block.Block, 15)
 	go func() {
 		for {
@@ -221,7 +222,7 @@ func main() {
 		log.Panicf("Failed to subscribe to ReceiveBlockchain topic : %s\n", err)
 	}
 
-	// Service 3 : Syncronize the blockchain with the network
+	// Service 3 : Syncronization
 	go func() {
 		// create a list of blacklisted nodes
 		blackListNode := []string{}
@@ -248,40 +249,72 @@ func main() {
 				continue
 			}
 
-			// // 2.1 Verify the integrity of the blockchain with the last block received
-			// verified2, err := blockchain.VerifyBlockchainIntegrity()
-			// if err != nil {
-			// 	log.Debugln("Error verifying blockchain integrity on the last block received: %s\n", err)
-			// 	continue
-			// }
-
 			// 3 . Dowlnoad the missing blocks
-			downloaded, err := blockchaindb.DownloadMissingBlocks(ctx, ipfsAPI, registryBytes, blockchain)
+			downloaded, listOfMissingBlocks, err := blockchaindb.DownloadMissingBlocks(ctx, ipfsAPI, registryBytes, blockchain)
 			if err != nil {
+				log.Debugln("Error downloading missing blocks : %s\n", err)
 			}
 
-			// 3.1 if something append we add the sender to the black list
 			if !downloaded {
+				log.Debugln("Blocks not downloaded")
 				blackListNode = append(blackListNode, sender)
 				continue
 			}
 
-			// 4 . Verify the integrity of the blockchain
-			verified3, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
-			if err != nil {
-				log.Debugln("Error verifying blockchain integrity : %s\n", err)
+			// 4 . Valid the downloaded blocks
+			for _, b := range listOfMissingBlocks {
+				prevBlock, err := block.DeserializeBlock(b.PrevBlock)
+				if err != nil {
+					log.Debugln("Error deserializing the previous block : %s\n", err)
+				}
+
+				if fullnode.IsGenesisBlock(b) {
+					if !consensus.ValidateBlock(b, nil) {
+						log.Debugln("Genesis block is invalid")
+						blackListNode = append(blackListNode, sender)
+						continue
+					}
+				} else {
+					if !consensus.ValidateBlock(b, prevBlock) {
+						log.Debugln("Block is invalid")
+						blackListNode = append(blackListNode, sender)
+						continue
+					}
+				}
+
+				// 4.1 Add the block to the blockchain
+				added, message := blockchaindb.AddBlockToBlockchain(b, blockchain)
+				if !added {
+					log.Debugln("Block not added to the blockchain : %s\n", message)
+					continue
+				}
+				log.Debugln(message)
+
+				// Send the block to IPFS
+				if err := blockchaindb.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, b); err != nil {
+					log.Debugln("error adding the block to IPFS : %s", err)
+
+				}
+
+				// 4.2  Verify the integrity of the blockchain
+				verified, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
+				if err != nil {
+					log.Debugln("Error verifying blockchain integrity : %s\n", err)
+				}
+
+				if !verified {
+					log.Debugln("Blockchain is not verified")
+					blackListNode = append(blackListNode, sender)
+					continue
+				}
+				break
+
 			}
 
-			// 4.1 if the blockchain is not verified we add the sender to the black list
-			if !verified3 {
-				blackListNode = append(blackListNode, sender)
-				continue
-			}
-
-			// 4.2 if the blockchain is verified, we clear the black list
+			// 5. if the blockchain is verified, we clear the black list
 			blackListNode = []string{}
 
-			// 5 . Change the state of needSync to false and break the loop
+			// 6 . Change the states
 			needSync = false
 			if !needSync {
 				inSync = false

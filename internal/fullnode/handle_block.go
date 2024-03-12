@@ -15,7 +15,7 @@ func HandleIncomingBlock(ctx context.Context, config *config.Config, nodeIpfs *c
 	if IsGenesisBlock(b) {
 		return handleGenesisBlock(ctx, config, nodeIpfs, ipfsApi, b, database)
 	}
-	return handleNormalBlock(ctx, config, nodeIpfs, ipfsApi, b, database)
+	return HandleNormalBlock(ctx, config, nodeIpfs, ipfsApi, b, database)
 }
 
 func handleGenesisBlock(ctx context.Context, config *config.Config, nodeIpfs *core.IpfsNode, ipfsApi icore.CoreAPI, b *block.Block, database *blockchaindb.BlockchainDB) (bool, error) {

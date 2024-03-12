@@ -6,7 +6,7 @@ import (
 
 	icore "github.com/ipfs/kubo/core/coreiface"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
+	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 )
 
 func AskTheBlockchainRegistry(ctx context.Context, askingBlockchain *pubsub.Topic, receiveBlockchain *pubsub.Subscription) ([]byte, string, error) {
@@ -38,12 +38,12 @@ func AskTheBlockchainRegistry(ctx context.Context, askingBlockchain *pubsub.Topi
 
 }
 
-func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, registry []byte, database *BlockchainDB) (bool, error) {
-
+func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, registry []byte, database *BlockchainDB) (bool, []*block.Block, error) {
+	var listOfMissingBlocks []*block.Block
 	// Convert the regustryBytes to blockRegistry
 	registryBlockchain, err := ConvertByteToBlockRegistry(registry)
 	if err != nil {
-		return false, fmt.Errorf("error converting bytes to block registry : %s", err)
+		return false, nil, fmt.Errorf("error converting bytes to block registry : %s", err)
 	}
 
 	for _, block := range registryBlockchain.Blocks {
@@ -56,20 +56,12 @@ func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, registry 
 		// Get the block from IPFS
 		blockIPFS, err := GetBlockFromIPFS(ctx, ipfsAPI, block.Cid)
 		if err != nil {
-			return false, fmt.Errorf("error getting block from IPFS : %s", err)
+			return false, nil, fmt.Errorf("error getting block from IPFS : %s", err)
 		}
 
-		// Valid and add the block to the blockchain
-		processed, err := fullnode.ProcessBlock(blockIPFS, database)
-		if err != nil {
-			return false, fmt.Errorf("error processing block : %s", err)
-		}
-
-		if !processed {
-			return false, fmt.Errorf("block not processed")
-		}
+		listOfMissingBlocks = append(listOfMissingBlocks, blockIPFS)
 	}
-	return true, nil
+	return true, listOfMissingBlocks, nil
 }
 
 func NodeBlackListed(blackListNode []string, sender string) bool {
