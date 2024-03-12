@@ -64,17 +64,6 @@ func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, registry 
 	return true, listOfMissingBlocks, nil
 }
 
-func NodeBlackListed(blackListNode []string, sender string) bool {
-	blacklisted := false
-	for _, node := range blackListNode {
-		if node == sender {
-			blacklisted = true
-			break
-		}
-	}
-	return blacklisted
-}
-
 // func IntegrityAndUpdate(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.PubSub, database *BlockchainDB) bool {
 // 	// create a list of blacklisted nodes
 // 	blackListNode := []string{}
