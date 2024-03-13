@@ -81,7 +81,6 @@ func main() {
 	/*
 	* BLOCKCHAIN DATABASE
 	 */
-
 	blockchain, err := blockchaindb.NewBlockchainDB("blockchain")
 	if err != nil {
 		log.Debugln("Error creating or opening a database : %s\n", err)
