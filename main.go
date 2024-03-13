@@ -15,10 +15,11 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
+	"github.com/multiformats/go-multiaddr"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
-	mdns "github.com/pierreleocadie/SecuraChain/internal/network"
+	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 	poccontext "github.com/pierreleocadie/SecuraChain/poc-context"
 )
@@ -91,10 +92,54 @@ func main() {
 	}
 
 	/*
+	* NETWORK PEER DISCOVERY WITH DHT
+	 */
+	// Convert the bootstrap peers from string to multiaddr
+	bootstrapPeersStrings := []string{
+		"/ip6/2600:3c0e::f03c:94ff:fedc:7aa3/udp/1211/quic-v1/p2p/12D3KooWRP6eb62Rpr5otdTe7Bv1dqjKfDwA5o6FW6MJvQikosud",
+		"/ip4/172.233.49.69/tcp/1211/p2p/12D3KooWRP6eb62Rpr5otdTe7Bv1dqjKfDwA5o6FW6MJvQikosud",
+		"/ip4/172.233.49.69/udp/1211/quic-v1/p2p/12D3KooWRP6eb62Rpr5otdTe7Bv1dqjKfDwA5o6FW6MJvQikosud",
+		"/ip6/2600:3c0e::f03c:94ff:fedc:7aa3/tcp/1211/p2p/12D3KooWRP6eb62Rpr5otdTe7Bv1dqjKfDwA5o6FW6MJvQikosud",
+		"/ip6/2a01:7e00::f03c:94ff:fedc:7ab4/tcp/1211/p2p/12D3KooWBSbQZsA75EA8kuzEu1W6mZQVvKDkQT8rHXFM8uSCkNjn",
+		"/ip6/2a01:7e00::f03c:94ff:fedc:7ab4/udp/1211/quic-v1/p2p/12D3KooWBSbQZsA75EA8kuzEu1W6mZQVvKDkQT8rHXFM8uSCkNjn",
+		"/ip4/212.71.248.78/tcp/1211/p2p/12D3KooWBSbQZsA75EA8kuzEu1W6mZQVvKDkQT8rHXFM8uSCkNjn",
+		"/ip4/212.71.248.78/udp/1211/quic-v1/p2p/12D3KooWBSbQZsA75EA8kuzEu1W6mZQVvKDkQT8rHXFM8uSCkNjn",
+		"/ip6/2400:8901::f03c:94ff:fedc:7a68/udp/1211/quic-v1/p2p/12D3KooWDLfHjQzNkQJLP4x4Q7Zy3KKTYts2RzeePQJh4VUT33Bz",
+		"/ip4/139.162.22.128/tcp/1211/p2p/12D3KooWDLfHjQzNkQJLP4x4Q7Zy3KKTYts2RzeePQJh4VUT33Bz",
+		"/ip4/139.162.22.128/udp/1211/quic-v1/p2p/12D3KooWDLfHjQzNkQJLP4x4Q7Zy3KKTYts2RzeePQJh4VUT33Bz",
+		"/ip6/2400:8901::f03c:94ff:fedc:7a68/tcp/1211/p2p/12D3KooWDLfHjQzNkQJLP4x4Q7Zy3KKTYts2RzeePQJh4VUT33Bz",
+		"/ip4/45.56.108.38/tcp/1211/p2p/12D3KooWJ3c6zrsXWcsgmvayu7ZrECiZCRSvL29tewyQ4etaENs8",
+		"/ip4/45.56.108.38/udp/1211/quic-v1/p2p/12D3KooWJ3c6zrsXWcsgmvayu7ZrECiZCRSvL29tewyQ4etaENs8",
+		"/ip6/2600:3c03::f03c:94ff:fedc:7a5e/tcp/1211/p2p/12D3KooWJ3c6zrsXWcsgmvayu7ZrECiZCRSvL29tewyQ4etaENs8",
+		"/ip6/2600:3c03::f03c:94ff:fedc:7a5e/udp/1211/quic-v1/p2p/12D3KooWJ3c6zrsXWcsgmvayu7ZrECiZCRSvL29tewyQ4etaENs8",
+	}
+	var bootstrapPeersMultiaddr []multiaddr.Multiaddr
+	for _, peer := range bootstrapPeersStrings {
+		peerMultiaddr, err := multiaddr.NewMultiaddr(peer)
+		if err != nil {
+			log.Println("Error converting bootstrap peer to multiaddr : ", err)
+		}
+		bootstrapPeersMultiaddr = append(bootstrapPeersMultiaddr, peerMultiaddr)
+	}
+
+	// Initialize DHT in server mode
+	dhtDiscovery := netwrk.NewDHTDiscovery(
+		false,
+		"SecuraChainNetwork",
+		bootstrapPeersMultiaddr,
+		10*time.Second,
+	)
+
+	// Run DHT
+	if err := dhtDiscovery.Run(ctx, host); err != nil {
+		log.Fatalf("Failed to run DHT: %s", err)
+	}
+
+	/*
 	* NETWORK PEER DISCOVERY WITH mDNS
 	 */
 	// Initialize mDNS
-	mdnsConfig := mdns.NewMDNSDiscovery(*rendezvousStringFlag)
+	mdnsConfig := netwrk.NewMDNSDiscovery(*rendezvousStringFlag)
 
 	// Run MDNS
 	mdnsConfig.Run(host)
@@ -135,7 +180,7 @@ func main() {
 		}()
 	} else if *networkRoleFlag == "miner" {
 		// Join the NewBlock topic
-		newBlockTopic, err := ps.Join("NewBlock")
+		newBlockTopic, err := ps.Join("BlockAnnouncement")
 		if err != nil {
 			log.Panicf("Failed to join NewBlock topic: %s", err)
 		}
@@ -183,9 +228,10 @@ func main() {
 			}
 		}()
 
+		time.Sleep(1 * time.Minute)
 		blockPool := []*block.Block{}
 		var previousBlock *block.Block = nil
-		currentBlock := block.NewBlock(trxPool, []byte("GenesisBlock"), 1, minerKeyPair)
+		currentBlock := block.NewBlock(trxPool, nil, 1, minerKeyPair)
 		go func() {
 			for {
 				log.Println("MINING A NEW BLOCK")
