@@ -5,9 +5,11 @@ import (
 	"flag"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
+	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
@@ -48,6 +50,50 @@ func main() { //nolint: funlen
 	 */
 	// Setup DHT discovery
 	node.SetupDHTDiscovery(ctx, cfg, host, true)
+
+	/*
+	 * NETWORK PEER DISCOVERY WITH mDNS
+	 */
+	// Initialize mDNS
+	mdnsConfig := netwrk.NewMDNSDiscovery(cfg.RendezvousStringFlag)
+	// Run MDNS
+	if err := mdnsConfig.Run(host); err != nil {
+		log.Fatalf("Failed to run mDNS: %s", err)
+		return
+	}
+
+	/*
+	* PUBSUB
+	 */
+	ps, err := pubsub.NewGossipSub(ctx, host)
+	if err != nil {
+		log.Panicf("Failed to create GossipSub: %s", err)
+	}
+
+	// VisualisationData
+	visualisationDataTopic, err := ps.Join("visualisationData")
+	if err != nil {
+		log.Warnf("Failed to join VisualisationData topic: %s", err)
+	}
+
+	// Subscribe to VisualisationData topic
+	subVisualisationData, err := visualisationDataTopic.Subscribe()
+	if err != nil {
+		log.Warnf("Failed to subscribe to VisualisationData topic: %s", err)
+	}
+
+	// Handle incoming VisualisationData messages
+	go func() {
+		for {
+			msg, err := subVisualisationData.Next(ctx)
+			if err != nil {
+				log.Errorf("Failed to get next message from VisualisationData topic: %s", err)
+				continue
+			}
+			log.Debugf("Received VisualisationData message from %s", msg.GetFrom().String())
+			log.Debugf("VisualisationData: %s", string(msg.Data))
+		}
+	}()
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES

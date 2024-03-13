@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
+	"github.com/pierreleocadie/SecuraChain/internal/visualisation"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
 
@@ -53,6 +55,17 @@ func main() { //nolint: funlen
 	_ = node.SetupDHTDiscovery(ctx, cfg, h, false)
 
 	/*
+	 * NETWORK PEER DISCOVERY WITH mDNS
+	 */
+	// Initialize mDNS
+	mdnsConfig := netwrk.NewMDNSDiscovery(cfg.RendezvousStringFlag)
+	// Run MDNS
+	if err := mdnsConfig.Run(h); err != nil {
+		log.Fatalf("Failed to run mDNS: %s", err)
+		return
+	}
+
+	/*
 	* PUBSUB
 	 */
 	ps, err := pubsub.NewGossipSub(ctx, h)
@@ -60,44 +73,42 @@ func main() { //nolint: funlen
 		log.Panicf("Failed to create GossipSub: %s", err)
 	}
 
-	// KeepRelayConnectionAlive
-	keepRelayConnectionAliveTopic, err := ps.Join("KeepRelayConnectionAlive")
+	// VisualisationData
+	visualisationDataTopic, err := ps.Join("visualisationData")
 	if err != nil {
-		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
+		log.Warnf("Failed to join VisualisationData topic: %s", err)
 	}
 
-	// Subscribe to KeepRelayConnectionAlive topic
-	subKeepRelayConnectionAlive, err := keepRelayConnectionAliveTopic.Subscribe()
-	if err != nil {
-		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
-	}
-
-	// Handle incoming KeepRelayConnectionAlive messages
+	// Handle outgoing VisualisationData messages
 	go func() {
 		for {
-			msg, err := subKeepRelayConnectionAlive.Next(ctx)
-			if err != nil {
-				log.Errorf("Failed to get next message from KeepRelayConnectionAlive topic: %s", err)
-				continue
+			time.Sleep(5 * time.Second)
+			connectedPeers := make([]string, 0, len(h.Network().Peers()))
+			for _, peer := range h.Network().Peers() {
+				connectedPeers = append(connectedPeers, peer.String())
 			}
-			if msg.GetFrom().String() == h.ID().String() {
-				continue
-			}
-			log.Debugf("Received KeepRelayConnectionAlive message from %s", msg.GetFrom().String())
-			log.Debugf("KeepRelayConnectionAlive: %s", string(msg.Data))
-		}
-	}()
 
-	// Handle outgoing KeepRelayConnectionAlive messages
-	go func() {
-		for {
-			time.Sleep(cfg.KeepRelayConnectionAliveInterval)
-			err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(h.ID()))
+			visualisationData := visualisation.VisualisationData{
+				Sender:                   h.ID().String(),
+				ConnectedPeers:           connectedPeers,
+				TopicsList:               ps.GetTopics(),
+				ClientAnnouncement:       []string{},
+				StorageNodeResponse:      []string{},
+				KeepRelayConnectionAlive: []string{},
+			}
+
+			visualisationDataJSON, err := json.Marshal(visualisationData)
 			if err != nil {
-				log.Errorf("Failed to publish KeepRelayConnectionAlive message: %s", err)
+				log.Errorf("Failed to marshal visualisationData: %s", err)
 				continue
 			}
-			log.Debugf("KeepRelayConnectionAlive message sent successfully")
+
+			err = visualisationDataTopic.Publish(ctx, visualisationDataJSON)
+			if err != nil {
+				log.Errorf("Failed to publish visualisationData message: %s", err)
+				continue
+			}
+			log.Debugf("visualisationData message sent successfully")
 		}
 	}()
 
