@@ -195,9 +195,9 @@ func main() {
 						continue
 					}
 
-					prevBlock, err := block.DeserializeBlock(bReceive.PrevBlock)
+					prevBlock, err := blockchain.GetBlock(bReceive.PrevBlock)
 					if err != nil {
-						log.Debugln("Error deserializing the previous block : %s\n", err)
+						log.Debugln("Error getting the previous block : %s\n", err)
 					}
 
 					if !consensus.ValidateBlock(bReceive, prevBlock) {
