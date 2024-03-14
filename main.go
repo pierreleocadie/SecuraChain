@@ -228,7 +228,7 @@ func main() {
 			}
 		}()
 
-		time.Sleep(1 * time.Minute)
+		//time.Sleep(1 * time.Minute)
 		blockPool := []*block.Block{}
 		var previousBlock *block.Block = nil
 		currentBlock := block.NewBlock(trxPool, nil, 1, minerKeyPair)
