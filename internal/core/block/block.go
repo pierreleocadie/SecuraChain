@@ -100,19 +100,23 @@ func (b *Block) Serialize() ([]byte, error) {
 
 	for _, tx := range b.Transactions {
 		var txWrapped transaction.TransactionWrapper
-		data, err := json.Marshal(tx)
-		if err != nil {
-			return nil, err
-		}
 		switch txType := tx.(type) {
-		case *transaction.AddFileTransaction: // Change type assertion to use pointer receiver
+		case *transaction.AddFileTransaction:
+			data, err := json.Marshal(tx)
+			if err != nil {
+				return nil, err
+			}
 			txWrapped = transaction.TransactionWrapper{
-				Type: reflect.TypeOf(tx).Name(),
+				Type: reflect.TypeOf(tx).Elem().Name(),
 				Data: data,
 			}
-		case *transaction.DeleteFileTransaction: // Change type assertion to use pointer receiver
+		case *transaction.DeleteFileTransaction:
+			data, err := json.Marshal(tx)
+			if err != nil {
+				return nil, err
+			}
 			txWrapped = transaction.TransactionWrapper{
-				Type: reflect.TypeOf(tx).Name(),
+				Type: reflect.TypeOf(tx).Elem().Name(),
 				Data: data,
 			}
 		default:
