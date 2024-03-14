@@ -96,22 +96,22 @@ func main() {
 	 */
 	// Convert the bootstrap peers from string to multiaddr
 	bootstrapPeersStrings := []string{
-		"/ip6/2600:3c0e::f03c:94ff:fedc:7aa3/udp/1211/quic-v1/p2p/12D3KooWRP6eb62Rpr5otdTe7Bv1dqjKfDwA5o6FW6MJvQikosud",
-		"/ip4/172.233.49.69/tcp/1211/p2p/12D3KooWRP6eb62Rpr5otdTe7Bv1dqjKfDwA5o6FW6MJvQikosud",
-		"/ip4/172.233.49.69/udp/1211/quic-v1/p2p/12D3KooWRP6eb62Rpr5otdTe7Bv1dqjKfDwA5o6FW6MJvQikosud",
-		"/ip6/2600:3c0e::f03c:94ff:fedc:7aa3/tcp/1211/p2p/12D3KooWRP6eb62Rpr5otdTe7Bv1dqjKfDwA5o6FW6MJvQikosud",
-		"/ip6/2a01:7e00::f03c:94ff:fedc:7ab4/tcp/1211/p2p/12D3KooWBSbQZsA75EA8kuzEu1W6mZQVvKDkQT8rHXFM8uSCkNjn",
-		"/ip6/2a01:7e00::f03c:94ff:fedc:7ab4/udp/1211/quic-v1/p2p/12D3KooWBSbQZsA75EA8kuzEu1W6mZQVvKDkQT8rHXFM8uSCkNjn",
-		"/ip4/212.71.248.78/tcp/1211/p2p/12D3KooWBSbQZsA75EA8kuzEu1W6mZQVvKDkQT8rHXFM8uSCkNjn",
-		"/ip4/212.71.248.78/udp/1211/quic-v1/p2p/12D3KooWBSbQZsA75EA8kuzEu1W6mZQVvKDkQT8rHXFM8uSCkNjn",
-		"/ip6/2400:8901::f03c:94ff:fedc:7a68/udp/1211/quic-v1/p2p/12D3KooWDLfHjQzNkQJLP4x4Q7Zy3KKTYts2RzeePQJh4VUT33Bz",
-		"/ip4/139.162.22.128/tcp/1211/p2p/12D3KooWDLfHjQzNkQJLP4x4Q7Zy3KKTYts2RzeePQJh4VUT33Bz",
-		"/ip4/139.162.22.128/udp/1211/quic-v1/p2p/12D3KooWDLfHjQzNkQJLP4x4Q7Zy3KKTYts2RzeePQJh4VUT33Bz",
-		"/ip6/2400:8901::f03c:94ff:fedc:7a68/tcp/1211/p2p/12D3KooWDLfHjQzNkQJLP4x4Q7Zy3KKTYts2RzeePQJh4VUT33Bz",
-		"/ip4/45.56.108.38/tcp/1211/p2p/12D3KooWJ3c6zrsXWcsgmvayu7ZrECiZCRSvL29tewyQ4etaENs8",
-		"/ip4/45.56.108.38/udp/1211/quic-v1/p2p/12D3KooWJ3c6zrsXWcsgmvayu7ZrECiZCRSvL29tewyQ4etaENs8",
-		"/ip6/2600:3c03::f03c:94ff:fedc:7a5e/tcp/1211/p2p/12D3KooWJ3c6zrsXWcsgmvayu7ZrECiZCRSvL29tewyQ4etaENs8",
-		"/ip6/2600:3c03::f03c:94ff:fedc:7a5e/udp/1211/quic-v1/p2p/12D3KooWJ3c6zrsXWcsgmvayu7ZrECiZCRSvL29tewyQ4etaENs8",
+		"/ip6/2600:3c03::f03c:94ff:fef5:88b5/tcp/1211/p2p/12D3KooWGFYLqaFuKRpYWa7mZ7zwQjdpfoLQW6CeH1GRzZdGvSKo",
+		"/ip6/2600:3c03::f03c:94ff:fef5:88b5/udp/1211/quic-v1/p2p/12D3KooWGFYLqaFuKRpYWa7mZ7zwQjdpfoLQW6CeH1GRzZdGvSKo",
+		"/ip4/198.74.62.104/tcp/1211/p2p/12D3KooWGFYLqaFuKRpYWa7mZ7zwQjdpfoLQW6CeH1GRzZdGvSKo",
+		"/ip4/198.74.62.104/udp/1211/quic-v1/p2p/12D3KooWGFYLqaFuKRpYWa7mZ7zwQjdpfoLQW6CeH1GRzZdGvSKo",
+		"/ip4/139.162.8.73/tcp/1211/p2p/12D3KooWANrHT2QWD8rjGPtzkAZqagihtNXe6bz4k4WhrH1AYioB",
+		"/ip4/139.162.8.73/udp/1211/quic-v1/p2p/12D3KooWANrHT2QWD8rjGPtzkAZqagihtNXe6bz4k4WhrH1AYioB",
+		"/ip6/2400:8901::f03c:94ff:fef5:88e6/tcp/1211/p2p/12D3KooWANrHT2QWD8rjGPtzkAZqagihtNXe6bz4k4WhrH1AYioB",
+		"/ip6/2400:8901::f03c:94ff:fef5:88e6/udp/1211/quic-v1/p2p/12D3KooWANrHT2QWD8rjGPtzkAZqagihtNXe6bz4k4WhrH1AYioB",
+		"/ip6/2600:3c0e::f03c:94ff:fef5:8800/tcp/1211/p2p/12D3KooWRWE8qw5Mx9qpi6v5PV3oqUfpZsgRaBT4Bs3uuX1gyEpc",
+		"/ip6/2600:3c0e::f03c:94ff:fef5:8800/udp/1211/quic-v1/p2p/12D3KooWRWE8qw5Mx9qpi6v5PV3oqUfpZsgRaBT4Bs3uuX1gyEpc",
+		"/ip4/172.233.59.106/tcp/1211/p2p/12D3KooWRWE8qw5Mx9qpi6v5PV3oqUfpZsgRaBT4Bs3uuX1gyEpc",
+		"/ip4/172.233.59.106/udp/1211/quic-v1/p2p/12D3KooWRWE8qw5Mx9qpi6v5PV3oqUfpZsgRaBT4Bs3uuX1gyEpc",
+		"/ip4/178.79.166.146/tcp/1211/p2p/12D3KooWRjuiCy1zdJy4UDNTWfoetVH3QXAt3131ftTSEDVwzTi5",
+		"/ip4/178.79.166.146/udp/1211/quic-v1/p2p/12D3KooWRjuiCy1zdJy4UDNTWfoetVH3QXAt3131ftTSEDVwzTi5",
+		"/ip6/2a01:7e00::f03c:94ff:fef5:880a/tcp/1211/p2p/12D3KooWRjuiCy1zdJy4UDNTWfoetVH3QXAt3131ftTSEDVwzTi5",
+		"/ip6/2a01:7e00::f03c:94ff:fef5:880a/udp/1211/quic-v1/p2p/12D3KooWRjuiCy1zdJy4UDNTWfoetVH3QXAt3131ftTSEDVwzTi5",
 	}
 	var bootstrapPeersMultiaddr []multiaddr.Multiaddr
 	for _, peer := range bootstrapPeersStrings {
@@ -201,6 +201,8 @@ func main() {
 			log.Panicf("Failed to subscribe to NewTransaction topic: %s", err)
 		}
 
+		time.Sleep(2 * time.Minute)
+
 		trxPool := []transaction.Transaction{}
 
 		// Handle NewTransaction events in a separate goroutine
@@ -228,7 +230,6 @@ func main() {
 			}
 		}()
 
-		//time.Sleep(1 * time.Minute)
 		blockPool := []*block.Block{}
 		var previousBlock *block.Block = nil
 		currentBlock := block.NewBlock(trxPool, nil, 1, minerKeyPair)
