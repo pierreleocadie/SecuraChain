@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
@@ -33,6 +34,11 @@ func (t *Verifier) VerifyTransaction(tx Transaction, signature []byte, publicKey
 type Transaction interface {
 	Serialize() ([]byte, error)
 	SpecificData() ([]byte, error)
+}
+
+type TransactionWrapper struct {
+	Type string          `json:"type"`
+	Data json.RawMessage `json:"data"`
 }
 
 // TransactionFactory is the interface for creating transactions
