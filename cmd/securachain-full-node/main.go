@@ -164,19 +164,6 @@ func main() {
 			case <-ctx.Done():
 				return
 			case bReceive := <-blockReceieved:
-				// 1 . Verify if the previous block is stored in the database
-				isPrevBlockStored, err := fullnode.PrevBlockStored(bReceive, blockchain)
-				if err != nil {
-					log.Debugln("error checking if previous block is stored : %s", err)
-				}
-
-				if !isPrevBlockStored {
-					waitingList = append(waitingList, bReceive)
-					treatBlock = false
-					needSync = true // This will call the process of synchronizing the blockchain with the network
-					continue
-				}
-
 				// 2 . Validation of the block
 				if fullnode.IsGenesisBlock(bReceive) {
 					if !consensus.ValidateBlock(bReceive, nil) {
@@ -184,6 +171,19 @@ func main() {
 						continue
 					}
 				} else {
+					// 1 . Verify if the previous block is stored in the database
+					isPrevBlockStored, err := fullnode.PrevBlockStored(bReceive, blockchain)
+					if err != nil {
+						log.Debugln("error checking if previous block is stored : %s", err)
+					}
+
+					if !isPrevBlockStored {
+						waitingList = append(waitingList, bReceive)
+						treatBlock = false
+						needSync = true // This will call the process of synchronizing the blockchain with the network
+						continue
+					}
+
 					prevBlock, err := block.DeserializeBlock(bReceive.PrevBlock)
 					if err != nil {
 						log.Debugln("Error deserializing the previous block : %s\n", err)
