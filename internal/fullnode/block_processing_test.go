@@ -516,7 +516,7 @@ func TestIsGenesisBlock(t *testing.T) {
 	genesisBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
 
 	// Call the IsGenesisBlock function
-	isGenesis := fullnode.IsGenesisBlock(genesisBlock)
+	isGenesis := block.IsGenesisBlock(genesisBlock)
 
 	// Verify that the function returns true
 	if !isGenesis {
@@ -546,7 +546,7 @@ func TestIsNotGenesisBlock(t *testing.T) {
 	secondBlock := block.NewBlock(transactions, key, 2, minerKeyPair)
 
 	// Call the IsGenesisBlock function
-	isGenesis := fullnode.IsGenesisBlock(secondBlock)
+	isGenesis := block.IsGenesisBlock(secondBlock)
 
 	// Verify that the function returns false
 	if isGenesis {

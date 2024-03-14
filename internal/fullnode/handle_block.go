@@ -12,7 +12,7 @@ import (
 )
 
 func HandleIncomingBlock(ctx context.Context, config *config.Config, nodeIpfs *core.IpfsNode, ipfsApi icore.CoreAPI, b *block.Block, database *blockchaindb.BlockchainDB) (bool, error) {
-	if IsGenesisBlock(b) {
+	if block.IsGenesisBlock(b) {
 		return handleGenesisBlock(ctx, config, nodeIpfs, ipfsApi, b, database)
 	}
 	return HandleNormalBlock(ctx, config, nodeIpfs, ipfsApi, b, database)

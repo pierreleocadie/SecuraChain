@@ -13,6 +13,16 @@ func AddBlockToBlockchain(b *block.Block, database *BlockchainDB) (bool, string)
 	// Use the block's signature as a unique key for storage.
 	key := block.ComputeHash(b)
 
+	if block.IsGenesisBlock(b) {
+		err := database.SaveBlock(key, b)
+		if err != nil {
+			// An error occurred while trying to save the block to the database.
+			return false, "Error adding block to the database: " + err.Error()
+		}
+
+		return true, "Block addded succesfully to the blockchain"
+	}
+
 	// Serialize the original block
 	originalBlockBytes, err := b.Serialize()
 	if err != nil {

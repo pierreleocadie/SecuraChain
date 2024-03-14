@@ -14,8 +14,8 @@ func ReceiveBlock(ctx context.Context, subBlockAnnouncement *pubsub.Subscription
 		return nil, fmt.Errorf("error getting block announcement message : %s", err)
 	}
 
-	fmt.Println("Received block announcement message from ", msg.GetFrom().String())
-	fmt.Println("Received block : ", msg.Data)
+	// fmt.Println("Received block announcement message from ", msg.GetFrom().String())
+	// fmt.Println("Received block : ", msg.Data)
 
 	// Deserialize the block announcement
 	blockAnnounced, err := block.DeserializeBlock(msg.Data)

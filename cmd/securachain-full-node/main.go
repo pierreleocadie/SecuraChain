@@ -145,6 +145,13 @@ func main() {
 				continue
 			}
 
+			// Display the block received
+			b, err := blockAnnounced.Serialize()
+			if err != nil {
+				log.Debugln("Error serializing the block : %s\n", err)
+			}
+			log.Debugln(string(b))
+
 			// If the node is synchronizing with the network
 			if needSync {
 				waitingList = append(waitingList, blockAnnounced)
@@ -165,11 +172,13 @@ func main() {
 				return
 			case bReceive := <-blockReceieved:
 				// 2 . Validation of the block
-				if fullnode.IsGenesisBlock(bReceive) {
+				if block.IsGenesisBlock(bReceive) {
+					log.Debugln("Genesis block")
 					if !consensus.ValidateBlock(bReceive, nil) {
 						log.Debugln("Genesis block is invalid")
 						continue
 					}
+					log.Debugln("Genesis block is valid")
 				} else {
 					// 1 . Verify if the previous block is stored in the database
 					isPrevBlockStored, err := fullnode.PrevBlockStored(bReceive, blockchain)
@@ -274,7 +283,7 @@ func main() {
 
 			// 4 . Valid the downloaded blocks
 			for _, b := range listOfMissingBlocks {
-				if fullnode.IsGenesisBlock(b) {
+				if block.IsGenesisBlock(b) {
 					if !consensus.ValidateBlock(b, nil) {
 						log.Debugln("Genesis block is invalid")
 						continue
@@ -350,7 +359,7 @@ func main() {
 				}
 
 				// 3 . Validation of the block
-				if fullnode.IsGenesisBlock(b) {
+				if block.IsGenesisBlock(b) {
 					if !consensus.ValidateBlock(b, nil) {
 						log.Debugln("Genesis block is invalid")
 						break

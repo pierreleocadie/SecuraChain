@@ -9,17 +9,9 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 )
 
-// IsGenesisBlock checks if the block is the genesis block
-func IsGenesisBlock(b *block.Block) bool {
-	if b.PrevBlock == nil && b.Header.Height == 1 {
-		return true
-	}
-	return false
-}
-
 // ProcessBlock validates and adds a block to the blockchain.
 func ProcessBlock(b *block.Block, database *blockchaindb.BlockchainDB) (bool, error) {
-	if IsGenesisBlock(b) {
+	if block.IsGenesisBlock(b) {
 		// Handle the genesis block.
 		if consensus.ValidateBlock(b, nil) {
 			// Block is valid, attempt to add it to the blockchain.

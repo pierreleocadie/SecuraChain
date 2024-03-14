@@ -171,3 +171,11 @@ func (b *Block) SignBlock(privateKey ecdsa.KeyPair) error {
 	b.Header.Signature = signature
 	return nil
 }
+
+// IsGenesisBlock checks if the block is the genesis block
+func IsGenesisBlock(b *Block) bool {
+	if b.PrevBlock == nil && b.Header.Height == 1 {
+		return true
+	}
+	return false
+}
