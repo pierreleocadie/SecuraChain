@@ -153,6 +153,47 @@ func main() {
 		log.Println("Failed to create new PubSub service:", err)
 	}
 
+	// KeepRelayConnectionAlive
+	keepRelayConnectionAliveTopic, err := ps.Join("KeepRelayConnectionAlive")
+	if err != nil {
+		log.Printf("Failed to join KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	// Subscribe to KeepRelayConnectionAlive topic
+	subKeepRelayConnectionAlive, err := keepRelayConnectionAliveTopic.Subscribe()
+	if err != nil {
+		log.Printf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	// Handle incoming KeepRelayConnectionAlive messages
+	go func() {
+		for {
+			msg, err := subKeepRelayConnectionAlive.Next(ctx)
+			if err != nil {
+				log.Printf("Failed to get next message from KeepRelayConnectionAlive topic: %s", err)
+				continue
+			}
+			if msg.GetFrom().String() == host.ID().String() {
+				continue
+			}
+			log.Printf("Received KeepRelayConnectionAlive message from %s", msg.GetFrom().String())
+			log.Printf("KeepRelayConnectionAlive: %s", string(msg.Data))
+		}
+	}()
+
+	// Handle outgoing KeepRelayConnectionAlive messages
+	go func() {
+		for {
+			time.Sleep(15 * time.Second)
+			err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(host.ID()))
+			if err != nil {
+				log.Printf("Failed to publish KeepRelayConnectionAlive message: %s", err)
+				continue
+			}
+			log.Println("KeepRelayConnectionAlive message sent successfully")
+		}
+	}()
+
 	if *networkRoleFlag == "storer" {
 		// Join the NewTransaction topic and generate fake transaction every random time between 5 and 10s
 		newTransactionTopic, err := ps.Join("NewTransaction")
