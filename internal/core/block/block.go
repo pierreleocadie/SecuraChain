@@ -3,6 +3,8 @@ package block
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
@@ -89,17 +91,69 @@ func computeMerkleRootForHashes(hashes [][]byte) []byte {
 
 // Serialize converts the block into a byte slice
 func (b *Block) Serialize() ([]byte, error) {
-	return json.Marshal(b)
+	aux := struct {
+		Header       Header                           `json:"header"`
+		Transactions []transaction.TransactionWrapper `json:"transactions"`
+	}{
+		Header: b.Header,
+	}
+
+	for _, tx := range b.Transactions {
+		var txWrapped transaction.TransactionWrapper
+		data, err := json.Marshal(tx)
+		if err != nil {
+			return nil, err
+		}
+		switch txType := tx.(type) {
+		case *transaction.AddFileTransaction: // Change type assertion to use pointer receiver
+			txWrapped = transaction.TransactionWrapper{
+				Type: reflect.TypeOf(tx).Name(),
+				Data: data,
+			}
+		case *transaction.DeleteFileTransaction: // Change type assertion to use pointer receiver
+			txWrapped = transaction.TransactionWrapper{
+				Type: reflect.TypeOf(tx).Name(),
+				Data: data,
+			}
+		default:
+			return nil, fmt.Errorf("unknown transaction type: %v", txType)
+		}
+		aux.Transactions = append(aux.Transactions, txWrapped)
+	}
+	return json.Marshal(aux)
 }
 
 // DeserializeBlock converts a byte slice back into a Block
 func DeserializeBlock(data []byte) (*Block, error) {
-	var block Block
-	err := json.Unmarshal(data, &block)
-	if err != nil {
+	var aux struct {
+		Header       Header                           `json:"header"`
+		Transactions []transaction.TransactionWrapper `json:"transactions"`
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
 		return nil, err
 	}
-	return &block, nil
+
+	block := &Block{
+		Header: aux.Header,
+	}
+
+	for _, wrappedTrx := range aux.Transactions {
+		var tx transaction.Transaction
+		switch wrappedTrx.Type {
+		case "AddFileTransaction":
+			tx = &transaction.AddFileTransaction{}
+		case "DeleteFileTransaction":
+			tx = &transaction.DeleteFileTransaction{}
+		default:
+			return nil, fmt.Errorf("unknown transaction type: %v", wrappedTrx.Type)
+		}
+		if err := json.Unmarshal(wrappedTrx.Data, &tx); err != nil {
+			return nil, err
+		}
+		block.Transactions = append(block.Transactions, tx)
+	}
+	return block, nil
 }
 
 // SignBlock signs the block with the given private key and adds the signature to the block header
