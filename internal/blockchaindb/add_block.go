@@ -1,7 +1,6 @@
 package blockchaindb
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
@@ -23,26 +22,13 @@ func AddBlockToBlockchain(b *block.Block, database *BlockchainDB) (bool, string)
 		return true, "Block addded succesfully to the blockchain"
 	}
 
-	// Serialize the original block
-	originalBlockBytes, err := b.Serialize()
-	if err != nil {
-		return false, fmt.Sprintf("Error serializing the original block: %v", err)
-	}
-
 	// Attempt to retrieve the block by its signature to check for its existence in the database.
 	retrievedBlock, err := database.GetBlock(key)
 	if err != nil {
 		return false, fmt.Sprintf("Error checking for the block existence in the database or Block already exists in the blockchain: %s", err)
 	}
 
-	// Serialize the retrieved block
-	retrievedBlockBytes, err := retrievedBlock.Serialize()
-	if err != nil {
-		return false, "Error serializing the retrieved block: " + err.Error()
-	}
-
-	// Compare the original block with the retrieved block
-	if bytes.Equal(originalBlockBytes, retrievedBlockBytes) {
+	if retrievedBlock != nil {
 		return false, "Block already exists in the blockchain"
 	}
 
