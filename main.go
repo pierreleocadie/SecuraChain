@@ -8,11 +8,15 @@ import (
 	"os"
 	"time"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/p2p/host/autorelay"
+	"github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/multiformats/go-multiaddr"
@@ -36,6 +40,12 @@ var (
 )
 
 func main() {
+	logg := ipfsLog.Logger("test-node")
+	err := ipfsLog.SetLogLevel("test-node", "DEBUG")
+	if err != nil {
+		log.Println("Error setting log level : ", err)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -56,26 +66,47 @@ func main() {
 	/*
 	* NODE INITIALIZATION
 	 */
-	host, err := libp2p.New(
+	var h host.Host
+	hostReady := make(chan struct{})
+	hostGetter := func() host.Host {
+		<-hostReady // closed when we finish setting up the host
+		return h
+	}
+
+	h, err = libp2p.New(
 		libp2p.UserAgent("SecuraChain"),
 		libp2p.ProtocolVersion("0.0.1"),
+		libp2p.AddrsFactory(netwrk.FilterOutPrivateAddrs), // Comment this line to build bootstrap node
+		libp2p.EnableNATService(),
+		libp2p.EnableHolePunching(),
 		libp2p.ListenAddrStrings(ip4tcp, ip6tcp, ip4quic, ip6quic),
 		libp2p.Transport(tcp.NewTCPTransport),
 		libp2p.Transport(libp2pquic.NewTransport),
 		libp2p.RandomIdentity,
 		libp2p.DefaultSecurity,
 		libp2p.DefaultMuxers,
+		libp2p.DefaultEnableRelay,
+		libp2p.EnableRelayService(),
+		libp2p.EnableAutoRelayWithPeerSource(
+			netwrk.NewPeerSource(logg, hostGetter),
+			autorelay.WithBackoff(10*time.Second),
+			autorelay.WithMinInterval(10*time.Second),
+			autorelay.WithNumRelays(1),
+			autorelay.WithMinCandidates(1),
+		),
 	)
 	if err != nil {
 		panic(err)
 	}
-	defer host.Close()
-	log.Printf("Our node ID : %s\n", host.ID())
+	defer h.Close()
+	log.Printf("Our node ID : %s\n", h.ID())
+
+	close(hostReady)
 
 	// Node info
 	hostInfo := peer.AddrInfo{
-		ID:    host.ID(),
-		Addrs: host.Addrs(),
+		ID:    h.ID(),
+		Addrs: h.Addrs(),
 	}
 
 	addrs, err := peer.AddrInfoToP2pAddrs(&hostInfo)
@@ -87,8 +118,59 @@ func main() {
 		log.Println("Node address:", addr)
 	}
 
-	for _, addr := range host.Addrs() {
+	for _, addr := range h.Addrs() {
 		log.Println("Listening on address:", addr)
+	}
+
+	/*
+	* RELAY SERVICE
+	 */
+	// Check if the node is behind NAT
+	behindNAT := netwrk.NATDiscovery(logg)
+
+	// If the node is behind NAT, search for a node that supports relay
+	// TODO: Optimize this code
+	if !behindNAT {
+		log.Println("Node is not behind NAT")
+		// Start the relay service
+		_, err = relay.New(h,
+			relay.WithResources(relay.Resources{
+				Limit: &relay.RelayLimit{
+					// Duration is the time limit before resetting a relayed connection; defaults to 2min.
+					Duration: 1 * time.Hour,
+					// Data is the limit of data relayed (on each direction) before resetting the connection.
+					// Defaults to 128KB
+					// Data: 1 << 30, // 1 GB
+					Data: 1 << 30,
+				},
+				// Default values
+				// ReservationTTL is the duration of a new (or refreshed reservation).
+				// Defaults to 1hr.
+				ReservationTTL: 1 * time.Hour,
+				// MaxReservations is the maximum number of active relay slots; defaults to 128.
+				MaxReservations: 128,
+				// MaxCircuits is the maximum number of open relay connections for each peer; defaults to 16.
+				MaxCircuits: 16,
+				// BufferSize is the size of the relayed connection buffers; defaults to 2048.
+				BufferSize: 2048,
+
+				// MaxReservationsPerPeer is the maximum number of reservations originating from the same
+				// peer; default is 4.
+				MaxReservationsPerPeer: 4,
+				// MaxReservationsPerIP is the maximum number of reservations originating from the same
+				// IP address; default is 8.
+				MaxReservationsPerIP: 8,
+				// MaxReservationsPerASN is the maximum number of reservations origination from the same
+				// ASN; default is 32
+				MaxReservationsPerASN: 32,
+			}),
+		)
+		if err != nil {
+			log.Println("Error instantiating relay service : ", err)
+		}
+		log.Println("Relay service started")
+	} else {
+		log.Println("Node is behind NAT")
 	}
 
 	/*
@@ -143,7 +225,7 @@ func main() {
 	)
 
 	// Run DHT
-	if err := dhtDiscovery.Run(ctx, host); err != nil {
+	if err := dhtDiscovery.Run(ctx, h); err != nil {
 		log.Fatalf("Failed to run DHT: %s", err)
 	}
 
@@ -154,13 +236,13 @@ func main() {
 	mdnsConfig := netwrk.NewMDNSDiscovery(*rendezvousStringFlag)
 
 	// Run MDNS
-	mdnsConfig.Run(host)
+	mdnsConfig.Run(h)
 
 	/*
 	* PUBLISH AND SUBSCRIBE TO TOPICS
 	 */
 	// Create a new PubSub service using the GossipSub router
-	ps, err := pubsub.NewGossipSub(ctx, host)
+	ps, err := pubsub.NewGossipSub(ctx, h)
 	if err != nil {
 		log.Println("Failed to create new PubSub service:", err)
 	}
@@ -185,7 +267,7 @@ func main() {
 				log.Printf("Failed to get next message from KeepRelayConnectionAlive topic: %s", err)
 				continue
 			}
-			if msg.GetFrom().String() == host.ID().String() {
+			if msg.GetFrom().String() == h.ID().String() {
 				continue
 			}
 			log.Printf("Received KeepRelayConnectionAlive message from %s", msg.GetFrom().String())
@@ -197,7 +279,7 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(15 * time.Second)
-			err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(host.ID()))
+			err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(h.ID()))
 			if err != nil {
 				log.Printf("Failed to publish KeepRelayConnectionAlive message: %s", err)
 				continue
@@ -254,7 +336,8 @@ func main() {
 			log.Panicf("Failed to subscribe to NewTransaction topic: %s", err)
 		}
 
-		time.Sleep(2 * time.Minute)
+		time.Sleep(1 * time.Minute)
+		time.Sleep(30 * time.Second)
 
 		trxPool := []transaction.Transaction{}
 
@@ -342,7 +425,7 @@ func main() {
 					log.Println("Failed to get next message from NewBlock topic:", err)
 					continue
 				}
-				if msg.ReceivedFrom == host.ID() {
+				if msg.ReceivedFrom == h.ID() {
 					continue
 				}
 				newBlock, err := block.DeserializeBlock(msg.Data)
@@ -364,7 +447,7 @@ func main() {
 	* DISPLAY PEER CONNECTEDNESS CHANGES
 	 */
 	// Subscribe to EvtPeerConnectednessChanged events
-	subNet, err := host.EventBus().Subscribe(new(event.EvtPeerConnectednessChanged))
+	subNet, err := h.EventBus().Subscribe(new(event.EvtPeerConnectednessChanged))
 	if err != nil {
 		log.Println("Failed to subscribe to EvtPeerConnectednessChanged:", err)
 	}
