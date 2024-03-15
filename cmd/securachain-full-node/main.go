@@ -125,6 +125,12 @@ func main() {
 		log.Panicf("Failed to join AskingBlockchain topic : %s\n", err)
 	}
 
+	// Subscribe to the topic to ask for the json file of the blockchain
+	subAskingBlockchain, err := askingBlockchainTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to AskingBlockchain topic : %s\n", err)
+	}
+
 	// Join the topic to receive the json file of the blockchain
 	receiveBlockchainTopic, err := ps.Join(cfg.ReceiveBlockchainStringFlag)
 	if err != nil {
@@ -252,20 +258,29 @@ func main() {
 				continue
 			}
 
+			log.Debugln("Registry received from : ", sender)
+			log.Debugln("Registry received : ", string(registryBytes))
+
 			// 1.1 Check if the sender is blacklisted
 			if slices.Contains(blackListNode, sender) {
 				log.Debugln("Node blacklisted")
 				continue
 			}
 
+			log.Debugln("Node not blacklisted")
+
 			// 1.2 black list the sender
 			blackListNode = append(blackListNode, sender)
+
+			log.Debugln("Node added to the black list")
 
 			// 2 . Dowlnoad the missing blocks
 			downloaded, listOfMissingBlocks, err := blockchaindb.DownloadMissingBlocks(ctx, ipfsAPI, registryBytes, blockchain)
 			if err != nil {
 				log.Debugln("Error downloading missing blocks : %s\n", err)
 			}
+
+			log.Debugln("Blocks downloaded : ", downloaded)
 
 			// just for the logs
 			log.Debugln("------- List of missing blocks -------")
@@ -405,6 +420,43 @@ func main() {
 			}
 			needPostSync = false
 			treatBlock = true
+		}
+	}()
+
+	// Service 5 : Sending registry of the blockchain
+	go func() {
+		for {
+			msg, err := subAskingBlockchain.Next(ctx)
+			if err != nil {
+				log.Debugln("Error getting message from the network : ", err)
+				break
+			}
+
+			if msg.GetFrom().String() == host.ID().String() {
+				continue
+			}
+
+			log.Debugln("Blockchain asked by a peer ", msg.GetFrom().String())
+
+			// Get the registry of the blockchain
+			blockRegistry, err := blockchaindb.ReadBlockDataFromFile(cfg.BlocksRegistryJSON)
+			if err != nil {
+				log.Debugln("Error reading the registry of the blockchain : ", err)
+				continue
+			}
+
+			// Convert the registry to bytes
+			registryBytes, err := blockchaindb.SerializeRegistry(blockRegistry)
+			if err != nil {
+				log.Debugln("Error serializing the registry of the blockchain : ", err)
+				continue
+			}
+
+			// Publish the registry of the blockchain
+			if err = receiveBlockchainTopic.Publish(ctx, registryBytes); err != nil {
+				log.Debugln("Error publishing the registry of the blockchain : ", err)
+				continue
+			}
 		}
 	}()
 

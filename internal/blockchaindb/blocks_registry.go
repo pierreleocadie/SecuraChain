@@ -127,3 +127,7 @@ func ConvertByteToBlockRegistry(data []byte) (BlockRegistry, error) {
 
 	return registry, nil
 }
+
+func SerializeRegistry(registry BlockRegistry) ([]byte, error) {
+	return json.Marshal(registry)
+}
