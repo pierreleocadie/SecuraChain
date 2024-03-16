@@ -40,6 +40,7 @@ func AskTheBlockchainRegistry(ctx context.Context, askingBlockchain *pubsub.Topi
 
 func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, registry []byte, database *BlockchainDB) (bool, []*block.Block, error) {
 	var listOfMissingBlocks []*block.Block
+	dhtAPI := ipfsAPI.Dht()
 	// Convert the regustryBytes to blockRegistry
 	registryBlockchain, err := ConvertByteToBlockRegistry(registry)
 	if err != nil {
@@ -53,6 +54,37 @@ func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, registry 
 			continue // we go to the next block, because the block is already in the blockchain
 		}
 
+		// -------
+		providers, err := dhtAPI.FindProviders(ctx, block.Cid)
+		if err != nil {
+			fmt.Println("error finding providers : ", err)
+			continue
+		}
+	outer:
+		for {
+			providers, err := dhtAPI.FindProviders(ctx, block.Cid)
+			if err != nil {
+				fmt.Println("error finding providers : ", err)
+				continue
+			}
+			for provider := range providers {
+				fmt.Println("found provider : ", provider.ID.String())
+				break outer
+			}
+			fmt.Printf("Channel contains %d providers", len(providers))
+			if len(providers) >= 1 {
+				break
+			}
+		}
+		for provider := range providers {
+			err := ipfsAPI.Swarm().Connect(ctx, provider)
+			if err != nil {
+				fmt.Printf("failed to connect to provider: %s", err)
+				continue
+			}
+		}
+		fmt.Printf("Downloading file %s", block.Cid.String())
+		// 	//--------
 		// Get the block from IPFS
 		blockIPFS, err := GetBlockFromIPFS(ctx, ipfsAPI, block.Cid)
 		if err != nil {
@@ -98,4 +130,15 @@ func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, registry 
 // 		}
 // 	}
 // 	return true
+// }
+
+// func convertStringToPathImmutable(stringCid string) (path.ImmutablePath, error) {
+// 	c, err := cid.Decode(stringCid)
+// 	if err != nil {
+// 		return path.ImmutablePath{}, fmt.Errorf("error decoding the path : %s", err)
+// 	}
+
+// 	pathImmutable := path.FromCid(c)
+
+// 	return pathImmutable, nil
 // }

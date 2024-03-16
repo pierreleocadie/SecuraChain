@@ -11,14 +11,14 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 )
 
-func GetBlockFromIPFS(ctx context.Context, ipfsAPI icore.CoreAPI, cidBlock string) (*block.Block, error) {
+func GetBlockFromIPFS(ctx context.Context, ipfsAPI icore.CoreAPI, cidBlock path.ImmutablePath) (*block.Block, error) {
 
-	cid, err := path.NewPath(cidBlock)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse CID to path: %s", err)
-	}
+	// cid, err := path.NewPath(cidBlock)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("could not parse CID to path: %s", err)
+	// }
 
-	rootNode, err := ipfsAPI.Unixfs().Get(ctx, cid)
+	rootNode, err := ipfsAPI.Unixfs().Get(ctx, cidBlock)
 	if err != nil {
 		return nil, fmt.Errorf("could not get directory with CID: %s", err)
 	}

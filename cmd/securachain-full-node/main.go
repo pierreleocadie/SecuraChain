@@ -280,35 +280,43 @@ func main() {
 				log.Debugln("Error downloading missing blocks : %s\n", err)
 			}
 
-			log.Debugln("Blocks downloaded : ", downloaded)
-
-			// just for the logs
-			log.Debugln("------- List of missing blocks -------")
-
-			for _, b := range listOfMissingBlocks {
-				bBytes, err := b.Serialize()
-				if err != nil {
-					log.Debugln("Error serializing the block : %s\n", err)
-				}
-				log.Debugln("Block : ", string(bBytes))
-			}
-
 			if !downloaded {
 				log.Debugln("Blocks not downloaded")
 				continue
 			}
 
+			log.Debugln("Blocks downloaded : ", downloaded)
+			log.Debugln("List of missing blocks : ", listOfMissingBlocks)
+
+			// // just for the logs
+			// log.Debugln("------- List of missing blocks -------")
+
+			// for _, b := range listOfMissingBlocks {
+			// 	bBytes, err := b.Serialize()
+			// 	if err != nil {
+			// 		log.Debugln("Error serializing the block : %s\n", err)
+			// 	}
+			// 	log.Debugln("Block : ", string(bBytes))
+			// }
+
 			// 4 . Valid the downloaded blocks
 			for _, b := range listOfMissingBlocks {
+				// for the logs
+				bBytes, err := b.Serialize()
+				if err != nil {
+					log.Debugln("Error serializing the block : %s\n", err)
+				}
+				log.Debugln("---------- Processing missing into validation ------------- : ", string(bBytes))
+
 				if block.IsGenesisBlock(b) {
 					if !consensus.ValidateBlock(b, nil) {
 						log.Debugln("Genesis block is invalid")
 						continue
 					}
 				} else {
-					prevBlock, err := block.DeserializeBlock(b.PrevBlock)
+					prevBlock, err := blockchain.GetBlock(b.PrevBlock)
 					if err != nil {
-						log.Debugln("Error deserializing the previous block : %s\n", err)
+						log.Debugln("Error getting the previous block : %s\n", err)
 					}
 					if !consensus.ValidateBlock(b, prevBlock) {
 						log.Debugln("Block is invalid")
@@ -348,6 +356,7 @@ func main() {
 			// 6 . Change the states
 			needSync = false
 			needPostSync = true
+			log.Debugln("Blockchain synchronized with the network")
 		}
 	}()
 
@@ -382,10 +391,11 @@ func main() {
 						break
 					}
 				} else {
-					prevBlock, err := block.DeserializeBlock(b.PrevBlock)
+					prevBlock, err := blockchain.GetBlock(b.PrevBlock)
 					if err != nil {
-						log.Debugln("Error deserializing the previous block : %s\n", err)
+						log.Debugln("Error getting the previous block : %s\n", err)
 					}
+
 					if !consensus.ValidateBlock(b, prevBlock) {
 						log.Debugln("Block is invalid")
 						break

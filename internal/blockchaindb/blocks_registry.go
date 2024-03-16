@@ -13,8 +13,8 @@ import (
 
 // BlockData represents the data associated with a block stored with IPFS.
 type BlockData struct {
-	Key []byte `json:"key"`
-	Cid string `json:"cid"`
+	Key []byte             `json:"key"`
+	Cid path.ImmutablePath `json:"cid"`
 }
 
 // BlockRegistry represents a collection of block records.
@@ -51,7 +51,7 @@ func AddBlockMetadataToRegistry(b *block.Block, config *config.Config, fileCid p
 
 	fileMetadata := BlockData{
 		Key: block.ComputeHash(b),
-		Cid: fileCid.String(),
+		Cid: fileCid,
 	}
 
 	if _, err := os.Stat(config.BlocksRegistryJSON); os.IsNotExist(err) {
@@ -79,30 +79,6 @@ func AddBlockMetadataToRegistry(b *block.Block, config *config.Config, fileCid p
 
 	return nil
 }
-
-// func RemoveFileMetadataFromRegistry(config *config.Config, fileCid path.ImmutablePath) error {
-// 	metadataRegistry, err := ReadBlockDataFromFile(config.BlocksRegistryJSON)
-// 	if err != nil {
-// 		log.Printf("Error loading JSON data %v", err)
-// 		return err
-// 	}
-
-// 	// Find and delete the metadata
-// 	for i, file := range metadataRegistry.Blocks {
-// 		if file.Cid == fileCid.String() {
-// 			metadataRegistry.Blocks = append(metadataRegistry.Blocks[:i], metadataRegistry.Blocks[i+1:]...)
-// 			break
-// 		}
-// 	}
-
-// 	// Save the new metadata
-// 	if err := saveToJSON(config, config.BlocksRegistryJSON, metadataRegistry); err != nil {
-// 		log.Fatalf("Error saving JSON data: %v", err)
-// 		return err
-// 	}
-
-// 	return nil
-// }
 
 func ConvertToBlock(filePath string) (*block.Block, error) {
 	data, err := os.ReadFile(filepath.Clean(filePath))
