@@ -16,6 +16,7 @@ import (
 
 // BlockData represents the data associated with a block stored with IPFS.
 type BlockData struct {
+	ID       uint32        `json:"ID"`
 	Key      []byte        `json:"key"`
 	BlockCid cid.Cid       `json:"cid"`
 	Provider peer.AddrInfo `json:"provider"`
@@ -55,6 +56,7 @@ func AddBlockMetadataToRegistry(b *block.Block, config *config.Config, fileCid p
 
 	fmt.Println("[AddBlockMetadataToRegistry] : ", fileCid)
 	fileMetadata := BlockData{
+		ID:       b.Header.Height,
 		Key:      block.ComputeHash(b),
 		BlockCid: fileCid.RootCid(),
 		Provider: provider,

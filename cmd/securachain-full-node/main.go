@@ -366,6 +366,7 @@ func main() {
 			if !needPostSync {
 				continue
 			}
+			log.Debugln("Post-syncronization of the blockchain with the network")
 
 			// 1. Sort the waiting list by height of the block
 			sortedList := fullnode.SortBlockByHeight(waitingList)
@@ -430,6 +431,7 @@ func main() {
 			}
 			needPostSync = false
 			treatBlock = true
+			log.Debugln("Post-syncronization done")
 		}
 	}()
 
