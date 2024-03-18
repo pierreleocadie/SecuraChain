@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ipfs/boxo/path"
 	icore "github.com/ipfs/kubo/core/coreiface"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
@@ -47,22 +48,23 @@ func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, registry 
 		return false, nil, fmt.Errorf("error converting bytes to block registry : %s", err)
 	}
 
-	for _, block := range registryBlockchain.Blocks {
+	for _, b := range registryBlockchain.Blocks {
 		// Check if the block is already in the blockchain
-		b, err := database.GetBlock(block.Key)
-		if err == nil && b != nil {
+		bBlock, err := database.GetBlock(b.Key)
+		if err == nil && bBlock != nil {
 			continue // we go to the next block, because the block is already in the blockchain
 		}
 
 		// -------
-		providers, err := dhtAPI.FindProviders(ctx, block.Cid)
+		pathBlock := path.FromCid(b.BlockCid)
+		providers, err := dhtAPI.FindProviders(ctx, pathBlock)
 		if err != nil {
 			fmt.Println("error finding providers : ", err)
 			continue
 		}
 	outer:
 		for {
-			providers, err := dhtAPI.FindProviders(ctx, block.Cid)
+			providers, err := dhtAPI.FindProviders(ctx, pathBlock)
 			if err != nil {
 				fmt.Println("error finding providers : ", err)
 				continue
@@ -83,10 +85,10 @@ func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, registry 
 				continue
 			}
 		}
-		fmt.Printf("Downloading file %s", block.Cid.String())
+		fmt.Printf("Downloading file %s", pathBlock.String())
 		// 	//--------
 		// Get the block from IPFS
-		blockIPFS, err := GetBlockFromIPFS(ctx, ipfsAPI, block.Cid)
+		blockIPFS, err := GetBlockFromIPFS(ctx, ipfsAPI, pathBlock)
 		if err != nil {
 			return false, nil, fmt.Errorf("error getting block from IPFS : %s", err)
 		}

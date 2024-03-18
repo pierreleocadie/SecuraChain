@@ -2,19 +2,21 @@ package blockchaindb
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/ipfs/boxo/path"
+	"github.com/ipfs/go-cid"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 )
 
 // BlockData represents the data associated with a block stored with IPFS.
 type BlockData struct {
-	Key []byte             `json:"key"`
-	Cid path.ImmutablePath `json:"cid"`
+	Key      []byte  `json:"key"`
+	BlockCid cid.Cid `json:"cid"`
 }
 
 // BlockRegistry represents a collection of block records.
@@ -49,10 +51,18 @@ func ReadBlockDataFromFile(filePath string) (BlockRegistry, error) {
 func AddBlockMetadataToRegistry(b *block.Block, config *config.Config, fileCid path.ImmutablePath) error {
 	var metadataRegistry = BlockRegistry{}
 
+	fmt.Println("[AddBlockMetadataToRegistry] : ", fileCid)
 	fileMetadata := BlockData{
-		Key: block.ComputeHash(b),
-		Cid: fileCid,
+		Key:      block.ComputeHash(b),
+		BlockCid: fileCid.RootCid(),
 	}
+
+	fmBytes, err := json.Marshal(fileMetadata)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Block metadata : %s\n", string(fmBytes))
 
 	if _, err := os.Stat(config.BlocksRegistryJSON); os.IsNotExist(err) {
 		metadataRegistry.Blocks = append(metadataRegistry.Blocks, fileMetadata)
@@ -64,7 +74,7 @@ func AddBlockMetadataToRegistry(b *block.Block, config *config.Config, fileCid p
 		return nil
 	}
 
-	metadataRegistry, err := ReadBlockDataFromFile(config.BlocksRegistryJSON)
+	metadataRegistry, err = ReadBlockDataFromFile(config.BlocksRegistryJSON)
 	if err != nil {
 		log.Printf("Error loading JSON data %v", err)
 		return err
