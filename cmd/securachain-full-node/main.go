@@ -275,7 +275,7 @@ func main() {
 			log.Debugln("Node added to the black list")
 
 			// 2 . Dowlnoad the missing blocks
-			downloaded, listOfMissingBlocks, err := blockchaindb.DownloadMissingBlocks(ctx, ipfsAPI, registryBytes, blockchain)
+			downloaded, listOfMissingBlocks, err := blockchaindb.DownloadMissingBlocks(log, ctx, ipfsAPI, registryBytes, blockchain)
 			if err != nil {
 				log.Debugln("Error downloading missing blocks : %s\n", err)
 			}

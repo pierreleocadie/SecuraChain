@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ipfs/boxo/path"
+	ipfsLog "github.com/ipfs/go-log/v2"
 	icore "github.com/ipfs/kubo/core/coreiface"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
@@ -39,9 +40,9 @@ func AskTheBlockchainRegistry(ctx context.Context, askingBlockchain *pubsub.Topi
 
 }
 
-func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, registry []byte, database *BlockchainDB) (bool, []*block.Block, error) {
+func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, registry []byte, database *BlockchainDB) (bool, []*block.Block, error) {
 	var listOfMissingBlocks []*block.Block
-	dhtAPI := ipfsAPI.Dht()
+	// dhtAPI := ipfsAPI.Dht()
 	// Convert the regustryBytes to blockRegistry
 	registryBlockchain, err := ConvertByteToBlockRegistry(registry)
 	if err != nil {
@@ -54,44 +55,51 @@ func DownloadMissingBlocks(ctx context.Context, ipfsAPI icore.CoreAPI, registry 
 		if err == nil && bBlock != nil {
 			continue // we go to the next block, because the block is already in the blockchain
 		}
-
+		log.Debugln("Block not found in the blockchain")
 		// -------
 		pathBlock := path.FromCid(b.BlockCid)
-		providers, err := dhtAPI.FindProviders(ctx, pathBlock)
+
+		log.Debugln("Transforing the block CID to path : ", pathBlock.String())
+
+		// 	providers, err := dhtAPI.FindProviders(ctx, pathBlock)
+		// 	if err != nil {
+		// 		log.Errorln("error finding providers : ", err)
+		// 		continue
+		// 	}
+		// 	log.Debugf("findprovs %d\n ", len(providers))
+		// outer:
+		// 	for {
+		// 		providers, err := dhtAPI.FindProviders(ctx, pathBlock)
+		// 		if err != nil {
+		// 			log.Errorln("error finding providers : ", err)
+		// 			continue
+		// 		}
+		// 		for provider := range providers {
+		// 			log.Errorln("found provider : ", provider.ID.String())
+		// 			break outer
+		// 		}
+		// 		log.Debugln("Channel contains %d providers", len(providers))
+		// 		if len(providers) >= 1 {
+		// 			break
+		// 		}
+		// 	}
+		// for provider := range providers {
+		err = ipfsAPI.Swarm().Connect(ctx, b.Provider)
 		if err != nil {
-			fmt.Println("error finding providers : ", err)
+			log.Errorln("failed to connect to provider: %s", err)
 			continue
 		}
-	outer:
-		for {
-			providers, err := dhtAPI.FindProviders(ctx, pathBlock)
-			if err != nil {
-				fmt.Println("error finding providers : ", err)
-				continue
-			}
-			for provider := range providers {
-				fmt.Println("found provider : ", provider.ID.String())
-				break outer
-			}
-			fmt.Printf("Channel contains %d providers", len(providers))
-			if len(providers) >= 1 {
-				break
-			}
-		}
-		for provider := range providers {
-			err := ipfsAPI.Swarm().Connect(ctx, provider)
-			if err != nil {
-				fmt.Printf("failed to connect to provider: %s", err)
-				continue
-			}
-		}
-		fmt.Printf("Downloading file %s", pathBlock.String())
+		log.Debugln("Connected to provider %s", b.Provider.String())
+
+		// }
+		log.Debugln("Downloading file %s", pathBlock.String())
 		// 	//--------
 		// Get the block from IPFS
 		blockIPFS, err := GetBlockFromIPFS(ctx, ipfsAPI, pathBlock)
 		if err != nil {
 			return false, nil, fmt.Errorf("error getting block from IPFS : %s", err)
 		}
+		log.Debugln("Block downloaded from IPFS : ", blockIPFS)
 
 		listOfMissingBlocks = append(listOfMissingBlocks, blockIPFS)
 	}

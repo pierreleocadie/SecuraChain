@@ -30,9 +30,11 @@ func PublishBlockToIPFS(ctx context.Context, config *config.Config, nodeIpfs *co
 	}
 	fmt.Println("block pinned on IPFS : ", pinned)
 
+	nodeId := nodeIpfs.Peerstore.PeerInfo(nodeIpfs.Identity)
+
 	fmt.Println("[PublishBlockTo IPFS] Block added : ", fileImmutablePathCid)
 	// Save the file CID to the blockchain registry
-	if err := AddBlockMetadataToRegistry(b, config, fileImmutablePathCid); err != nil {
+	if err := AddBlockMetadataToRegistry(b, config, fileImmutablePathCid, nodeId); err != nil {
 		fmt.Printf("Error adding the block metadata to the registry : %s\n", err)
 		return err
 	}
