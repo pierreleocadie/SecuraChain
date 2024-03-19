@@ -103,3 +103,12 @@ func DeserializeRegistry(data []byte) (BlockRegistry, error) {
 func SerializeRegistry(registry BlockRegistry) ([]byte, error) {
 	return json.Marshal(registry)
 }
+
+// ConvertToBlock reads the contents of the file at the given file path and converts it into a block.Block object.
+func ConvertToBlock(filePath string) (*block.Block, error) {
+	data, err := os.ReadFile(filepath.Clean(filePath))
+	if err != nil {
+		return nil, err
+	}
+	return block.DeserializeBlock(data)
+}
