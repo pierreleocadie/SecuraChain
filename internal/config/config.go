@@ -52,11 +52,17 @@ type Config struct {
 	ClientAnnouncementStringFlag       string `yaml:"clientAnnouncementStringFlag"`
 	StorageNodeResponseStringFlag      string `yaml:"storageNodeResponseStringFlag"`
 	KeepRelayConnectionAliveStringFlag string `yaml:"keepRelayConnectionAliveStringFlag"`
+	BlockAnnouncementStringFlag        string `yaml:"blockAnnouncementStringFlag"`
+	FullNodeAnnouncementStringFlag     string `yaml:"fullNodeAnnouncementStringFlag"`
+	BlacklistStringFlag                string `yaml:"blacklistStringFlag"`
+	AskingBlockchainStringFlag         string `yaml:"askingBlockchainStringFlag"`
+	ReceiveBlockchainStringFlag        string `yaml:"receiveBlockchainStringFlag"`
 
 	// Embedded IPFS node
 	FileRights               int    `yaml:"fileRights"`
 	FileMetadataRegistryJSON string `yaml:"fileMetadataRegistryJson"`
 	MemorySpace              uint   `yaml:"memorySpace"`
+	RegistryPath             string `yaml:"registryPath"`
 }
 
 // Function to load the yaml config file
