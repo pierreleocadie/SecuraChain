@@ -62,7 +62,7 @@ type Config struct {
 	FileRights               int    `yaml:"fileRights"`
 	FileMetadataRegistryJSON string `yaml:"fileMetadataRegistryJson"`
 	MemorySpace              uint   `yaml:"memorySpace"`
-	BlocksRegistryJSON       string `yaml:"blocksRegistryJson"`
+	RegistryPath             string `yaml:"registryPath"`
 }
 
 // Function to load the yaml config file

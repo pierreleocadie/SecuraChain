@@ -2,13 +2,12 @@ package blockchaindb
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
@@ -27,98 +26,80 @@ type BlockRegistry struct {
 	Blocks []BlockData `json:"blocks"`
 }
 
-// saveToJSON saves the block registry records to a JSON file.
-func saveToJSON(config *config.Config, filePath string, registry BlockRegistry) error {
-	jsonData, err := json.Marshal(registry)
-	if err != nil {
-		return err
-	}
+// AddBlockToRegistry adds a block and the data associated to the registry.
+func AddBlockToRegistry(log *ipfsLog.ZapEventLogger, b *block.Block, config *config.Config, fileCid path.ImmutablePath, provider peer.AddrInfo) error {
+	registry := BlockRegistry{}
 
-	return os.WriteFile(filepath.Clean(filePath), jsonData, os.FileMode(config.FileRights))
-}
-
-func ReadBlockDataFromFile(filePath string) (BlockRegistry, error) {
-	var registry BlockRegistry
-
-	jsonData, err := os.ReadFile(filepath.Clean(filePath))
-	if err != nil {
-		return registry, err
-	}
-
-	if err := json.Unmarshal(jsonData, &registry); err != nil {
-		return registry, err
-	}
-	return registry, err
-}
-
-func AddBlockMetadataToRegistry(b *block.Block, config *config.Config, fileCid path.ImmutablePath, provider peer.AddrInfo) error {
-	var metadataRegistry = BlockRegistry{}
-
-	fmt.Println("[AddBlockMetadataToRegistry] : ", fileCid)
-	fileMetadata := BlockData{
+	newData := BlockData{
 		ID:       b.Header.Height,
 		Key:      block.ComputeHash(b),
 		BlockCid: fileCid.RootCid(),
 		Provider: provider,
 	}
+	log.Debugln("New BlockData : ", newData)
 
-	fmBytes, err := json.Marshal(fileMetadata)
-	if err != nil {
-		return err
-	}
+	if _, err := os.Stat(config.RegistryPath); os.IsNotExist(err) {
+		registry.Blocks = append(registry.Blocks, newData)
 
-	fmt.Printf("Block metadata : %s\n", string(fmBytes))
-
-	if _, err := os.Stat(config.BlocksRegistryJSON); os.IsNotExist(err) {
-		metadataRegistry.Blocks = append(metadataRegistry.Blocks, fileMetadata)
-
-		if err := saveToJSON(config, config.BlocksRegistryJSON, metadataRegistry); err != nil {
-			log.Printf("Error saving JSON data %v", err)
+		if err := saveRegistryToFile(config, config.RegistryPath, registry); err != nil {
+			log.Errorln("Error saving JSON data %v", err)
 			return err
 		}
+
+		log.Debugln("Block registry created successfully")
 		return nil
 	}
 
-	metadataRegistry, err = ReadBlockDataFromFile(config.BlocksRegistryJSON)
+	metadataRegistry, err := loadRegistry(config.RegistryPath)
 	if err != nil {
-		log.Printf("Error loading JSON data %v", err)
+		log.Errorln("Error loading JSON data %v", err)
 		return err
 	}
 
-	metadataRegistry.Blocks = append(metadataRegistry.Blocks, fileMetadata)
+	metadataRegistry.Blocks = append(metadataRegistry.Blocks, newData)
 
-	if err := saveToJSON(config, config.BlocksRegistryJSON, metadataRegistry); err != nil {
-		log.Printf("Error saving JSON data %v", err)
+	if err := saveRegistryToFile(config, config.RegistryPath, metadataRegistry); err != nil {
+		log.Errorln("Error saving JSON data %v", err)
 		return err
 	}
 
+	log.Debugln("Block registry updated successfully")
 	return nil
 }
 
-func ConvertToBlock(filePath string) (*block.Block, error) {
-	data, err := os.ReadFile(filepath.Clean(filePath))
+// saveRegistryToFile saves the block registry records to a JSON file.
+func saveRegistryToFile(config *config.Config, filePath string, registry BlockRegistry) error {
+	data, err := json.Marshal(registry)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	b, err := block.DeserializeBlock(data)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
+	return os.WriteFile(filepath.Clean(filePath), data, os.FileMode(config.FileRights))
 }
 
-func ConvertByteToBlockRegistry(data []byte) (BlockRegistry, error) {
+// loadRegistry loads the block registry from a JSON file.
+func loadRegistry(filePath string) (BlockRegistry, error) {
 	var registry BlockRegistry
+	data, err := os.ReadFile(filepath.Clean(filePath))
+	if err != nil {
+		return registry, err
+	}
 
 	if err := json.Unmarshal(data, &registry); err != nil {
 		return registry, err
 	}
+	return registry, err
+}
 
+// DeserializeRegistry converts a byte slice to a BlockRegistry struct.
+func DeserializeRegistry(data []byte) (BlockRegistry, error) {
+	var registry BlockRegistry
+	if err := json.Unmarshal(data, &registry); err != nil {
+		return registry, err
+	}
 	return registry, nil
 }
 
+// SerializeRegistry serializes the given BlockRegistry into a byte slice using JSON encoding.
 func SerializeRegistry(registry BlockRegistry) ([]byte, error) {
 	return json.Marshal(registry)
 }
