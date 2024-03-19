@@ -11,123 +11,69 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 )
 
-func AskTheBlockchainRegistry(ctx context.Context, askingBlockchain *pubsub.Topic, receiveBlockchain *pubsub.Subscription) ([]byte, string, error) {
-	// Publish a message to ask for the blockchain
-	fmt.Println("Requesting blockchain from the network")
-	if err := askingBlockchain.Publish(ctx, []byte("I need the json file of your blockchain")); err != nil {
+// AskForBlockchainRegistry sends a request for the blockchain registry over the network.
+func AskForBlockchainRegistry(log *ipfsLog.ZapEventLogger, ctx context.Context, askBlockchain *pubsub.Topic, recBlockchain *pubsub.Subscription) ([]byte, string, error) {
+	log.Debugln("Requesting blockchain from the network")
+	if err := askBlockchain.Publish(ctx, []byte("I need to synchronize. Who can help me ?")); err != nil {
 		return nil, "", fmt.Errorf("error publishing blockchain request %s", err)
 	}
 
-	jsonfile := make(chan []byte)
-	sender := make(chan string)
+	registryBytes := make(chan []byte)
+	senderID := make(chan string)
 	go func() {
 		for {
-			msg, err := receiveBlockchain.Next(ctx)
+			msg, err := recBlockchain.Next(ctx)
 			if err != nil {
-				fmt.Println("Error getting message from the network : ", err)
+				log.Errorln("Error receiving message from network: ", err)
 				break
 			}
 			if msg != nil {
-				fmt.Println("Blockchain received from the network")
-				jsonfile <- msg.Data
-				sender <- msg.GetFrom().String()
+				log.Debugln("Blockchain received from the network")
+				registryBytes <- msg.Data
+				senderID <- msg.GetFrom().String()
 				break
 			}
 		}
 	}()
 
-	return <-jsonfile, <-sender, nil
-
+	return <-registryBytes, <-senderID, nil
 }
 
-func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, registry []byte, database *BlockchainDB) (bool, []*block.Block, error) {
-	var listOfMissingBlocks []*block.Block
-	// dhtAPI := ipfsAPI.Dht()
-	// Convert the regustryBytes to blockRegistry
-	registryBlockchain, err := ConvertByteToBlockRegistry(registry)
+// DownloadMissingBlocks attemps to download blocks that are missing in the local blockchain from IPFS.
+func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, registryBytes []byte, db *BlockchainDB) (bool, []*block.Block, error) {
+	var missingBlocks []*block.Block
+
+	registry, err := ConvertByteToBlockRegistry(registryBytes)
 	if err != nil {
 		return false, nil, fmt.Errorf("error converting bytes to block registry : %s", err)
 	}
+	log.Debugln("Registry converted to BlockRegistry : ", registry)
 
-	for _, b := range registryBlockchain.Blocks {
-		// Check if the block is already in the blockchain
-		bBlock, err := database.GetBlock(b.Key)
-		if err == nil && bBlock != nil {
-			continue // we go to the next block, because the block is already in the blockchain
+	for _, blockData := range registry.Blocks {
+		blockk, err := db.GetBlock(blockData.Key)
+		if err == nil && blockk != nil {
+			log.Debugln("Block already present in the blockchain")
+			continue
 		}
-		log.Debugln("Block not found in the blockchain")
 
-		// Transform the block CID to pathImmutable
-		pathBlock := path.FromCid(b.BlockCid)
+		blockPath := path.FromCid(blockData.BlockCid)
+		log.Debugln("Converted block CID to path : ", blockPath.String())
 
-		log.Debugln("Transforing the block CID to path : ", pathBlock.String())
-
-		// Connect to the provider
-		err = ipfsAPI.Swarm().Connect(ctx, b.Provider)
-		if err != nil {
+		if err := ipfsAPI.Swarm().Connect(ctx, blockData.Provider); err != nil {
 			log.Errorln("failed to connect to provider: %s", err)
 			continue
 		}
-		log.Debugln("Connected to provider %s", b.Provider.String())
+		log.Debugln("Connected to provider %s", blockData.Provider.ID)
 
-		log.Debugln("Downloading file %s", pathBlock.String())
-
-		// Get the block from IPFS
-		blockIPFS, err := GetBlockFromIPFS(ctx, ipfsAPI, pathBlock)
+		downloadBlock, err := GetBlockFromIPFS(ctx, ipfsAPI, blockPath)
 		if err != nil {
-			return false, nil, fmt.Errorf("error getting block from IPFS : %s", err)
+			return false, nil, fmt.Errorf("error downloading block from IPFS : %s", err)
 		}
-		log.Debugln("Block downloaded from IPFS : ", blockIPFS)
+		log.Debugln("Block downloaded from IPFS : ", downloadBlock)
 
-		listOfMissingBlocks = append(listOfMissingBlocks, blockIPFS)
-
+		missingBlocks = append(missingBlocks, downloadBlock)
 	}
-	return true, listOfMissingBlocks, nil
+
+	log.Debugln("Number of missing blocks donwnloaded : ", len(missingBlocks))
+	return true, missingBlocks, nil
 }
-
-// func IntegrityAndUpdate(ctx context.Context, ipfsAPI icore.CoreAPI, ps *pubsub.PubSub, database *BlockchainDB) bool {
-// 	// create a list of blacklisted nodes
-// 	blackListNode := []string{}
-
-// 	for {
-// 		lastBlock := database.GetLastBlock()
-// 		if lastBlock == nil {
-// 			fmt.Println("No block in the blockchain")
-// 			return true
-// 		}
-
-// 		integrity, err := database.VerifyBlockchainIntegrity(lastBlock)
-// 		if err != nil {
-// 			return false
-// 		}
-
-// 		if !integrity {
-// 			fmt.Println("Blockchain not verified")
-// 			// Download the missing blocks and verify the blockchain
-// 			updated, sender, err := DownloadMissingBlocks(ctx, ipfsAPI, blackListNode, ps, database)
-// 			if err != nil {
-// 				fmt.Println("Error downloading missing blocks : ", err)
-// 				return false
-// 			}
-// 			if !updated {
-// 				fmt.Println("Error downloading missing blocks and verifying the blockchain")
-// 				blackListNode = append(blackListNode, sender)
-// 				continue
-// 			}
-// 		} else {
-// 			break // the blockchain is verified
-// 		}
-// 	}
-// 	return true
-// }
-
-// func convertStringToPathImmutable(stringCid string) (path.ImmutablePath, error) {
-// 	c, err := cid.Decode(stringCid)
-// 	if err != nil {
-// 		return path.ImmutablePath{}, fmt.Errorf("error decoding the path : %s", err)
-// 	}
-
-// 	pathImmutable := path.FromCid(c)
-
-// 	return pathImmutable, nil
-// }
