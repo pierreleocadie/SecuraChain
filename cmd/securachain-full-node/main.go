@@ -369,11 +369,11 @@ func main() {
 			log.Debugln("Post-syncronization of the blockchain with the network")
 
 			// 1. Sort the waiting list by height of the block
-			sortedList := fullnode.SortBlockByHeight(waitingList)
+			sortedList := fullnode.SortBlockByHeight(log, waitingList)
 
 			for _, b := range sortedList {
 				// 2 . Verify if the previous block is stored in the database
-				isPrevBlockStored, err := fullnode.PrevBlockStored(b, blockchain)
+				isPrevBlockStored, err := fullnode.PrevBlockStored(log, b, blockchain)
 				if err != nil {
 					log.Debugln("Error checking if previous block is stored : %s", err)
 				}
