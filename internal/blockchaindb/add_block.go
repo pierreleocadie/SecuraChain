@@ -12,7 +12,7 @@ func AddBlockToBlockchain(log *ipfsLog.ZapEventLogger, b *block.Block, db *Block
 
 	// Check if the block is the genesis block
 	if block.IsGenesisBlock(b) {
-		err := db.SaveBlock(key, b)
+		err := db.SaveBlock(log, key, b)
 		if err != nil {
 			log.Errorf("Failed to add genesis block to the db: %s\n", err)
 			return false
@@ -22,16 +22,16 @@ func AddBlockToBlockchain(log *ipfsLog.ZapEventLogger, b *block.Block, db *Block
 	}
 
 	// Check if the block already exists in the db
-	retrievedBlock, err := db.GetBlock(key)
+	retrievedBlock, err := db.GetBlock(log, key)
 	if err != nil {
 		log.Errorf("Failed to check for block existence in the db: %s\n", err)
 		return false
 	} else if retrievedBlock != nil {
-		log.Debugln("Block already exists in the blockchain")
+		log.Warnln("Block already exists in the blockchain")
 		return false
 	}
 
-	if err := db.SaveBlock(key, b); err != nil {
+	if err := db.SaveBlock(log, key, b); err != nil {
 		log.Errorf("Failed to add block to the db: %s\n", err)
 		return false
 	}

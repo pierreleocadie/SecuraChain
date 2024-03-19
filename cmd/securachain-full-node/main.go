@@ -82,7 +82,7 @@ func main() {
 	/*
 	* BLOCKCHAIN DATABASE
 	 */
-	blockchain, err := blockchaindb.NewBlockchainDB("blockchain")
+	blockchain, err := blockchaindb.NewBlockchainDB(log, "blockchain")
 	if err != nil {
 		log.Debugln("Error creating or opening a database : %s\n", err)
 	}
@@ -195,7 +195,7 @@ func main() {
 						continue
 					}
 
-					prevBlock, err := blockchain.GetBlock(bReceive.PrevBlock)
+					prevBlock, err := blockchain.GetBlock(log, bReceive.PrevBlock)
 					if err != nil {
 						log.Debugln("Error getting the previous block : %s\n", err)
 					}
@@ -277,7 +277,7 @@ func main() {
 					}
 					log.Debugln("Genesis block is valid")
 				} else {
-					prevBlock, err := blockchain.GetBlock(b.PrevBlock)
+					prevBlock, err := blockchain.GetBlock(log, b.PrevBlock)
 					if err != nil {
 						log.Debugln("Error getting the previous block : %s\n", err)
 					}
@@ -351,7 +351,7 @@ func main() {
 					}
 					log.Debugln("Genesis block is valid")
 				} else {
-					prevBlock, err := blockchain.GetBlock(b.PrevBlock)
+					prevBlock, err := blockchain.GetBlock(log, b.PrevBlock)
 					if err != nil {
 						log.Debugln("Error getting the previous block : %s\n", err)
 					}
@@ -403,7 +403,7 @@ func main() {
 			log.Debugln("Blockchain asked by a peer ", msg.GetFrom().String())
 
 			// Publish the registry of the blockchain
-			if !fullnode.PublishRegistryToNetwork(log, ctx, cfg, receiveBlockchainTopic) {
+			if !fullnode.SendRegistryToNetwork(log, ctx, cfg, receiveBlockchainTopic) {
 				log.Debugln("Error publishing the registry of the blockchain")
 				continue
 			}

@@ -11,8 +11,9 @@ import (
 
 // PrevBlockStored checks if the previous block is stored in the db.
 func PrevBlockStored(log *ipfsLog.ZapEventLogger, b *block.Block, db *blockchaindb.BlockchainDB) (bool, error) {
-	prevBlockStored, err := db.GetBlock(b.PrevBlock)
+	prevBlockStored, err := db.GetBlock(log, b.PrevBlock)
 	if err != nil {
+		log.Errorln("Failed to check for previous block in db: ", err)
 		return false, fmt.Errorf("failed to check for previous block in db: %s", err)
 	}
 

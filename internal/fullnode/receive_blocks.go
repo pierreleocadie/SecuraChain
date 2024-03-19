@@ -13,6 +13,7 @@ import (
 func ReceiveBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, subBlockAnnouncement *pubsub.Subscription) (*block.Block, error) {
 	msg, err := subBlockAnnouncement.Next(ctx)
 	if err != nil {
+		log.Errorln("error getting block announcement message: ", err)
 		return nil, fmt.Errorf("error getting block announcement message: %s", err)
 	}
 
@@ -24,6 +25,7 @@ func ReceiveBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, subBlockAnno
 	// Deserialize the block announcement
 	b, err := block.DeserializeBlock(msg.Data)
 	if err != nil {
+		log.Errorln("error deserializing block announcement: ", err)
 		return nil, fmt.Errorf("error deserializing block announcement: %s", err)
 	}
 	return b, nil

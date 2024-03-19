@@ -14,12 +14,12 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 )
 
-// PublishBlockpublishes a block to IPFS and adds its metadata to the registry.
+// PublishBlock publishes a block to IPFS and adds its metadata to the registry.
 func PublishBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, nodeIpfs *core.IpfsNode, ipfsApi icore.CoreAPI, b *block.Block) bool {
 	// Add the block to IPFS
 	cidFile, err := addBlock(log, ctx, ipfsApi, b)
 	if err != nil {
-		log.Debugln("Error adding the block to IPFS")
+		log.Errorln("Error adding the block to IPFS")
 		return false
 	}
 
@@ -48,6 +48,7 @@ func PublishBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, config *conf
 func addBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, b *block.Block) (path.ImmutablePath, error) {
 	blockBytes, err := b.Serialize()
 	if err != nil {
+		log.Errorln("Error serializing block: ", err)
 		return path.ImmutablePath{}, fmt.Errorf("could not serialize block: %s", err)
 	}
 	log.Debugln("Block serialized")
@@ -55,6 +56,7 @@ func addBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.Co
 	cidFile, err := ipfsAPI.Unixfs().Add(ctx,
 		files.NewBytesFile(blockBytes))
 	if err != nil {
+		log.Errorln("Error adding File: ", err)
 		return path.ImmutablePath{}, fmt.Errorf("could not add File: %s", err)
 	}
 
