@@ -1,43 +1,41 @@
 package blockchaindb
 
 import (
-	"fmt"
-
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 )
 
-// AddBlockToBlockchain adds a block to the blockchain if it is not already present.
-// It returns a boolean indicating whether the block was added, and a message.
-func AddBlockToBlockchain(b *block.Block, database *BlockchainDB) (bool, string) {
-	// Use the block's signature as a unique key for storage.
+// AddBlockToBlockchain adds a block to the blockchain database.
+func AddBlockToBlockchain(log *ipfsLog.ZapEventLogger, b *block.Block, database *BlockchainDB) bool {
+	// Compute the hash of the block to use as a key in the database
 	key := block.ComputeHash(b)
 
+	// Check if the block is the genesis block
 	if block.IsGenesisBlock(b) {
 		err := database.SaveBlock(key, b)
 		if err != nil {
-			// An error occurred while trying to save the block to the database.
-			return false, "Error adding block to the database: " + err.Error()
+			log.Errorf("Failed to add genesis block to the database: %s\n", err)
+			return false
 		}
-
-		return true, "Block addded succesfully to the blockchain"
+		log.Debugln("Genesis block successfully added to the blockchain")
+		return true
 	}
 
-	// Attempt to retrieve the block by its signature to check for its existence in the database.
+	// Check if the block already exists in the database
 	retrievedBlock, err := database.GetBlock(key)
 	if err != nil {
-		return false, fmt.Sprintf("Error checking for the block existence in the database or Block already exists in the blockchain: %s", err)
+		log.Errorf("Failed to check for block existence in the database: %s\n", err)
+		return false
+	} else if retrievedBlock != nil {
+		log.Debugln("Block already exists in the blockchain")
+		return false
 	}
 
-	if retrievedBlock != nil {
-		return false, "Block already exists in the blockchain"
+	if err := database.SaveBlock(key, b); err != nil {
+		log.Errorf("Failed to add block to the database: %s\n", err)
+		return false
 	}
 
-	// If the block is not in the blockchain, add it.
-	err = database.SaveBlock(key, b)
-	if err != nil {
-		// An error occurred while trying to save the block to the database.
-		return false, "Error adding block to the database: " + err.Error()
-	}
-
-	return true, "Block addded succesfully to the blockchain"
+	log.Debugln("Block successfully added to the blockchain")
+	return true
 }

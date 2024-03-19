@@ -189,7 +189,7 @@ func main() {
 					log.Debugln("Genesis block is valid")
 				} else {
 					// 1 . Verify if the previous block is stored in the database
-					isPrevBlockStored, err := fullnode.PrevBlockStored(bReceive, blockchain)
+					isPrevBlockStored, err := fullnode.PrevBlockStored(log, bReceive, blockchain)
 					if err != nil {
 						log.Debugln("error checking if previous block is stored : %s", err)
 					}
@@ -233,7 +233,7 @@ func main() {
 				}
 
 				// Send the block to IPFS
-				if err := blockchaindb.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, bReceive); err != nil {
+				if err := blockchaindb.PublishBlockToIPFS(log, ctx, cfg, nodeIpfs, ipfsAPI, bReceive); err != nil {
 					log.Debugln("error adding the block to IPFS : %s", err)
 				}
 			}
@@ -344,7 +344,7 @@ func main() {
 				}
 
 				// Send the block to IPFS
-				if err := blockchaindb.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, b); err != nil {
+				if err := blockchaindb.PublishBlockToIPFS(log, ctx, cfg, nodeIpfs, ipfsAPI, b); err != nil {
 					log.Debugln("error adding the block to IPFS : %s", err)
 
 				}
@@ -425,7 +425,7 @@ func main() {
 				}
 
 				// Send the block to IPFS
-				if err := blockchaindb.PublishBlockToIPFS(ctx, cfg, nodeIpfs, ipfsAPI, b); err != nil {
+				if err := blockchaindb.PublishBlockToIPFS(log, ctx, cfg, nodeIpfs, ipfsAPI, b); err != nil {
 					log.Debugln("error adding the block to IPFS : %s", err)
 				}
 			}
