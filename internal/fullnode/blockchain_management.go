@@ -9,6 +9,7 @@ import (
 	icore "github.com/ipfs/kubo/core/coreiface"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
+	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 )
@@ -30,7 +31,8 @@ func AskForBlockchainRegistry(log *ipfsLog.ZapEventLogger, ctx context.Context, 
 				break
 			}
 			if msg != nil {
-				log.Debugln("Blockchain received from the network")
+				log.Debugln("Registry received from : ", senderID)
+				log.Debugln("Registry received : ", string(msg.Data))
 				registryBytes <- msg.Data
 				senderID <- msg.GetFrom().String()
 				break
@@ -39,6 +41,26 @@ func AskForBlockchainRegistry(log *ipfsLog.ZapEventLogger, ctx context.Context, 
 	}()
 
 	return <-registryBytes, <-senderID, nil
+}
+
+func PublishRegistryToNetwork(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, network *pubsub.Topic) bool {
+	// Get the registry of the blockchain
+	registry, err := blockchaindb.LoadRegistry(config.RegistryPath)
+	if err != nil {
+		log.Debugln("Error reading the registry of the blockchain : ", err)
+	}
+
+	registryBytes, err := blockchaindb.SerializeRegistry(registry)
+	if err != nil {
+		log.Errorln("Error serializing the registry of the blockchain : ", err)
+		return false
+	}
+	if err := network.Publish(ctx, registryBytes); err != nil {
+		return false
+	}
+
+	log.Debugln("Registry of the blockchain published successfully")
+	return true
 }
 
 // DownloadMissingBlocks attemps to download blocks that are missing in the local blockchain from IPFS.

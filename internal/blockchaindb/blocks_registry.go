@@ -1,7 +1,6 @@
 package blockchaindb
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -9,7 +8,6 @@ import (
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
 	ipfsLog "github.com/ipfs/go-log/v2"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
@@ -113,18 +111,4 @@ func ConvertToBlock(filePath string) (*block.Block, error) {
 		return nil, err
 	}
 	return block.DeserializeBlock(data)
-}
-
-func PublishRegistryToNetwork(log *ipfsLog.ZapEventLogger, ctx context.Context, registry BlockRegistry, network *pubsub.Topic) bool {
-	registryBytes, err := SerializeRegistry(registry)
-	if err != nil {
-		log.Errorln("Error serializing the registry of the blockchain : ", err)
-		return false
-	}
-	if err := network.Publish(ctx, registryBytes); err != nil {
-		return false
-	}
-
-	log.Debugln("Registry of the blockchain published successfully")
-	return true
 }

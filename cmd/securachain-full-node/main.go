@@ -24,10 +24,10 @@ import (
 )
 
 var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
-var needSync = false
-var needPostSync = false
-var treatBlock = true
-var waitingList = []*block.Block{}
+var requiresSync = false
+var requiresPostSync = false
+var blockProcessingEnabled = true
+var pendingBlocks = []*block.Block{}
 
 func main() {
 	log := ipfsLog.Logger("full-node")
@@ -57,7 +57,6 @@ func main() {
 	* IPFS NODE
 	 */
 	ipfsAPI, nodeIpfs := node.InitializeIPFSNode(ctx, cfg, log)
-	// dhtAPI := ipfsAPI.Dht()
 
 	/*
 	* IPFS MEMORY MANAGEMENT
@@ -153,16 +152,9 @@ func main() {
 				continue
 			}
 
-			// Display the block received
-			b, err := blockAnnounced.Serialize()
-			if err != nil {
-				log.Debugln("Error serializing the block : %s\n", err)
-			}
-			log.Debugln(string(b))
-
 			// If the node is synchronizing with the network
-			if needSync {
-				waitingList = append(waitingList, blockAnnounced)
+			if requiresSync {
+				pendingBlocks = append(pendingBlocks, blockAnnounced)
 			} else {
 				blockReceieved <- blockAnnounced
 			}
@@ -172,14 +164,17 @@ func main() {
 	// Service 2: Handle the block received
 	go func() {
 		for {
-			if !treatBlock {
+			if !blockProcessingEnabled {
 				continue
 			}
 			select {
 			case <-ctx.Done():
 				return
 			case bReceive := <-blockReceieved:
-				// 2 . Validation of the block
+				log.Debugln("Normal block processing")
+				log.Debugln("State : block processing enabled ", blockProcessingEnabled)
+
+				// 1 . Validation of the block
 				if block.IsGenesisBlock(bReceive) {
 					log.Debugln("Genesis block")
 					if !consensus.ValidateBlock(bReceive, nil) {
@@ -188,16 +183,15 @@ func main() {
 					}
 					log.Debugln("Genesis block is valid")
 				} else {
-					// 1 . Verify if the previous block is stored in the database
 					isPrevBlockStored, err := fullnode.PrevBlockStored(log, bReceive, blockchain)
 					if err != nil {
 						log.Debugln("error checking if previous block is stored : %s", err)
 					}
 
 					if !isPrevBlockStored {
-						waitingList = append(waitingList, bReceive)
-						treatBlock = false
-						needSync = true // This will call the process of synchronizing the blockchain with the network
+						pendingBlocks = append(pendingBlocks, bReceive)
+						blockProcessingEnabled = false
+						requiresSync = true // This will call the process of synchronizing the blockchain with the network
 						continue
 					}
 
@@ -212,19 +206,20 @@ func main() {
 					}
 				}
 
-				// 3 . Add the block to the blockchain
+				// 2 . Add the block to the blockchain
 				added := blockchaindb.AddBlockToBlockchain(log, bReceive, blockchain)
 				if !added {
 					continue
 				}
 
+				// 3 . Verify the integrity of the blockchain
 				if !blockchain.VerifyIntegrity(log) {
-					treatBlock = false
-					needSync = true // This will call the process of synchronizing the blockchain with the network
+					blockProcessingEnabled = false
+					requiresSync = true // This will call the process of synchronizing the blockchain with the network
 					continue
 				}
 
-				// Send the block to IPFS
+				// 4 . Send the block to IPFS
 				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, bReceive) {
 					log.Debugln("Error publishing the block to IPFS")
 				}
@@ -237,21 +232,18 @@ func main() {
 		// create a list of blacklisted nodes
 		blackListNode := []string{}
 		for {
-			if !needSync {
+			if !requiresSync {
 				continue
 			}
+			log.Debugln("Synchronizing the blockchain with the network")
+			log.Debugln("State : requires sync ", requiresSync)
 
-			log.Debugln("Syncronizing the blockchain with the network")
-
-			//1 . Ask fot the registry of the blockchain
+			//1 . Ask for a registry of the blockchain
 			registryBytes, senderID, err := fullnode.AskForBlockchainRegistry(log, ctx, askingBlockchainTopic, subReceiveBlockchain)
 			if err != nil {
 				log.Debugln("Error asking the blockchain registry : %s\n", err)
 				continue
 			}
-
-			log.Debugln("Registry received from : ", senderID)
-			log.Debugln("Registry received : ", string(registryBytes))
 
 			// 1.1 Check if the sender is blacklisted
 			if slices.Contains(blackListNode, senderID) {
@@ -263,7 +255,6 @@ func main() {
 
 			// 1.2 black list the sender
 			blackListNode = append(blackListNode, senderID)
-
 			log.Debugln("Node added to the black list")
 
 			// 2 . Dowlnoad the missing blocks
@@ -277,34 +268,14 @@ func main() {
 				continue
 			}
 
-			log.Debugln("Blocks downloaded : ", downloaded)
-			log.Debugln("List of missing blocks : ", listOfMissingBlocks)
-
-			// // just for the logs
-			// log.Debugln("------- List of missing blocks -------")
-
-			// for _, b := range listOfMissingBlocks {
-			// 	bBytes, err := b.Serialize()
-			// 	if err != nil {
-			// 		log.Debugln("Error serializing the block : %s\n", err)
-			// 	}
-			// 	log.Debugln("Block : ", string(bBytes))
-			// }
-
-			// 4 . Valid the downloaded blocks
+			// 3 . Valid the downloaded blocks
 			for _, b := range listOfMissingBlocks {
-				// for the logs
-				bBytes, err := b.Serialize()
-				if err != nil {
-					log.Debugln("Error serializing the block : %s\n", err)
-				}
-				log.Debugln("---------- Processing missing into validation ------------- : ", string(bBytes))
-
 				if block.IsGenesisBlock(b) {
 					if !consensus.ValidateBlock(b, nil) {
 						log.Debugln("Genesis block is invalid")
 						continue
 					}
+					log.Debugln("Genesis block is valid")
 				} else {
 					prevBlock, err := blockchain.GetBlock(b.PrevBlock)
 					if err != nil {
@@ -314,31 +285,33 @@ func main() {
 						log.Debugln("Block is invalid")
 						continue
 					}
+					log.Debugln(b.Height, " is valid")
 				}
 
-				// 4.1 Add the block to the blockchain
+				// 4 . Add the block to the blockchain
 				added := blockchaindb.AddBlockToBlockchain(log, b, blockchain)
 				if !added {
 					continue
 				}
 
+				// 5 . Verify the integrity of the blockchain
 				if !blockchain.VerifyIntegrity(log) {
 					log.Debugln("Blockchain is not verified")
 					continue
 				}
 
-				// Send the block to IPFS
+				// 6 . Send the block to IPFS
 				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, b) {
 					log.Debugln("Error publishing the block to IPFS")
 				}
 			}
 
-			// 5. if the blockchain is verified, we clear the black list
+			// 7 . Clear the pending blocks
 			blackListNode = []string{}
 
-			// 6 . Change the states
-			needSync = false
-			needPostSync = true
+			// 8 . Change the state of the node
+			requiresSync = false
+			requiresPostSync = true
 			log.Debugln("Blockchain synchronized with the network")
 		}
 	}()
@@ -346,13 +319,15 @@ func main() {
 	// Service 4 : Post-syncronization
 	go func() {
 		for {
-			if !needPostSync {
+			if !requiresPostSync {
 				continue
 			}
+
 			log.Debugln("Post-syncronization of the blockchain with the network")
+			log.Debugln("State : Post-syncronization ", requiresPostSync)
 
 			// 1. Sort the waiting list by height of the block
-			sortedList := fullnode.SortBlockByHeight(log, waitingList)
+			sortedList := fullnode.SortBlockByHeight(log, pendingBlocks)
 
 			for _, b := range sortedList {
 				// 2 . Verify if the previous block is stored in the database
@@ -362,9 +337,9 @@ func main() {
 				}
 
 				if !isPrevBlockStored {
-					waitingList = []*block.Block{}
-					needPostSync = false
-					needSync = true // This will call the process of synchronizing the blockchain with the network
+					pendingBlocks = []*block.Block{}
+					requiresPostSync = false
+					requiresSync = true // This will call the process of synchronizing the blockchain with the network
 					continue
 				}
 
@@ -374,6 +349,7 @@ func main() {
 						log.Debugln("Genesis block is invalid")
 						break
 					}
+					log.Debugln("Genesis block is valid")
 				} else {
 					prevBlock, err := blockchain.GetBlock(b.PrevBlock)
 					if err != nil {
@@ -384,6 +360,7 @@ func main() {
 						log.Debugln("Block is invalid")
 						break
 					}
+					log.Debugln(b.Height, " is valid")
 				}
 
 				// 4 . Add the block to the blockchain
@@ -393,19 +370,20 @@ func main() {
 				}
 
 				if !blockchain.VerifyIntegrity(log) {
-					waitingList = []*block.Block{}
-					needPostSync = false
-					needSync = true // This will call the process of synchronizing the blockchain with the network
+					pendingBlocks = []*block.Block{}
+					requiresPostSync = false
+					requiresSync = true // This will call the process of synchronizing the blockchain with the network
 					continue
 				}
 
-				// Send the block to IPFS
+				// 5 . Send the block to IPFS
 				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, b) {
 					log.Debugln("Error publishing the block to IPFS")
 				}
 			}
-			needPostSync = false
-			treatBlock = true
+			// 6 . Change the state of the node
+			requiresPostSync = false
+			blockProcessingEnabled = true
 			log.Debugln("Post-syncronization done")
 		}
 	}()
@@ -422,18 +400,10 @@ func main() {
 			if msg.GetFrom().String() == host.ID().String() {
 				continue
 			}
-
 			log.Debugln("Blockchain asked by a peer ", msg.GetFrom().String())
 
-			// Get the registry of the blockchain
-			blockRegistry, err := blockchaindb.LoadRegistry(cfg.RegistryPath)
-			if err != nil {
-				log.Debugln("Error reading the registry of the blockchain : ", err)
-				continue
-			}
-
 			// Publish the registry of the blockchain
-			if !blockchaindb.PublishRegistryToNetwork(log, ctx, blockRegistry, receiveBlockchainTopic) {
+			if !fullnode.PublishRegistryToNetwork(log, ctx, cfg, receiveBlockchainTopic) {
 				log.Debugln("Error publishing the registry of the blockchain")
 				continue
 			}

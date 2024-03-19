@@ -17,7 +17,9 @@ func ReceiveBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, subBlockAnno
 	}
 
 	log.Debugln("Received block announcement message from ", msg.GetFrom().String())
-	log.Debugln("Received block: ", msg.Data)
+
+	// Display the block received
+	log.Debugln("Received block : ", string(msg.Data))
 
 	// Deserialize the block announcement
 	b, err := block.DeserializeBlock(msg.Data)
