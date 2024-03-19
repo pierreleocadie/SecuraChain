@@ -128,7 +128,7 @@ func ConvertToBlock(log *ipfsLog.ZapEventLogger, filePath string) (*block.Block,
 		log.Errorf("Error sanitizing file path %v\n", err)
 		return nil, err
 	}
-	data, err := os.ReadFile(filePath)
+	data, err := os.ReadFile(filePath) //#nosec G304
 	if err != nil {
 		log.Errorf("Error reading file %v\n", err)
 		return nil, err
