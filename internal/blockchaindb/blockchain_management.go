@@ -50,8 +50,7 @@ func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipf
 	log.Debugln("Registry converted to BlockRegistry : ", registry)
 
 	for _, blockData := range registry.Blocks {
-		blockk, err := db.GetBlock(blockData.Key)
-		if err == nil && blockk != nil {
+		if existingBlock, err := db.GetBlock(blockData.Key); err == nil && existingBlock != nil {
 			log.Debugln("Block already present in the blockchain")
 			continue
 		}
