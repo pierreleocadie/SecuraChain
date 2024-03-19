@@ -1,4 +1,4 @@
-package blockchaindb
+package ipfs
 
 import (
 	"context"
@@ -9,23 +9,25 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/ipfs/kubo/core"
 	icore "github.com/ipfs/kubo/core/coreiface"
+	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
-	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 )
 
-// PublishBlockToIPFS publishes a block to IPFS and adds its metadata to the registry.
-func PublishBlockToIPFS(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, nodeIpfs *core.IpfsNode, ipfsApi icore.CoreAPI, b *block.Block) error {
+// PublishBlockpublishes a block to IPFS and adds its metadata to the registry.
+func PublishBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, nodeIpfs *core.IpfsNode, ipfsApi icore.CoreAPI, b *block.Block) bool {
 	// Add the block to IPFS
-	cidFile, err := addBlockToIPFS(log, ctx, ipfsApi, b)
+	cidFile, err := addBlock(log, ctx, ipfsApi, b)
 	if err != nil {
-		return fmt.Errorf("error adding the block to IPFS : %s", err)
+		log.Debugln("Error adding the block to IPFS")
+		return false
 	}
 
 	// Pin the file on IPFS
-	_, err = ipfs.PinFile(ctx, ipfsApi, cidFile)
+	_, err = PinFile(ctx, ipfsApi, cidFile)
 	if err != nil {
-		return fmt.Errorf("error pinning the block to IPFS : %s", err)
+		log.Errorln("Error pinning the block to IPFS")
+		return false
 	}
 	log.Debugln("block pinned on IPFS")
 
@@ -33,16 +35,17 @@ func PublishBlockToIPFS(log *ipfsLog.ZapEventLogger, ctx context.Context, config
 	nodeId := nodeIpfs.Peerstore.PeerInfo(nodeIpfs.Identity)
 
 	// Save the block metadata to the registry
-	if err := AddBlockMetadataToRegistry(b, config, cidFile, nodeId); err != nil {
-		return fmt.Errorf("error adding the block metadata to the registry : %s", err)
+	if err := blockchaindb.AddBlockToRegistry(log, b, config, cidFile, nodeId); err != nil {
+		log.Errorln("Error adding the block metadata to the registry")
+		return false
 	}
 
 	log.Debugln("block metadata added to the registry")
-	return nil
+	return true
 }
 
-// addBlockToIPFS serializes the given block and adds it to IPFS.
-func addBlockToIPFS(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, b *block.Block) (path.ImmutablePath, error) {
+// addBlock serializes the given block and adds it to IPFS.
+func addBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, b *block.Block) (path.ImmutablePath, error) {
 	blockBytes, err := b.Serialize()
 	if err != nil {
 		return path.ImmutablePath{}, fmt.Errorf("could not serialize block: %s", err)

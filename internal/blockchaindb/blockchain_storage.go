@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/cockroachdb/pebble"
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 )
@@ -12,7 +13,7 @@ import (
 type BlockchainStorage interface {
 	SaveBlock(key []byte, b *block.Block) error
 	GetBlock(key []byte) (*block.Block, error)
-	VerifyIntegrity() (bool, error)
+	VerifyIntegrity(log *ipfsLog.ZapEventLogger) (bool, error)
 	GetLastBlock() *block.Block
 	Close() error
 }
@@ -66,26 +67,31 @@ func (pdb *BlockchainDB) GetBlock(key []byte) (*block.Block, error) {
 }
 
 // VerifyIntegrity verifies the integrity of the blockchain stored in the BlockchainDB based on the last block.
-func (pdb *BlockchainDB) VerifyIntegrity() (bool, error) {
+func (pdb *BlockchainDB) VerifyIntegrity(log *ipfsLog.ZapEventLogger) bool {
 
 	for blockKey := pdb.GetLastBlock().PrevBlock; blockKey != nil; {
 		currentBlock, err := pdb.GetBlock(blockKey)
 		if err != nil {
-			return false, fmt.Errorf("error retrieving block: %v", err)
+			log.Errorln("error retrieving block")
+			return false
 		}
 
 		prevBlock, err := pdb.GetBlock(currentBlock.PrevBlock)
 		if err != nil {
-			return false, fmt.Errorf("previous block not found")
+			log.Errorln("previous block not found")
+			return false
 		}
 
 		if !consensus.ValidateBlock(currentBlock, prevBlock) {
-			return false, fmt.Errorf("block validation failed")
+			log.Errorln("block validation failed")
+			return false
 		}
 
 		blockKey = currentBlock.PrevBlock
 	}
-	return true, nil
+
+	log.Debugln("Blockchain integrity verified")
+	return true
 }
 
 // saveLastBlock updates the reference to the last block in the blockchain.

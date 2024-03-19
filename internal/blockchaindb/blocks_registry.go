@@ -1,6 +1,7 @@
 package blockchaindb
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
 	ipfsLog "github.com/ipfs/go-log/v2"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
@@ -50,7 +52,7 @@ func AddBlockToRegistry(log *ipfsLog.ZapEventLogger, b *block.Block, config *con
 		return nil
 	}
 
-	metadataRegistry, err := loadRegistry(config.RegistryPath)
+	metadataRegistry, err := LoadRegistry(config.RegistryPath)
 	if err != nil {
 		log.Errorln("Error loading JSON data %v", err)
 		return err
@@ -76,8 +78,8 @@ func saveRegistryToFile(config *config.Config, filePath string, registry BlockRe
 	return os.WriteFile(filepath.Clean(filePath), data, os.FileMode(config.FileRights))
 }
 
-// loadRegistry loads the block registry from a JSON file.
-func loadRegistry(filePath string) (BlockRegistry, error) {
+// LoadRegistry loads the block registry from a JSON file.
+func LoadRegistry(filePath string) (BlockRegistry, error) {
 	var registry BlockRegistry
 	data, err := os.ReadFile(filepath.Clean(filePath))
 	if err != nil {
@@ -111,4 +113,18 @@ func ConvertToBlock(filePath string) (*block.Block, error) {
 		return nil, err
 	}
 	return block.DeserializeBlock(data)
+}
+
+func PublishRegistryToNetwork(log *ipfsLog.ZapEventLogger, ctx context.Context, registry BlockRegistry, network *pubsub.Topic) bool {
+	registryBytes, err := SerializeRegistry(registry)
+	if err != nil {
+		log.Errorln("Error serializing the registry of the blockchain : ", err)
+		return false
+	}
+	if err := network.Publish(ctx, registryBytes); err != nil {
+		return false
+	}
+
+	log.Debugln("Registry of the blockchain published successfully")
+	return true
 }

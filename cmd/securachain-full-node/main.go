@@ -147,7 +147,7 @@ func main() {
 	blockReceieved := make(chan *block.Block, 15)
 	go func() {
 		for {
-			blockAnnounced, err := fullnode.ReceiveBlock(ctx, subBlockAnnouncement)
+			blockAnnounced, err := fullnode.ReceiveBlock(log, ctx, subBlockAnnouncement)
 			if err != nil {
 				log.Debugln("Error waiting for the next block : %s\n", err)
 				continue
@@ -213,28 +213,20 @@ func main() {
 				}
 
 				// 3 . Add the block to the blockchain
-				added, message := blockchaindb.AddBlockToBlockchain(bReceive, blockchain)
+				added := blockchaindb.AddBlockToBlockchain(log, bReceive, blockchain)
 				if !added {
-					log.Debugln("Block not added to the blockchain : %s\n", message)
 					continue
 				}
-				log.Debugln(message)
 
-				// 4 .  Verify the integrity of the blockchain
-				verified, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
-				if err != nil {
-					log.Debugln("Error verifying blockchain integrity : %s\n", err)
-				}
-
-				if !verified {
+				if !blockchain.VerifyIntegrity(log) {
 					treatBlock = false
 					needSync = true // This will call the process of synchronizing the blockchain with the network
 					continue
 				}
 
 				// Send the block to IPFS
-				if err := blockchaindb.PublishBlockToIPFS(log, ctx, cfg, nodeIpfs, ipfsAPI, bReceive); err != nil {
-					log.Debugln("error adding the block to IPFS : %s", err)
+				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, bReceive) {
+					log.Debugln("Error publishing the block to IPFS")
 				}
 			}
 		}
@@ -252,17 +244,17 @@ func main() {
 			log.Debugln("Syncronizing the blockchain with the network")
 
 			//1 . Ask fot the registry of the blockchain
-			registryBytes, sender, err := blockchaindb.AskTheBlockchainRegistry(ctx, askingBlockchainTopic, subReceiveBlockchain)
+			registryBytes, senderID, err := fullnode.AskForBlockchainRegistry(log, ctx, askingBlockchainTopic, subReceiveBlockchain)
 			if err != nil {
 				log.Debugln("Error asking the blockchain registry : %s\n", err)
 				continue
 			}
 
-			log.Debugln("Registry received from : ", sender)
+			log.Debugln("Registry received from : ", senderID)
 			log.Debugln("Registry received : ", string(registryBytes))
 
 			// 1.1 Check if the sender is blacklisted
-			if slices.Contains(blackListNode, sender) {
+			if slices.Contains(blackListNode, senderID) {
 				log.Debugln("Node blacklisted")
 				continue
 			}
@@ -270,12 +262,12 @@ func main() {
 			log.Debugln("Node not blacklisted")
 
 			// 1.2 black list the sender
-			blackListNode = append(blackListNode, sender)
+			blackListNode = append(blackListNode, senderID)
 
 			log.Debugln("Node added to the black list")
 
 			// 2 . Dowlnoad the missing blocks
-			downloaded, listOfMissingBlocks, err := blockchaindb.DownloadMissingBlocks(log, ctx, ipfsAPI, registryBytes, blockchain)
+			downloaded, listOfMissingBlocks, err := fullnode.DownloadMissingBlocks(log, ctx, ipfsAPI, registryBytes, blockchain)
 			if err != nil {
 				log.Debugln("Error downloading missing blocks : %s\n", err)
 			}
@@ -325,28 +317,19 @@ func main() {
 				}
 
 				// 4.1 Add the block to the blockchain
-				added, message := blockchaindb.AddBlockToBlockchain(b, blockchain)
+				added := blockchaindb.AddBlockToBlockchain(log, b, blockchain)
 				if !added {
-					log.Debugln("Block not added to the blockchain : %s\n", message)
 					continue
 				}
-				log.Debugln(message)
 
-				// 4.2  Verify the integrity of the blockchain
-				verified, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
-				if err != nil {
-					log.Debugln("Error verifying blockchain integrity : %s\n", err)
-				}
-
-				if !verified {
+				if !blockchain.VerifyIntegrity(log) {
 					log.Debugln("Blockchain is not verified")
 					continue
 				}
 
 				// Send the block to IPFS
-				if err := blockchaindb.PublishBlockToIPFS(log, ctx, cfg, nodeIpfs, ipfsAPI, b); err != nil {
-					log.Debugln("error adding the block to IPFS : %s", err)
-
+				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, b) {
+					log.Debugln("Error publishing the block to IPFS")
 				}
 			}
 
@@ -404,20 +387,12 @@ func main() {
 				}
 
 				// 4 . Add the block to the blockchain
-				added, message := blockchaindb.AddBlockToBlockchain(b, blockchain)
+				added := blockchaindb.AddBlockToBlockchain(log, b, blockchain)
 				if !added {
-					log.Debugln("Block not added to the blockchain : %s\n", message)
 					continue
 				}
-				log.Debugln(message)
 
-				// 5 .  Verify the integrity of the blockchain
-				verified, err := blockchain.VerifyBlockchainIntegrity(blockchain.GetLastBlock())
-				if err != nil {
-					log.Debugln("Error verifying blockchain integrity : %s\n", err)
-				}
-
-				if !verified {
+				if !blockchain.VerifyIntegrity(log) {
 					waitingList = []*block.Block{}
 					needPostSync = false
 					needSync = true // This will call the process of synchronizing the blockchain with the network
@@ -425,8 +400,8 @@ func main() {
 				}
 
 				// Send the block to IPFS
-				if err := blockchaindb.PublishBlockToIPFS(log, ctx, cfg, nodeIpfs, ipfsAPI, b); err != nil {
-					log.Debugln("error adding the block to IPFS : %s", err)
+				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, b) {
+					log.Debugln("Error publishing the block to IPFS")
 				}
 			}
 			needPostSync = false
@@ -451,22 +426,15 @@ func main() {
 			log.Debugln("Blockchain asked by a peer ", msg.GetFrom().String())
 
 			// Get the registry of the blockchain
-			blockRegistry, err := blockchaindb.ReadBlockDataFromFile(cfg.BlocksRegistryJSON)
+			blockRegistry, err := blockchaindb.LoadRegistry(cfg.RegistryPath)
 			if err != nil {
 				log.Debugln("Error reading the registry of the blockchain : ", err)
 				continue
 			}
 
-			// Convert the registry to bytes
-			registryBytes, err := blockchaindb.SerializeRegistry(blockRegistry)
-			if err != nil {
-				log.Debugln("Error serializing the registry of the blockchain : ", err)
-				continue
-			}
-
 			// Publish the registry of the blockchain
-			if err = receiveBlockchainTopic.Publish(ctx, registryBytes); err != nil {
-				log.Debugln("Error publishing the registry of the blockchain : ", err)
+			if !blockchaindb.PublishRegistryToNetwork(log, ctx, blockRegistry, receiveBlockchainTopic) {
+				log.Debugln("Error publishing the registry of the blockchain")
 				continue
 			}
 		}

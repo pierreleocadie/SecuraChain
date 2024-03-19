@@ -1,4 +1,4 @@
-package blockchaindb
+package fullnode
 
 import (
 	"context"
@@ -8,7 +8,9 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	icore "github.com/ipfs/kubo/core/coreiface"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 )
 
 // AskForBlockchainRegistry sends a request for the blockchain registry over the network.
@@ -40,10 +42,10 @@ func AskForBlockchainRegistry(log *ipfsLog.ZapEventLogger, ctx context.Context, 
 }
 
 // DownloadMissingBlocks attemps to download blocks that are missing in the local blockchain from IPFS.
-func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, registryBytes []byte, db *BlockchainDB) (bool, []*block.Block, error) {
+func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, registryBytes []byte, db *blockchaindb.BlockchainDB) (bool, []*block.Block, error) {
 	var missingBlocks []*block.Block
 
-	registry, err := ConvertByteToBlockRegistry(registryBytes)
+	registry, err := blockchaindb.DeserializeRegistry(registryBytes)
 	if err != nil {
 		return false, nil, fmt.Errorf("error converting bytes to block registry : %s", err)
 	}
@@ -64,7 +66,7 @@ func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipf
 		}
 		log.Debugln("Connected to provider %s", blockData.Provider.ID)
 
-		downloadBlock, err := GetBlockFromIPFS(ctx, ipfsAPI, blockPath)
+		downloadBlock, err := ipfs.GetBlock(log, ctx, ipfsAPI, blockPath)
 		if err != nil {
 			return false, nil, fmt.Errorf("error downloading block from IPFS : %s", err)
 		}
