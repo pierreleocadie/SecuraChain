@@ -7,6 +7,8 @@ bin/
 *.pem
 /temp
 
+.idea/
+
 ssh-keys/
 hosts.ini
 instance_details.json
@@ -260,7 +262,6 @@ fabric.properties
 
 ### macOS ###
 # General
-.DS_Store
 .AppleDouble
 .LSOverride
 
