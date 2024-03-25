@@ -69,5 +69,6 @@ askingBlockchainStringFlag: "AskingBlockchain"
 receiveBlockchainStringFlag: "ReceiveBlockchain"
 fileRights: 0700
 fileMetadataRegistryJson: "fileMetadataRegistry.json"
-registryPath: "blocksRegistry.json"
+blockRegistryPath: "blocksRegistry.json"
+indexingRegistryPath: "indexingRegistry.json"
 memorySpace: 10 # in GB

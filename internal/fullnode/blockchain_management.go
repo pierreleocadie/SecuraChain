@@ -47,7 +47,7 @@ func AskForBlockchainRegistry(log *ipfsLog.ZapEventLogger, ctx context.Context, 
 // SendRegistryToNetwork sends the registry of the blockchain to the network.
 func SendRegistryToNetwork(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, network *pubsub.Topic) bool {
 	// Get the registry of the blockchain
-	registry, err := blockchaindb.LoadRegistry(log, config.RegistryPath)
+	registry, err := blockchaindb.LoadRegistry(log, config.BlockRegistryPath)
 	if err != nil {
 		log.Errorln("Error loading the registry of the blockchain : ", err)
 		return false

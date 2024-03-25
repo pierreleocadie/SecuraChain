@@ -39,10 +39,10 @@ func AddBlockToRegistry(log *ipfsLog.ZapEventLogger, b *block.Block, config *con
 	}
 	log.Debugln("New BlockData : ", newData)
 
-	if _, err := os.Stat(config.RegistryPath); os.IsNotExist(err) {
+	if _, err := os.Stat(config.BlockRegistryPath); os.IsNotExist(err) {
 		registry.Blocks = append(registry.Blocks, newData)
 
-		if err := saveRegistryToFile(log, config, config.RegistryPath, registry); err != nil {
+		if err := saveRegistryToFile(log, config, config.BlockRegistryPath, registry); err != nil {
 			log.Errorln("Error saving JSON data %v", err)
 			return err
 		}
@@ -51,15 +51,15 @@ func AddBlockToRegistry(log *ipfsLog.ZapEventLogger, b *block.Block, config *con
 		return nil
 	}
 
-	metadataRegistry, err := LoadRegistry(log, config.RegistryPath)
+	blockRegistry, err := LoadRegistry(log, config.BlockRegistryPath)
 	if err != nil {
 		log.Errorln("Error loading JSON data %v", err)
 		return err
 	}
 
-	metadataRegistry.Blocks = append(metadataRegistry.Blocks, newData)
+	blockRegistry.Blocks = append(blockRegistry.Blocks, newData)
 
-	if err := saveRegistryToFile(log, config, config.RegistryPath, metadataRegistry); err != nil {
+	if err := saveRegistryToFile(log, config, config.BlockRegistryPath, blockRegistry); err != nil {
 		log.Errorln("Error saving JSON data %v", err)
 		return err
 	}
