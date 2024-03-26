@@ -29,12 +29,24 @@ type OwnersFiles struct {
 
 // IndexingRegistry represents the registry for indexing files owned by a specific address.
 type IndexingRegistry struct {
-	OwnersFilesData []OwnersFiles
+	IndexingFiles []OwnersFiles
 }
 
 // AddFileToRegistry adds a file and the data associated to the registry.
-func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, clientAnnouncement *transaction.ClientAnnouncement) error {
-	registry := IndexingRegistry{}
+func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, clientAnnouncement *transaction.AddFileTransaction) error {
+	var registry IndexingRegistry
+	var existing bool
+
+	if _, err := os.Stat(config.IndexingRegistryPath); os.IsNotExist(err) {
+		registry = IndexingRegistry{}
+	} else {
+		var err error
+		registry, err = LoadIndexingRegistry(log, config.IndexingRegistryPath)
+		if err != nil {
+			log.Errorln("Error loading JSON data %v", err)
+			return err
+		}
+	}
 
 	newData := FileRegistry{
 		Filename:             clientAnnouncement.Filename,
@@ -45,43 +57,33 @@ func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, clien
 		TransactionTimestamp: clientAnnouncement.AnnouncementTimestamp,
 	}
 
-	ownersData := OwnersFiles{
-		OwnerAddress: clientAnnouncement.OwnerAddress,
-		Files:        []FileRegistry{newData},
-	}
-
-	log.Debugln("New FileRegistry : ", newData)
-
-	if _, err := os.Stat(config.IndexingRegistryPath); os.IsNotExist(err) {
-		registry.OwnersFilesData = append(registry.OwnersFilesData, ownersData)
-
-		if err := saveRegistryToFile(log, config, config.IndexingRegistryPath, registry); err != nil {
-			log.Errorln("Error saving JSON data %v", err)
-			return err
+	for i, ownerData := range registry.IndexingFiles {
+		if string(ownerData.OwnerAddress) == string(clientAnnouncement.OwnerAddress) {
+			registry.IndexingFiles[i].Files = append(ownerData.Files, newData)
+			existing = true
+			log.Debug("Owner exists")
+			break
 		}
-
-		log.Infoln("Block registry created successfully")
-		return nil
 	}
 
-	indexingRegistry, err := LoadIndexingRegistry(log, config.IndexingRegistryPath)
-	if err != nil {
-		log.Errorln("Error loading JSON data %v", err)
-		return err
+	if !existing {
+		ownersData := OwnersFiles{
+			OwnerAddress: clientAnnouncement.OwnerAddress,
+			Files:        []FileRegistry{newData},
+		}
+		registry.IndexingFiles = append(registry.IndexingFiles, ownersData)
 	}
 
-	indexingRegistry.OwnersFilesData = append(indexingRegistry.OwnersFilesData, ownersData)
-
-	if err := saveRegistryToFile(log, config, config.IndexingRegistryPath, indexingRegistry); err != nil {
+	if err := saveRegistryToFile(log, config, config.IndexingRegistryPath, registry); err != nil {
 		log.Errorln("Error saving JSON data %v", err)
 		return err
 	}
 
-	log.Infoln("Block registry updated successfully")
+	log.Infoln("Indexing registry updated/or created successfully")
 	return nil
 }
 
-// saveRegistryToFile saves the block registry records to a JSON file.
+// saveRegistryToFile saves the indexing registry records to a JSON file.
 func saveRegistryToFile(log *ipfsLog.ZapEventLogger, config *config.Config, filePath string, registry IndexingRegistry) error {
 	data, err := SerializeIndexingRegistry(log, registry)
 	if err != nil {

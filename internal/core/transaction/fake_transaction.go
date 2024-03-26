@@ -14,6 +14,16 @@ import (
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
+var sameOwner ecdsa.KeyPair
+
+func init() {
+	var err error
+	sameOwner, err = ecdsa.NewECDSAKeyPair()
+	if err != nil {
+		log.Fatalf("failed to create ECDSA key pair: %s", err)
+	}
+}
+
 func GenFakeAddTransaction() (*AddFileTransaction, error) {
 	// Set up a valid AddFileTransaction
 	nodeECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
@@ -50,6 +60,8 @@ func GenFakeAddTransaction() (*AddFileTransaction, error) {
 	}
 
 	announcement := NewClientAnnouncement(ownerECDSAKeyPair, randomFileCid, encryptedFilename, encryptedExtension, 1234, checksum[:])
+	announcementB, _ := announcement.Serialize()
+	log.Printf("Announcement: %s\n", string(announcementB))
 	time.Sleep(1 * time.Second)
 	addFileTransaction := NewAddFileTransaction(announcement, randomFileCid, false, nodeECDSAKeyPair, randomeNodeID)
 	bd, _ := addFileTransaction.Serialize()
@@ -91,4 +103,47 @@ func genRandomPeerID() (peer.ID, error) {
 	}
 
 	return pid, nil
+}
+
+func GenFakeAddTransactionWithSameOwner() (*AddFileTransaction, error) {
+	// Set up a valid AddFileTransaction
+	nodeECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create ECDSA key pair: %s", err)
+	}
+
+	ownerAesKey, err := aes.NewAESKey()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create AES key: %s", err)
+	}
+
+	randomeNodeID, err := genRandomPeerID()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create peer.ID: %s", err)
+	}
+
+	randomFileCid := merkledag.NodeWithData(unixfs.FilePBData([]byte("fileCID"), uint64(len([]byte("fileCID"))))).Cid() // Random CIDv0
+
+	checksum := sha256.Sum256([]byte("checksum"))
+	encryptedFilename, err := ownerAesKey.EncryptData([]byte("filename"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt filename: %s", err)
+	}
+
+	encryptedExtension, err := ownerAesKey.EncryptData([]byte("extension"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt extension: %s", err)
+	}
+
+	announcement := NewClientAnnouncement(sameOwner, randomFileCid, encryptedFilename, encryptedExtension, 1234, checksum[:])
+	time.Sleep(1 * time.Second)
+	addFileTransaction := NewAddFileTransaction(announcement, randomFileCid, false, nodeECDSAKeyPair, randomeNodeID)
+	bd, _ := addFileTransaction.Serialize()
+	log.Printf("Transaction: %s\n", string(bd))
+
+	// if !ValidateTransaction(addFileTransaction) {
+	// 	return nil, fmt.Errorf("ValidateTransaction failed for a valid AddFileTransaction")
+	// }
+
+	return addFileTransaction, nil
 }
