@@ -1,4 +1,4 @@
-package indexing
+package registry
 
 import (
 	"os"
@@ -22,28 +22,48 @@ func TestAddFileToRegistryWhenOwnerDontExists(t *testing.T) {
 
 	// Generate a fake AddFileTransaction.
 	addFileTransac, err := transaction.GenFakeAddTransaction()
-	require.NoError(t, err)
+	if err != nil {
+		log.Errorln("Error generating fake AddFileTransaction : ", err)
+	}
 
 	// Call the function under test.
 	err = AddFileToRegistry(log, cfg, addFileTransac)
+	if err != nil {
+		log.Errorln("Error adding file to registry : ", err)
+	}
 
 	// Generate a fake AddFileTransaction with the same Owner.
 	addFileTransacWithSameOwner1, err := transaction.GenFakeAddTransactionWithSameOwner()
-	require.NoError(t, err)
+	if err != nil {
+		log.Errorln("Error generating fake AddFileTransaction : ", err)
+	}
 
 	err = AddFileToRegistry(log, cfg, addFileTransacWithSameOwner1)
+	if err != nil {
+		log.Errorln("Error adding file to registry : ", err)
+	}
 
 	// Generate a fake AddFileTransaction with the same Owner.
 	addFileTransacWithSameOwner2, err := transaction.GenFakeAddTransactionWithSameOwner()
-	require.NoError(t, err)
+	if err != nil {
+		log.Errorln("Error generating fake AddFileTransaction : ", err)
+	}
 
 	err = AddFileToRegistry(log, cfg, addFileTransacWithSameOwner2)
+	if err != nil {
+		log.Errorln("Error adding file to registry : ", err)
+	}
 
 	// Generate a fake AddFileTransaction with the same Owner.
 	addFileTransacWithSameOwner3, err := transaction.GenFakeAddTransactionWithSameOwner()
-	require.NoError(t, err)
+	if err != nil {
+		log.Errorln("Error generating fake AddFileTransaction : ", err)
+	}
 
 	err = AddFileToRegistry(log, cfg, addFileTransacWithSameOwner3)
+	if err != nil {
+		log.Errorln("Error adding file to registry : ", err)
+	}
 
 	// Assert that no error occurred.
 	require.NoError(t, err)

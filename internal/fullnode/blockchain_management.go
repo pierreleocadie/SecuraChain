@@ -12,6 +12,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
+	"github.com/pierreleocadie/SecuraChain/internal/registry"
 )
 
 // AskForBlockchainRegistry sends a request for the blockchain registry over the network.
@@ -19,7 +20,7 @@ func AskForBlockchainRegistry(log *ipfsLog.ZapEventLogger, ctx context.Context, 
 	log.Debugln("Requesting blockchain from the network")
 	if err := askBlockchain.Publish(ctx, []byte("I need to synchronize. Who can help me ?")); err != nil {
 		log.Errorln("Error publishing blockchain request : ", err)
-		return nil, "", fmt.Errorf("error publishing blockchain request %s", err)
+		return nil, "", err
 	}
 
 	registryBytes := make(chan []byte)
@@ -44,16 +45,16 @@ func AskForBlockchainRegistry(log *ipfsLog.ZapEventLogger, ctx context.Context, 
 	return <-registryBytes, <-senderID, nil
 }
 
-// SendRegistryToNetwork sends the registry of the blockchain to the network.
-func SendRegistryToNetwork(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, network *pubsub.Topic) bool {
+// SendBlocksRegistryToNetwork sends the registry of the blockchain to the network.
+func SendBlocksRegistryToNetwork(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, network *pubsub.Topic) bool {
 	// Get the registry of the blockchain
-	registry, err := blockchaindb.LoadRegistry(log, config.BlockRegistryPath)
+	r, err := registry.LoadRegistryFile[registry.BlockRegistry](log, config.BlockRegistryPath)
 	if err != nil {
 		log.Errorln("Error loading the registry of the blockchain : ", err)
 		return false
 	}
 
-	registryBytes, err := blockchaindb.SerializeRegistry(log, registry)
+	registryBytes, err := registry.SerializeRegistry(log, r)
 	if err != nil {
 		log.Errorln("Error serializing the registry of the blockchain : ", err)
 		return false
@@ -63,7 +64,7 @@ func SendRegistryToNetwork(log *ipfsLog.ZapEventLogger, ctx context.Context, con
 		return false
 	}
 
-	log.Debugln("Registry of the blockchain published successfully")
+	log.Debugln("Blocks registry sent to the network")
 	return true
 }
 
@@ -71,14 +72,14 @@ func SendRegistryToNetwork(log *ipfsLog.ZapEventLogger, ctx context.Context, con
 func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, registryBytes []byte, db *blockchaindb.BlockchainDB) (bool, []*block.Block, error) {
 	var missingBlocks []*block.Block
 
-	registry, err := blockchaindb.DeserializeRegistry(log, registryBytes)
+	r, err := registry.DeserializeRegistry[registry.BlockRegistry](log, registryBytes)
 	if err != nil {
 		log.Errorln("Error converting bytes to block registry : ", err)
 		return false, nil, fmt.Errorf("error converting bytes to block registry : %s", err)
 	}
-	log.Debugln("Registry converted to BlockRegistry : ", registry)
+	log.Debugln("Registry converted to BlockRegistry : ", r)
 
-	for _, blockData := range registry.Blocks {
+	for _, blockData := range r.Blocks {
 		if existingBlock, err := db.GetBlock(log, blockData.Key); err == nil && existingBlock != nil {
 			log.Errorln("Block already exists in the blockchain : ", blockData.Key)
 			continue

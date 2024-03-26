@@ -9,8 +9,8 @@ import (
 	"github.com/ipfs/boxo/path"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	icore "github.com/ipfs/kubo/core/coreiface"
-	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/registry"
 )
 
 // GetBlock retrieves a block from IPFS using the provided CID.
@@ -28,7 +28,7 @@ func GetBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.Co
 	}
 	log.Debugln("Wrote the block into a file")
 
-	b, err := blockchaindb.ConvertToBlock(log, "block")
+	b, err := registry.ConvertToBlock(log, "block")
 	if err != nil {
 		log.Errorln("Failed to convert the file into a *block.Block: %s ", err)
 		return nil, fmt.Errorf("failed to converted the file into a *block.Block: %v", err)

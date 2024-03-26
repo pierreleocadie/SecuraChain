@@ -14,6 +14,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
+	"github.com/pierreleocadie/SecuraChain/internal/search"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -140,6 +141,24 @@ func main() {
 	subReceiveBlockchain, err := receiveBlockchainTopic.Subscribe()
 	if err != nil {
 		log.Panicf("Failed to subscribe to ReceiveBlockchain topic : %s\n", err)
+	}
+
+	// Join the topic to ask for my files
+	askMyFilesTopic, err := ps.Join(cfg.AskMyFilesStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join AskMyFiles topic : %s\n", err)
+	}
+
+	// Subscribe to the topic to ask for my files
+	subAskMyFiles, err := askMyFilesTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to AskMyFiles topic : %s\n", err)
+	}
+
+	// Join the topic to send the files of the owner
+	sendFilesTopic, err := ps.Join(cfg.SendFilesStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join SendFiles topic : %s\n", err)
 	}
 
 	// Service 1 : Receiption of blocks
@@ -402,9 +421,31 @@ func main() {
 			}
 			log.Debugln("Blockchain asked by a peer ", msg.GetFrom().String())
 
-			// Publish the registry of the blockchain
-			if !fullnode.SendRegistryToNetwork(log, ctx, cfg, receiveBlockchainTopic) {
-				log.Debugln("Error publishing the registry of the blockchain")
+			// Send the registry of the blockchain
+			if !fullnode.SendBlocksRegistryToNetwork(log, ctx, cfg, receiveBlockchainTopic) {
+				log.Debugln("Error sending the registry of the blockchain")
+				continue
+			}
+		}
+	}()
+
+	// Service 6 : Sending the files of the address given
+	go func() {
+		for {
+			msg, err := subAskMyFiles.Next(ctx)
+			if err != nil {
+				log.Debugln("Error getting message from the network : ", err)
+				break
+			}
+
+			if msg.GetFrom().String() == host.ID().String() {
+				continue
+			}
+			log.Debugln("Files asked by a peer ", msg.GetFrom().String())
+
+			// Send the files of the owner
+			if !search.SendOwnersFiles(log, ctx, cfg, msg.Data, sendFilesTopic) {
+				log.Debugln("Error sending the files of the owner")
 				continue
 			}
 		}

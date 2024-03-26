@@ -9,9 +9,9 @@ import (
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/ipfs/kubo/core"
 	icore "github.com/ipfs/kubo/core/coreiface"
-	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/registry"
 )
 
 // PublishBlock publishes a block to IPFS and adds its metadata to the registry.
@@ -35,7 +35,7 @@ func PublishBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, config *conf
 	nodeId := nodeIpfs.Peerstore.PeerInfo(nodeIpfs.Identity)
 
 	// Save the block metadata to the registry
-	if err := blockchaindb.AddBlockToRegistry(log, b, config, cidFile, nodeId); err != nil {
+	if err := registry.AddBlockToRegistry(log, b, config, cidFile, nodeId); err != nil {
 		log.Errorln("Error adding the block metadata to the registry")
 		return false
 	}

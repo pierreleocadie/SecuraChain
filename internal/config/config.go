@@ -57,6 +57,8 @@ type Config struct {
 	BlacklistStringFlag                string `yaml:"blacklistStringFlag"`
 	AskingBlockchainStringFlag         string `yaml:"askingBlockchainStringFlag"`
 	ReceiveBlockchainStringFlag        string `yaml:"receiveBlockchainStringFlag"`
+	AskMyFilesStringFlag               string `yaml:"askMyFilesStringFlag"`
+	SendFilesStringFlag                string `yaml:"sendFilesStringFlag"`
 
 	// Embedded IPFS node
 	FileRights               int    `yaml:"fileRights"`
