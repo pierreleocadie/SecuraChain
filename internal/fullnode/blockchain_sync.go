@@ -45,29 +45,6 @@ func AskForBlockchainRegistry(log *ipfsLog.ZapEventLogger, ctx context.Context, 
 	return <-registryBytes, <-senderID, nil
 }
 
-// SendBlocksRegistryToNetwork sends the registry of the blockchain to the network.
-func SendBlocksRegistryToNetwork(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, network *pubsub.Topic) bool {
-	// Get the registry of the blockchain
-	r, err := registry.LoadRegistryFile[registry.BlockRegistry](log, config.BlockRegistryPath)
-	if err != nil {
-		log.Errorln("Error loading the registry of the blockchain : ", err)
-		return false
-	}
-
-	registryBytes, err := registry.SerializeRegistry(log, r)
-	if err != nil {
-		log.Errorln("Error serializing the registry of the blockchain : ", err)
-		return false
-	}
-	if err := network.Publish(ctx, registryBytes); err != nil {
-		log.Errorln("Error publishing the registry of the blockchain : ", err)
-		return false
-	}
-
-	log.Debugln("Blocks registry sent to the network")
-	return true
-}
-
 // DownloadMissingBlocks attemps to download blocks that are missing in the local blockchain from IPFS.
 func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, registryBytes []byte, db *blockchaindb.BlockchainDB) (bool, []*block.Block, error) {
 	var missingBlocks []*block.Block
@@ -106,4 +83,27 @@ func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipf
 
 	log.Debugln("Number of missing blocks donwnloaded : ", len(missingBlocks))
 	return true, missingBlocks, nil
+}
+
+// SendBlocksRegistryToNetwork sends the registry of the blockchain to the network.
+func SendBlocksRegistryToNetwork(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, network *pubsub.Topic) bool {
+	// Get the registry of the blockchain
+	r, err := registry.LoadRegistryFile[registry.BlockRegistry](log, config.BlockRegistryPath)
+	if err != nil {
+		log.Errorln("Error loading the registry of the blockchain : ", err)
+		return false
+	}
+
+	registryBytes, err := registry.SerializeRegistry(log, r)
+	if err != nil {
+		log.Errorln("Error serializing the registry of the blockchain : ", err)
+		return false
+	}
+	if err := network.Publish(ctx, registryBytes); err != nil {
+		log.Errorln("Error publishing the registry of the blockchain : ", err)
+		return false
+	}
+
+	log.Debugln("Blocks registry sent to the network")
+	return true
 }
