@@ -9,6 +9,10 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 )
 
+type Registeries interface {
+	IndexingRegistry | FileRegistry | BlockRegistry | OwnersFiles | BlockData
+}
+
 // SaveRegistryToFile saves any registry to a JSON file.
 func SaveRegistryToFile(log *ipfsLog.ZapEventLogger, config *config.Config, filePath string, registry interface{}) error {
 	data, err := json.Marshal(registry)
@@ -23,7 +27,7 @@ func SaveRegistryToFile(log *ipfsLog.ZapEventLogger, config *config.Config, file
 // LoadRegistryFile loads the registry data from the specified file path and returns it.
 // The registry data is deserialized into the provided generic type R.
 // It returns the deserialized registry data and any error encountered during the process.
-func LoadRegistryFile[R any](log *ipfsLog.ZapEventLogger, filePath string) (R, error) {
+func LoadRegistryFile[R Registeries](log *ipfsLog.ZapEventLogger, filePath string) (R, error) {
 	var registry R
 	data, err := os.ReadFile(filepath.Clean(filePath))
 	if err != nil {
@@ -50,7 +54,7 @@ func SerializeRegistry(log *ipfsLog.ZapEventLogger, registry interface{}) ([]byt
 }
 
 // DeserializeRegistry converts a byte slice to a registry struct.
-func DeserializeRegistry[R any](log *ipfsLog.ZapEventLogger, data []byte) (R, error) {
+func DeserializeRegistry[R Registeries](log *ipfsLog.ZapEventLogger, data []byte) (R, error) {
 	var registry R
 	if err := json.Unmarshal(data, &registry); err != nil {
 		log.Errorln("Error deserializing registry", err)

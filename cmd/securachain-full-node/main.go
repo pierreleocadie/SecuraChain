@@ -14,7 +14,6 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
-	"github.com/pierreleocadie/SecuraChain/internal/search"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -444,7 +443,7 @@ func main() {
 			log.Debugln("Files asked by a peer ", msg.GetFrom().String())
 
 			// Send the files of the owner
-			if !search.SendOwnersFiles(log, ctx, cfg, msg.Data, sendFilesTopic) {
+			if !fullnode.SendOwnersFiles(log, ctx, cfg, msg.Data, sendFilesTopic) {
 				log.Debugln("Error sending the files of the owner")
 				continue
 			}

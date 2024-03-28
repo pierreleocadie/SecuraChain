@@ -8,9 +8,9 @@ import (
 )
 
 // AskForIndexingRegistry sends a request for the indexing registry over the network.
-func AskForMyFiles(log *ipfsLog.ZapEventLogger, ctx context.Context, askMyFiles *pubsub.Topic, recMyFiles *pubsub.Subscription) ([]byte, string, error) {
+func AskForMyFiles(log *ipfsLog.ZapEventLogger, ctx context.Context, askMyFiles *pubsub.Topic, recMyFiles *pubsub.Subscription, myKey []byte) ([]byte, string, error) {
 	log.Debugln("Requesting for my files from the network")
-	if err := askMyFiles.Publish(ctx, []byte("I need to know what files I uploaded")); err != nil {
+	if err := askMyFiles.Publish(ctx, myKey); err != nil {
 		log.Errorln("Error publishing my files request : ", err)
 		return nil, "", err
 	}
