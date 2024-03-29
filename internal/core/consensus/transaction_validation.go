@@ -87,6 +87,27 @@ func (v *AddFileTransactionValidator) Validate(tx transaction.Transaction) bool 
 		return false
 	}
 
+	// Verify that IPFSClientNodeAddrInfo and IPFSStorageNodeAddrInfo are valid peer.AddrInfo
+	if addFileTransaction.IPFSClientNodeAddrInfo.ID == "" || addFileTransaction.IPFSStorageNodeAddrInfo.ID == "" {
+		fmt.Printf("Transaction validation failed: IPFSClientNodeAddrInfo and IPFSStorageNodeAddrInfo must have valid peer.IDs")
+		return false
+	}
+
+	if addFileTransaction.IPFSClientNodeAddrInfo.ID == addFileTransaction.IPFSStorageNodeAddrInfo.ID {
+		fmt.Printf("Transaction validation failed: IPFSClientNodeAddrInfo and IPFSStorageNodeAddrInfo must have different peer.IDs")
+		return false
+	}
+
+	if addFileTransaction.IPFSStorageNodeAddrInfo.ID == addFileTransaction.NodeID {
+		fmt.Printf("Transaction validation failed: IPFSStorageNodeAddrInfo and NodeID must have different peer.IDs")
+		return false
+	}
+
+	if !isValidPeerID(addFileTransaction.IPFSClientNodeAddrInfo.ID) || !isValidPeerID(addFileTransaction.IPFSStorageNodeAddrInfo.ID) {
+		fmt.Printf("Transaction validation failed: IPFSClientNodeAddrInfo and IPFSStorageNodeAddrInfo must have valid peer.IDs")
+		return false
+	}
+
 	// Verify that FileCID is valid CID
 	if !isValidCID(addFileTransaction.FileCid) {
 		fmt.Printf("Transaction validation failed: FileCid is not a valid CID")
@@ -107,15 +128,16 @@ func (v *AddFileTransactionValidator) Validate(tx transaction.Transaction) bool 
 
 	// Verify the client announcement step
 	clientAnnouncement := &transaction.ClientAnnouncement{
-		AnnouncementID:        addFileTransaction.AnnouncementID,
-		OwnerAddress:          addFileTransaction.OwnerAddress,
-		FileCid:               addFileTransaction.FileCid,
-		Filename:              addFileTransaction.Filename,
-		Extension:             addFileTransaction.Extension,
-		FileSize:              addFileTransaction.FileSize,
-		Checksum:              addFileTransaction.Checksum,
-		OwnerSignature:        addFileTransaction.OwnerSignature,
-		AnnouncementTimestamp: addFileTransaction.AnnouncementTimestamp,
+		AnnouncementID:         addFileTransaction.AnnouncementID,
+		OwnerAddress:           addFileTransaction.OwnerAddress,
+		IPFSClientNodeAddrInfo: addFileTransaction.IPFSClientNodeAddrInfo,
+		FileCid:                addFileTransaction.FileCid,
+		Filename:               addFileTransaction.Filename,
+		Extension:              addFileTransaction.Extension,
+		FileSize:               addFileTransaction.FileSize,
+		Checksum:               addFileTransaction.Checksum,
+		OwnerSignature:         addFileTransaction.OwnerSignature,
+		AnnouncementTimestamp:  addFileTransaction.AnnouncementTimestamp,
 	}
 
 	if !clientAnnouncement.VerifyTransaction(clientAnnouncement, clientAnnouncement.OwnerSignature, clientAnnouncement.OwnerAddress) {
