@@ -312,6 +312,7 @@ func main() { //nolint: funlen, gocyclo
 				false,
 				ecdsaKeyPair,
 				host.ID(),
+				nodeIpfs.Peerstore.PeerInfo(nodeIpfs.Identity),
 			)
 
 			// Send the transaction to the storage node response topic

@@ -236,6 +236,7 @@ func main() { //nolint: funlen, gocyclo
 		selectedFileLabel,
 		&ecdsaKeyPair,
 		&aesKey,
+		nodeIpfs,
 		ipfsAPI,
 		clientAnnouncementChan,
 		log,
