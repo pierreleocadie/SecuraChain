@@ -10,7 +10,7 @@ import (
 )
 
 type Registeries interface {
-	IndexingRegistry | FileRegistry | BlockRegistry | OwnersFiles | BlockData
+	IndexingRegistry | FileRegistry | BlockRegistry | BlockData
 }
 
 // SaveRegistryToFile saves any registry to a JSON file.

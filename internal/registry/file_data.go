@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"encoding/base64"
 	"os"
 
 	"github.com/ipfs/go-cid"
@@ -19,27 +20,28 @@ type FileRegistry struct {
 	TransactionTimestamp int64   `json:"transactionTimestamp"`
 }
 
-// OwnersFiles represents a collection of files owned by a specific address.
-type OwnersFiles struct {
-	OwnerAddress []byte
-	Files        []FileRegistry
-}
-
 // IndexingRegistry represents the registry for indexing files owned by a specific address.
 type IndexingRegistry struct {
-	IndexingFiles []OwnersFiles
+	IndexingFiles map[string][]FileRegistry
 }
 
 // AddFileToRegistry adds a file and the data associated to the registry.
 func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, addFileTransac *transaction.AddFileTransaction) error {
-	var indexingRegistry IndexingRegistry
+	var r IndexingRegistry
 
 	// Load existing registry if it exists
-	indexingRegistry, err := LoadRegistryFile[IndexingRegistry](log, config.IndexingRegistryPath)
+	r, err := LoadRegistryFile[IndexingRegistry](log, config.IndexingRegistryPath)
 	if err != nil && !os.IsNotExist(err) {
 		log.Errorln("Error loading indexing registry:", err)
 		return err
 	}
+
+	// Initialize registry if it doesn't exist
+	if r.IndexingFiles == nil {
+		r.IndexingFiles = make(map[string][]FileRegistry)
+	}
+
+	ownerAddressStr := base64.StdEncoding.EncodeToString(addFileTransac.OwnerAddress)
 
 	newData := FileRegistry{
 		Filename:             addFileTransac.Filename,
@@ -51,26 +53,9 @@ func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, addFi
 	}
 	log.Debugln("New FileRegistry : ", newData)
 
-	// Check if the owner exists in the registry
-	existing := false
-	for i, ownerData := range indexingRegistry.IndexingFiles {
-		if string(ownerData.OwnerAddress) == string(addFileTransac.OwnerAddress) {
-			indexingRegistry.IndexingFiles[i].Files = append(ownerData.Files, newData)
-			existing = true
-			log.Debug("Owner exists")
-			break
-		}
-	}
+	// Ajouter le nouveau fichier à la liste existante pour cet utilisateur
+	r.IndexingFiles[ownerAddressStr] = append(r.IndexingFiles[ownerAddressStr], newData)
 
-	if !existing {
-		ownersData := OwnersFiles{
-			OwnerAddress: addFileTransac.OwnerAddress,
-			Files:        []FileRegistry{newData},
-		}
-		indexingRegistry.IndexingFiles = append(indexingRegistry.IndexingFiles, ownersData)
-	}
-
-	// Save updated registry back to file
-	log.Infoln("Indexing registry created or updated successfully")
-	return SaveRegistryToFile(log, config, config.IndexingRegistryPath, indexingRegistry)
+	// Sauvegarder le registre mis à jour
+	return SaveRegistryToFile(log, config, config.IndexingRegistryPath, r)
 }

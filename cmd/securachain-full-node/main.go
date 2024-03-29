@@ -237,7 +237,12 @@ func main() {
 					continue
 				}
 
-				// 4 . Send the block to IPFS
+				// 4 . Add the block to the index registry
+				(vérifier les doublons
+				provider dans une liste 
+			)
+
+				// 5 . Send the block to IPFS
 				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, bReceive) {
 					log.Debugln("Error publishing the block to IPFS")
 				}
