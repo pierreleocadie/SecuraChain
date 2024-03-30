@@ -20,12 +20,7 @@ import (
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/multiformats/go-multiaddr"
-	"github.com/pierreleocadie/SecuraChain/internal/core/block"
-	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
-	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
-	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
-	poccontext "github.com/pierreleocadie/SecuraChain/poc-context"
 )
 
 const RefreshInterval = 10 * time.Second
@@ -39,6 +34,36 @@ var (
 	ip6quic              string  = fmt.Sprintf("/ip6/::/udp/%d/quic-v1", 0)
 )
 
+// AskForIndexingRegistry sends a request for the indexing registry over the network.
+func AskForMyFiles(ctx context.Context, askMyFiles *pubsub.Topic, recMyFiles *pubsub.Subscription, myPublicKey []byte) ([]byte, string, error) {
+	log.Println("Requesting for my files from the network")
+	if err := askMyFiles.Publish(ctx, myPublicKey); err != nil {
+		log.Println("Error publishing my files request : ", err)
+		return nil, "", err
+	}
+
+	myFiles := make(chan []byte)
+	senderID := make(chan string)
+	go func() {
+		for {
+			msg, err := recMyFiles.Next(ctx)
+			if err != nil {
+				log.Println("Error receiving message from network: ", err)
+				break
+			}
+			if msg != nil {
+				log.Println("My files received from : ", senderID)
+				log.Println("My files received : ", string(msg.Data))
+				myFiles <- msg.Data
+				senderID <- msg.GetFrom().String()
+				break
+			}
+		}
+	}()
+
+	return <-myFiles, <-senderID, nil
+}
+
 func main() {
 	logg := ipfsLog.Logger("test-node")
 	err := ipfsLog.SetLogLevel("test-node", "DEBUG")
@@ -49,11 +74,11 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	minerKeyPair, err := ecdsa.NewECDSAKeyPair()
-	if err != nil {
-		log.Fatalln("Failed to create ECDSA key pair:", err)
-		return
-	}
+	// minerKeyPair, err := ecdsa.NewECDSAKeyPair()
+	// if err != nil {
+	// 	log.Fatalln("Failed to create ECDSA key pair:", err)
+	// 	return
+	// }
 
 	/*
 	* ROLE VALIDATION
@@ -276,7 +301,40 @@ func main() {
 		}
 	}()
 
-	if *networkRoleFlag == "storer" {
+	askMyFilesTopic, err := ps.Join("AskMyFiles")
+	if err != nil {
+		panic(err)
+	}
+
+	// Join the topic to send the files of the owner
+	sendFilesTopic, err := ps.Join("SendFiles")
+	if err != nil {
+		log.Panicf("Failed to join SendFiles topic : %s\n", err)
+	}
+
+	subSendFiles, err := sendFilesTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to SendFiles topic : %s\n", err)
+	}
+
+	time.Sleep(60 * time.Second)
+	// myKey := "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmZLi2dAunj2Np86wxToVxigcf5HElMQfUw088XVO9vRn/PAeMJoviu+BWTiJPkuFULb9IpaYP7JemV1V+q2yjQ=="
+	// data, err := base64.StdEncoding.DecodeString(myKey)
+	// if err != nil {
+	// 	fmt.Println("Error decoding base64 string:", err)
+	// 	return
+	// }
+	data := []byte("3059301306072a8648ce3d020106082a8648ce3d030107034200041755e02c550ea11e1897ba9cb4c4d2ddb96e73b0e271965f694b958425ff828b10a66471310583f046bfbdf734441387f336a0629bdc44d8d02cfee0f356625b")
+
+	iRegistry, senderID, err := AskForMyFiles(ctx, askMyFilesTopic, subSendFiles, data)
+	if err != nil {
+		log.Println("Error asking for my files : ", err)
+	}
+
+	log.Println("Indexing registry received : ", string(iRegistry))
+	log.Println("Indexing registry received from : ", senderID)
+
+	/* if *networkRoleFlag == "storer" {
 		// Join the NewTransaction topic and generate fake transaction every random time between 5 and 10s
 		newTransactionTopic, err := ps.Join("NewTransaction")
 		if err != nil {
@@ -429,7 +487,7 @@ func main() {
 				}
 			}
 		}()
-	}
+	} */
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES
