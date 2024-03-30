@@ -129,3 +129,57 @@ func generateRandomAddrInfo() (peer.AddrInfo, error) {
 
 	return peer.AddrInfo{ID: pid}, nil
 }
+
+func GenFakeAddTransactionWithSameOwner() (*AddFileTransaction, error) {
+	// Set up a valid AddFileTransaction
+	nodeECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create ECDSA key pair: %s", err)
+	}
+
+	ownerAesKey, err := aes.NewAESKey()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create AES key: %s", err)
+	}
+
+	randomeNodeID, err := genRandomPeerID()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create peer.ID: %s", err)
+	}
+
+	randomFileCid := merkledag.NodeWithData(unixfs.FilePBData([]byte("fileCID"), uint64(len([]byte("fileCID"))))).Cid() // Random CIDv0
+
+	checksum := sha256.Sum256([]byte("checksum"))
+	encryptedFilename, err := ownerAesKey.EncryptData([]byte("filename"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt filename: %s", err)
+	}
+
+	encryptedExtension, err := ownerAesKey.EncryptData([]byte("extension"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt extension: %s", err)
+	}
+
+	randomClientAddrInfo, err := generateRandomAddrInfo()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create random AddrInfo: %s", err)
+	}
+
+	randomStorageAddrInfo, err := generateRandomAddrInfo()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create random AddrInfo: %s", err)
+	}
+
+	announcement := NewClientAnnouncement(sameOwner, randomClientAddrInfo, randomFileCid, encryptedFilename, encryptedExtension, 1234, checksum[:])
+
+	time.Sleep(1 * time.Second)
+	addFileTransaction := NewAddFileTransaction(announcement, randomFileCid, false, nodeECDSAKeyPair, randomeNodeID, randomStorageAddrInfo)
+	bd, _ := addFileTransaction.Serialize()
+	log.Printf("Transaction: %s\n", string(bd))
+
+	// if !ValidateTransaction(addFileTransaction) {
+	// 	return nil, fmt.Errorf("ValidateTransaction failed for a valid AddFileTransaction")
+	// }
+
+	return addFileTransaction, nil
+}

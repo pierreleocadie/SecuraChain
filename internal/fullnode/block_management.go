@@ -35,3 +35,15 @@ func SortBlockByHeight(log *ipfsLog.ZapEventLogger, waitingList []*block.Block) 
 	log.Debugln("List of blocks sorted by height")
 	return waitingList
 }
+
+// func AddTransactionToRegistry(log *ipfsLog.ZapEventLogger, b *block.Block) {
+// 	// Add the transactions to the indexing registry.
+// 	for _, t := range b.Transactions {
+// 		if t.Type == block.AddFile {
+// 			err := registry.AddFileToRegistry(log, t)
+// 			if err != nil {
+// 				log.Errorln("Error adding file to registry : ", err)
+// 			}
+// 		}
+// 	}
+// }

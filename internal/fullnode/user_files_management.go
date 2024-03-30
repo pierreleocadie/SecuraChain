@@ -1,7 +1,6 @@
 package fullnode
 
 import (
-	"bytes"
 	"context"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -10,7 +9,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/registry"
 )
 
-func searchMyFiles(log *ipfsLog.ZapEventLogger, config *config.Config, myAddress []byte) []registry.FileRegistry {
+func searchMyFiles(log *ipfsLog.ZapEventLogger, config *config.Config, myAddress string) []registry.FileRegistry {
 	log.Debugln("Searching for files of owner : ", myAddress)
 	var myFiles []registry.FileRegistry
 
@@ -20,9 +19,9 @@ func searchMyFiles(log *ipfsLog.ZapEventLogger, config *config.Config, myAddress
 		log.Errorln("Error loading the indexing registry : ", err)
 	}
 
-	for _, ownerFiles := range r.IndexingFiles {
-		if bytes.Equal(ownerFiles.OwnerAddress, myAddress) {
-			myFiles = append(myFiles, ownerFiles.Files...)
+	for owner, _ := range r.IndexingFiles {
+		if owner == myAddress {
+			myFiles = append(myFiles, r.IndexingFiles[owner]...)
 			log.Debugln("Files found")
 			return myFiles
 		}
@@ -33,7 +32,7 @@ func searchMyFiles(log *ipfsLog.ZapEventLogger, config *config.Config, myAddress
 }
 
 // SendOwnersFiles sends the files owned by a specific address to the given owner topic.
-func SendOwnersFiles(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, myAddress []byte, owner *pubsub.Topic) bool {
+func SendOwnersFiles(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, myAddress string, owner *pubsub.Topic) bool {
 	myFiles := searchMyFiles(log, config, myAddress)
 
 	myFilesBytes, err := registry.SerializeRegistry(log, myFiles)

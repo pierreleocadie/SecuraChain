@@ -238,9 +238,9 @@ func main() {
 				}
 
 				// 4 . Add the block to the index registry
-				(vérifier les doublons
-				provider dans une liste 
-			)
+				// 	(vérifier les doublons
+				// 	provider dans une liste
+				// )
 
 				// 5 . Send the block to IPFS
 				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, bReceive) {
@@ -448,7 +448,7 @@ func main() {
 			log.Debugln("Files asked by a peer ", msg.GetFrom().String())
 
 			// Send the files of the owner
-			if !fullnode.SendOwnersFiles(log, ctx, cfg, msg.Data, sendFilesTopic) {
+			if !fullnode.SendOwnersFiles(log, ctx, cfg, string(msg.Data), sendFilesTopic) {
 				log.Debugln("Error sending the files of the owner")
 				continue
 			}
