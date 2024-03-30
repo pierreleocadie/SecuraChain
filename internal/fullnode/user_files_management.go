@@ -9,8 +9,9 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/registry"
 )
 
-func searchMyFiles(log *ipfsLog.ZapEventLogger, config *config.Config, myAddress string) []registry.FileRegistry {
-	log.Debugln("Searching for files of owner : ", myAddress)
+// searchMyFiles searches for files owned by a specific user (by his publicKey).
+func searchMyFiles(log *ipfsLog.ZapEventLogger, config *config.Config, myPublicKey string) []registry.FileRegistry {
+	log.Debugln("Searching for files of owner : ", myPublicKey)
 	var myFiles []registry.FileRegistry
 
 	// Get the indexing registry
@@ -20,7 +21,7 @@ func searchMyFiles(log *ipfsLog.ZapEventLogger, config *config.Config, myAddress
 	}
 
 	for owner, filesRegistry := range r.IndexingFiles {
-		if owner == myAddress {
+		if owner == myPublicKey {
 			myFiles = append(myFiles, filesRegistry...)
 			log.Debugln("Files found")
 			return myFiles
@@ -31,9 +32,9 @@ func searchMyFiles(log *ipfsLog.ZapEventLogger, config *config.Config, myAddress
 	return myFiles
 }
 
-// SendOwnersFiles sends the files owned by a specific address to the given owner topic.
-func SendOwnersFiles(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, myAddress string, owner *pubsub.Topic) bool {
-	myFiles := searchMyFiles(log, config, myAddress)
+// SendOwnersFiles sends the files owned by a specific specific user (by his publicKey).
+func SendOwnersFiles(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, myPublicKey string, owner *pubsub.Topic) bool {
+	myFiles := searchMyFiles(log, config, myPublicKey)
 
 	myFilesBytes, err := registry.SerializeRegistry(log, myFiles)
 	if err != nil {

@@ -8,14 +8,14 @@ import (
 )
 
 // AskForIndexingRegistry sends a request for the indexing registry over the network.
-func AskForMyFiles(log *ipfsLog.ZapEventLogger, ctx context.Context, askMyFiles *pubsub.Topic, recMyFiles *pubsub.Subscription, myKey []byte) ([]byte, string, error) {
+func AskForMyFiles(log *ipfsLog.ZapEventLogger, ctx context.Context, askMyFiles *pubsub.Topic, recMyFiles *pubsub.Subscription, myPublicKey []byte) ([]byte, string, error) {
 	log.Debugln("Requesting for my files from the network")
-	if err := askMyFiles.Publish(ctx, myKey); err != nil {
+	if err := askMyFiles.Publish(ctx, myPublicKey); err != nil {
 		log.Errorln("Error publishing my files request : ", err)
 		return nil, "", err
 	}
 
-	indexingRegistryB := make(chan []byte)
+	myFiles := make(chan []byte)
 	senderID := make(chan string)
 	go func() {
 		for {
@@ -27,12 +27,12 @@ func AskForMyFiles(log *ipfsLog.ZapEventLogger, ctx context.Context, askMyFiles 
 			if msg != nil {
 				log.Debugln("My files received from : ", senderID)
 				log.Debugln("My files received : ", string(msg.Data))
-				indexingRegistryB <- msg.Data
+				myFiles <- msg.Data
 				senderID <- msg.GetFrom().String()
 				break
 			}
 		}
 	}()
 
-	return <-indexingRegistryB, <-senderID, nil
+	return <-myFiles, <-senderID, nil
 }
