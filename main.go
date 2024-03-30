@@ -208,22 +208,18 @@ func main() {
 	 */
 	// Convert the bootstrap peers from string to multiaddr
 	bootstrapPeersStrings := []string{
-		"/ip4/192.53.121.117/udp/1211/quic-v1/p2p/12D3KooWMZZGJ3CpGLKuM4eUKZenLchjLW29MYseuFZ9XXXwMdpS",
-		"/ip6/2600:3c04::f03c:94ff:fed9:e3d0/tcp/1211/p2p/12D3KooWMZZGJ3CpGLKuM4eUKZenLchjLW29MYseuFZ9XXXwMdpS",
-		"/ip6/2600:3c04::f03c:94ff:fed9:e3d0/udp/1211/quic-v1/p2p/12D3KooWMZZGJ3CpGLKuM4eUKZenLchjLW29MYseuFZ9XXXwMdpS",
-		"/ip4/192.53.121.117/tcp/1211/p2p/12D3KooWMZZGJ3CpGLKuM4eUKZenLchjLW29MYseuFZ9XXXwMdpS",
-		"/ip4/50.116.53.162/tcp/1211/p2p/12D3KooWQZL6Nyj8GNivQhfDy44h15M8EsYuAvpFbsL5GZGr1Q4W",
-		"/ip4/50.116.53.162/udp/1211/quic-v1/p2p/12D3KooWQZL6Nyj8GNivQhfDy44h15M8EsYuAvpFbsL5GZGr1Q4W",
-		"/ip6/2600:3c03::f03c:94ff:fed9:e3c2/tcp/1211/p2p/12D3KooWQZL6Nyj8GNivQhfDy44h15M8EsYuAvpFbsL5GZGr1Q4W",
-		"/ip6/2600:3c03::f03c:94ff:fed9:e3c2/udp/1211/quic-v1/p2p/12D3KooWQZL6Nyj8GNivQhfDy44h15M8EsYuAvpFbsL5GZGr1Q4W",
-		"/ip6/2a01:7e00::f03c:94ff:fed9:e311/udp/1211/quic-v1/p2p/12D3KooWPend1neCi43iDKMhV4WaRWePNyU1gATCATYSTa4gdocd",
-		"/ip4/139.162.207.106/tcp/1211/p2p/12D3KooWPend1neCi43iDKMhV4WaRWePNyU1gATCATYSTa4gdocd",
-		"/ip4/139.162.207.106/udp/1211/quic-v1/p2p/12D3KooWPend1neCi43iDKMhV4WaRWePNyU1gATCATYSTa4gdocd",
-		"/ip6/2a01:7e00::f03c:94ff:fed9:e311/tcp/1211/p2p/12D3KooWPend1neCi43iDKMhV4WaRWePNyU1gATCATYSTa4gdocd",
-		"/ip6/2600:3c0e::f03c:94ff:fed9:e35b/tcp/1211/p2p/12D3KooWAjSSeXQsxX8cX8dZgsjSt1Mc9ZyPpEFLojGZtJNpNf96",
-		"/ip6/2600:3c0e::f03c:94ff:fed9:e35b/udp/1211/quic-v1/p2p/12D3KooWAjSSeXQsxX8cX8dZgsjSt1Mc9ZyPpEFLojGZtJNpNf96",
-		"/ip4/172.233.51.181/tcp/1211/p2p/12D3KooWAjSSeXQsxX8cX8dZgsjSt1Mc9ZyPpEFLojGZtJNpNf96",
-		"/ip4/172.233.51.181/udp/1211/quic-v1/p2p/12D3KooWAjSSeXQsxX8cX8dZgsjSt1Mc9ZyPpEFLojGZtJNpNf96",
+		"/ip4/172.105.102.102/tcp/1211/p2p/12D3KooWLQNTEsbJ6DTwMDmxTBMKoVJupVsZaNscE18LtRc4hWnW",
+		"/ip4/172.105.102.102/udp/1211/quic-v1/p2p/12D3KooWLQNTEsbJ6DTwMDmxTBMKoVJupVsZaNscE18LtRc4hWnW",
+		"/ip6/2600:3c04::f03c:94ff:fed9:c988/tcp/1211/p2p/12D3KooWLQNTEsbJ6DTwMDmxTBMKoVJupVsZaNscE18LtRc4hWnW",
+		"/ip6/2600:3c04::f03c:94ff:fed9:c988/udp/1211/quic-v1/p2p/12D3KooWLQNTEsbJ6DTwMDmxTBMKoVJupVsZaNscE18LtRc4hWnW",
+		"/ip4/162.216.16.195/tcp/1211/p2p/12D3KooWRQ7vwPZubf9gLMLqWu8qmeb7EZ1wRgJEQu3XwTABgpcA",
+		"/ip4/162.216.16.195/udp/1211/quic-v1/p2p/12D3KooWRQ7vwPZubf9gLMLqWu8qmeb7EZ1wRgJEQu3XwTABgpcA",
+		"/ip6/2600:3c03::f03c:94ff:fed9:c9f3/tcp/1211/p2p/12D3KooWRQ7vwPZubf9gLMLqWu8qmeb7EZ1wRgJEQu3XwTABgpcA",
+		"/ip6/2600:3c03::f03c:94ff:fed9:c9f3/udp/1211/quic-v1/p2p/12D3KooWRQ7vwPZubf9gLMLqWu8qmeb7EZ1wRgJEQu3XwTABgpcA",
+		"/ip4/172.233.40.200/tcp/1211/p2p/12D3KooWQNJZqfT6mJf9rAGS3PaSgEE6AGWkbtgNAiqefN19gXNU",
+		"/ip4/172.233.40.200/udp/1211/quic-v1/p2p/12D3KooWQNJZqfT6mJf9rAGS3PaSgEE6AGWkbtgNAiqefN19gXNU",
+		"/ip6/2600:3c0e::f03c:94ff:fed9:c958/tcp/1211/p2p/12D3KooWQNJZqfT6mJf9rAGS3PaSgEE6AGWkbtgNAiqefN19gXNU",
+		"/ip6/2600:3c0e::f03c:94ff:fed9:c958/udp/1211/quic-v1/p2p/12D3KooWQNJZqfT6mJf9rAGS3PaSgEE6AGWkbtgNAiqefN19gXNU",
 	}
 	var bootstrapPeersMultiaddr []multiaddr.Multiaddr
 	for _, peer := range bootstrapPeersStrings {
