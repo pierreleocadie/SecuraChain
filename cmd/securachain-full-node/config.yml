@@ -6,7 +6,7 @@ ecdsaKeyPairPath: ""
 aesKeyPath: ""
 lowWater: 160
 highWater: 192
-bootstrapPeers:[
+bootstrapPeers: [
         "/ip4/172.232.117.250/tcp/1211/p2p/12D3KooWMqZawvjTD2P9hBhSdQeEADSd3usAeLgV5F5rJfqYT8TZ",
         "/ip4/172.232.117.250/udp/1211/quic-v1/p2p/12D3KooWMqZawvjTD2P9hBhSdQeEADSd3usAeLgV5F5rJfqYT8TZ",
         "/ip6/2600:3c08::f03c:94ff:fed9:59fe/tcp/1211/p2p/12D3KooWMqZawvjTD2P9hBhSdQeEADSd3usAeLgV5F5rJfqYT8TZ",
