@@ -1,7 +1,7 @@
 package registry
 
 import (
-	"encoding/base64"
+	"fmt"
 	"os"
 
 	"github.com/ipfs/go-cid"
@@ -43,7 +43,8 @@ func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, addFi
 		r.IndexingFiles = make(map[string][]FileRegistry)
 	}
 
-	ownerAddressStr := base64.StdEncoding.EncodeToString(addFileTransac.OwnerAddress)
+	ownerAddressStr := fmt.Sprintf("%x", addFileTransac.OwnerAddress)
+	log.Debugln("Owner address converted to string : ", ownerAddressStr)
 
 	newData := FileRegistry{
 		Filename:                addFileTransac.Filename,
@@ -76,7 +77,8 @@ func DeleteFileFromRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, 
 		return err
 	}
 
-	ownerAddressStr := base64.StdEncoding.EncodeToString(deleteFileTransac.OwnerAddress)
+	ownerAddressStr := fmt.Sprintf("%x", deleteFileTransac.OwnerAddress)
+	log.Debugln("Owner address converted to string : ", ownerAddressStr)
 
 	// Delete the file from the list for this user
 	for i, file := range r.IndexingFiles[ownerAddressStr] {

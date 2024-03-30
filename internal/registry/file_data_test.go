@@ -69,4 +69,19 @@ func TestAddFileToRegistryWhenOwnerDontExists(t *testing.T) {
 	}
 
 	// ----------- 2 ----------------
+
+	// // 3 - Delete the file from the registry
+
+	deleteFileTransac, err := transaction.GenFakeDeleteTransactionWithOwnerGiven(addFileTransacWithSameOwner3.FileCid)
+	if err != nil {
+		log.Errorln("Error generating fake DeleteFileTransaction : ", err)
+	}
+
+	err = DeleteFileFromRegistry(log, cfg, deleteFileTransac)
+	if err != nil {
+		log.Errorln("Error deleting file from registry : ", err)
+	}
+
+	log.Debugln("deleteFileTransac with cid : ", deleteFileTransac.FileCid)
+
 }

@@ -8,6 +8,7 @@ import (
 
 	merkledag "github.com/ipfs/boxo/ipld/merkledag"
 	unixfs "github.com/ipfs/boxo/ipld/unixfs"
+	"github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
@@ -182,4 +183,10 @@ func GenFakeAddTransactionWithSameOwner() (*AddFileTransaction, error) {
 	// }
 
 	return addFileTransaction, nil
+}
+
+// GenFakeDeleteTransactionWithOwnerGiven generates a fake delete file transaction with the given owner and file CID.
+func GenFakeDeleteTransactionWithOwnerGiven(fileCID cid.Cid) (*DeleteFileTransaction, error) {
+
+	return NewDeleteFileTransaction(sameOwner, fileCID), nil
 }
