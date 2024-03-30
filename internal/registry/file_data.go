@@ -6,18 +6,20 @@ import (
 
 	"github.com/ipfs/go-cid"
 	ipfsLog "github.com/ipfs/go-log/v2"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 )
 
 // FileRegistry represents a registry of owners' files.
 type FileRegistry struct {
-	Filename             []byte  `json:"filename"`
-	Extension            []byte  `json:"extension"`
-	FileSize             uint64  `json:"fileSize"`
-	Checksum             []byte  `json:"checksum"`
-	FileCid              cid.Cid `json:"fileCid"`
-	TransactionTimestamp int64   `json:"transactionTimestamp"`
+	Filename                []byte        `json:"filename"`
+	Extension               []byte        `json:"extension"`
+	FileSize                uint64        `json:"fileSize"`
+	Checksum                []byte        `json:"checksum"`
+	IPFSStorageNodeAddrInfo peer.AddrInfo `json:"ipfsStorageNodeAddrInfo"`
+	FileCid                 cid.Cid       `json:"fileCid"`
+	TransactionTimestamp    int64         `json:"transactionTimestamp"`
 }
 
 // IndexingRegistry represents the registry for indexing files owned by a specific address.
@@ -44,18 +46,47 @@ func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, addFi
 	ownerAddressStr := base64.StdEncoding.EncodeToString(addFileTransac.OwnerAddress)
 
 	newData := FileRegistry{
-		Filename:             addFileTransac.Filename,
-		Extension:            addFileTransac.Extension,
-		FileSize:             addFileTransac.FileSize,
-		Checksum:             addFileTransac.Checksum,
-		FileCid:              addFileTransac.FileCid,
-		TransactionTimestamp: addFileTransac.AnnouncementTimestamp,
+		Filename:                addFileTransac.Filename,
+		Extension:               addFileTransac.Extension,
+		FileSize:                addFileTransac.FileSize,
+		Checksum:                addFileTransac.Checksum,
+		IPFSStorageNodeAddrInfo: addFileTransac.IPFSStorageNodeAddrInfo,
+		FileCid:                 addFileTransac.FileCid,
+		TransactionTimestamp:    addFileTransac.AnnouncementTimestamp,
 	}
 	log.Debugln("New FileRegistry : ", newData)
 
-	// Ajouter le nouveau fichier à la liste existante pour cet utilisateur
+	// Add the file to the list for this user
 	r.IndexingFiles[ownerAddressStr] = append(r.IndexingFiles[ownerAddressStr], newData)
 
-	// Sauvegarder le registre mis à jour
+	log.Debugln("[AddFileToRegistry] - File added to registry")
+
+	// Save the updated registry
+	return SaveRegistryToFile(log, config, config.IndexingRegistryPath, r)
+}
+
+// DeleteFileFromRegistry deletes a file and the data associated from the registry.
+func DeleteFileFromRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, deleteFileTransac *transaction.DeleteFileTransaction) error {
+	var r IndexingRegistry
+
+	// Load existing registry if it exists
+	r, err := LoadRegistryFile[IndexingRegistry](log, config.IndexingRegistryPath)
+	if err != nil && !os.IsNotExist(err) {
+		log.Errorln("Error loading indexing registry:", err)
+		return err
+	}
+
+	ownerAddressStr := base64.StdEncoding.EncodeToString(deleteFileTransac.OwnerAddress)
+
+	// Delete the file from the list for this user
+	for i, file := range r.IndexingFiles[ownerAddressStr] {
+		if file.FileCid == deleteFileTransac.FileCid {
+			r.IndexingFiles[ownerAddressStr] = append(r.IndexingFiles[ownerAddressStr][:i], r.IndexingFiles[ownerAddressStr][i+1:]...)
+			break
+		}
+	}
+
+	log.Debugln("[AddFileToRegistry] - File deleted from the registry")
+	// Save the updated registry
 	return SaveRegistryToFile(log, config, config.IndexingRegistryPath, r)
 }

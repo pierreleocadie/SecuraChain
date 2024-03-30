@@ -19,9 +19,9 @@ func searchMyFiles(log *ipfsLog.ZapEventLogger, config *config.Config, myAddress
 		log.Errorln("Error loading the indexing registry : ", err)
 	}
 
-	for owner, _ := range r.IndexingFiles {
+	for owner, filesRegistry := range r.IndexingFiles {
 		if owner == myAddress {
-			myFiles = append(myFiles, r.IndexingFiles[owner]...)
+			myFiles = append(myFiles, filesRegistry...)
 			log.Debugln("Files found")
 			return myFiles
 		}

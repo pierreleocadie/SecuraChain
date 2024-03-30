@@ -237,10 +237,10 @@ func main() {
 					continue
 				}
 
-				// 4 . Add the block to the index registry
-				// 	(vérifier les doublons
-				// 	provider dans une liste
-				// )
+				// 4 . Add the block transaction to the registry
+				if !fullnode.AddBlockTransactionToRegistry(log, cfg, bReceive) {
+					log.Debugln("Error adding the block transactions to the registry")
+				}
 
 				// 5 . Send the block to IPFS
 				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, bReceive) {
@@ -323,7 +323,12 @@ func main() {
 					continue
 				}
 
-				// 6 . Send the block to IPFS
+				// 6 . Add the block transaction to the registry
+				if !fullnode.AddBlockTransactionToRegistry(log, cfg, b) {
+					log.Debugln("Error adding the block transactions to the registry")
+				}
+
+				// 7 . Send the block to IPFS
 				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, b) {
 					log.Debugln("Error publishing the block to IPFS")
 				}
@@ -399,7 +404,12 @@ func main() {
 					continue
 				}
 
-				// 5 . Send the block to IPFS
+				// 5 . Add the block transaction to the registry
+				if !fullnode.AddBlockTransactionToRegistry(log, cfg, b) {
+					log.Debugln("Error adding the block transactions to the registry")
+				}
+
+				// 6 . Send the block to IPFS
 				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, b) {
 					log.Debugln("Error publishing the block to IPFS")
 				}
