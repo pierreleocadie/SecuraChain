@@ -58,6 +58,16 @@ func ValidateBlock(currentBlock *block.Block, prevBlock *block.Block) bool {
 		return false
 	}
 
+	// If not empty, verify the block's transactions
+	if len(currentBlock.Transactions) > 0 {
+		for _, tx := range currentBlock.Transactions {
+			if !ValidateTransaction(tx) {
+				log.Printf("Block validation failed: Transaction is invalid")
+				return false
+			}
+		}
+	}
+
 	return true
 }
 
