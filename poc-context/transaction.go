@@ -6,7 +6,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/google/uuid"
 	merkledag "github.com/ipfs/boxo/ipld/merkledag"
 	unixfs "github.com/ipfs/boxo/ipld/unixfs"
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -40,7 +39,8 @@ func GenFakeTransaction() (*transaction.AddFileTransaction, error) {
 	}
 
 	// Generate a random uuid for the file CID
-	randomFilename := uuid.New().String()
+	// randomFilename := uuid.New().String()
+	randomFilename := "fileCID"
 	randomFileCid := merkledag.NodeWithData(unixfs.FilePBData([]byte(randomFilename), uint64(len([]byte(randomFilename))))).Cid() // Random CIDv0
 
 	checksum := sha256.Sum256([]byte("checksum"))

@@ -20,7 +20,12 @@ import (
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
+	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
+	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
+	poccontext "github.com/pierreleocadie/SecuraChain/poc-context"
 )
 
 const RefreshInterval = 10 * time.Second
@@ -74,11 +79,11 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// minerKeyPair, err := ecdsa.NewECDSAKeyPair()
-	// if err != nil {
-	// 	log.Fatalln("Failed to create ECDSA key pair:", err)
-	// 	return
-	// }
+	minerKeyPair, err := ecdsa.NewECDSAKeyPair()
+	if err != nil {
+		log.Fatalln("Failed to create ECDSA key pair:", err)
+		return
+	}
 
 	/*
 	* ROLE VALIDATION
@@ -301,7 +306,7 @@ func main() {
 		}
 	}()
 
-	askMyFilesTopic, err := ps.Join("AskMyFiles")
+	/* askMyFilesTopic, err := ps.Join("AskMyFiles")
 	if err != nil {
 		panic(err)
 	}
@@ -332,9 +337,9 @@ func main() {
 	}
 
 	log.Println("Indexing registry received : ", string(iRegistry))
-	log.Println("Indexing registry received from : ", senderID)
+	log.Println("Indexing registry received from : ", senderID) */
 
-	/* if *networkRoleFlag == "storer" {
+	if *networkRoleFlag == "storer" {
 		// Join the NewTransaction topic and generate fake transaction every random time between 5 and 10s
 		newTransactionTopic, err := ps.Join("NewTransaction")
 		if err != nil {
@@ -487,7 +492,7 @@ func main() {
 				}
 			}
 		}()
-	} */
+	}
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES
