@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
+	"github.com/ipfs/kubo/core"
 	iface "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
@@ -18,7 +19,7 @@ import (
 )
 
 func SendFile(ctx context.Context, cfg *config.Config, selectedFile string, //nolint: funlen
-	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, ipfsAPI iface.CoreAPI,
+	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, nodeIpfs *core.IpfsNode, ipfsAPI iface.CoreAPI,
 	clientAnnouncementChan chan *transaction.ClientAnnouncement,
 	log *ipfsLog.ZapEventLogger) error {
 	// -1. Check if the ECDSA key pair and the AES key are loaded
@@ -75,6 +76,7 @@ func SendFile(ctx context.Context, cfg *config.Config, selectedFile string, //no
 	// 6. Create a new ClientAnnouncement
 	clientAnnouncement := transaction.NewClientAnnouncement(
 		*ecdsaKeyPair,
+		nodeIpfs.Peerstore.PeerInfo(nodeIpfs.Identity),
 		encryptedFileCid.RootCid(),
 		encryptedFilename,
 		encryptedExtension,

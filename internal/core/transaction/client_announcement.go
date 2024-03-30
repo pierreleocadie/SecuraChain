@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
@@ -18,16 +19,17 @@ func (f *ClientAnnouncementFactory) CreateTransaction(data []byte) (Transaction,
 }
 
 type ClientAnnouncement struct {
-	AnnouncementID        uuid.UUID `json:"announcementID"`        // Announcement ID - UUID
-	OwnerAddress          []byte    `json:"ownerAddress"`          // Owner address - ECDSA public key
-	FileCid               cid.Cid   `json:"fileCid"`               // File CID
-	Filename              []byte    `json:"filename"`              // Encrypted filename
-	Extension             []byte    `json:"extension"`             // Encrypted extension
-	FileSize              uint64    `json:"fileSize"`              // File size
-	Checksum              []byte    `json:"checksum"`              // Checksum - SHA256
-	OwnerSignature        []byte    `json:"ownerSignature"`        // Owner signature - ECDSA signature
-	AnnouncementTimestamp int64     `json:"announcementTimestamp"` // Announcement timestamp - Unix timestamp
-	Verifier                        // embed TransactionVerifier struct to inherit VerifyTransaction method
+	AnnouncementID         uuid.UUID     `json:"announcementID"`         // Announcement ID - UUID
+	OwnerAddress           []byte        `json:"ownerAddress"`           // Owner address - ECDSA public key
+	IPFSClientNodeAddrInfo peer.AddrInfo `json:"ipfsClientNodeAddrInfo"` // IPFS client node address info
+	FileCid                cid.Cid       `json:"fileCid"`                // File CID
+	Filename               []byte        `json:"filename"`               // Encrypted filename
+	Extension              []byte        `json:"extension"`              // Encrypted extension
+	FileSize               uint64        `json:"fileSize"`               // File size
+	Checksum               []byte        `json:"checksum"`               // Checksum - SHA256
+	OwnerSignature         []byte        `json:"ownerSignature"`         // Owner signature - ECDSA signature
+	AnnouncementTimestamp  int64         `json:"announcementTimestamp"`  // Announcement timestamp - Unix timestamp
+	Verifier                             // embed TransactionVerifier struct to inherit VerifyTransaction method
 }
 
 func (a *ClientAnnouncement) Serialize() ([]byte, error) {
@@ -44,21 +46,22 @@ func (a *ClientAnnouncement) SpecificData() ([]byte, error) {
 	return json.Marshal(a)
 }
 
-func NewClientAnnouncement(keyPair ecdsa.KeyPair, fileCid cid.Cid, filename []byte, extension []byte, fileSize uint64, checksum []byte) *ClientAnnouncement { //nolint: lll
+func NewClientAnnouncement(keyPair ecdsa.KeyPair, clientNodeAddrInfo peer.AddrInfo, fileCid cid.Cid, filename []byte, extension []byte, fileSize uint64, checksum []byte) *ClientAnnouncement { //nolint: lll
 	ownerAddressBytes, err := keyPair.PublicKeyToBytes()
 	if err != nil {
 		return nil
 	}
 
 	announcement := &ClientAnnouncement{
-		AnnouncementID:        uuid.New(),
-		OwnerAddress:          ownerAddressBytes,
-		FileCid:               fileCid,
-		Filename:              filename,
-		Extension:             extension,
-		FileSize:              fileSize,
-		Checksum:              checksum,
-		AnnouncementTimestamp: time.Now().Unix(),
+		AnnouncementID:         uuid.New(),
+		OwnerAddress:           ownerAddressBytes,
+		IPFSClientNodeAddrInfo: clientNodeAddrInfo,
+		FileCid:                fileCid,
+		Filename:               filename,
+		Extension:              extension,
+		FileSize:               fileSize,
+		Checksum:               checksum,
+		AnnouncementTimestamp:  time.Now().Unix(),
 	}
 
 	announcementBytes, err := json.Marshal(announcement)

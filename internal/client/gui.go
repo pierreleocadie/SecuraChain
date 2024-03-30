@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
+	"github.com/ipfs/kubo/core"
 	iface "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
@@ -163,7 +164,7 @@ func SelectFileButton(w fyne.Window, selectedFileInputLabel *widget.Label, log *
 }
 
 func SendFileButton(ctx context.Context, cfg *config.Config, selectedFile *widget.Label,
-	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, ipfsAPI iface.CoreAPI,
+	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, nodeIpfs *core.IpfsNode, ipfsAPI iface.CoreAPI,
 	clientAnnouncementChan chan *transaction.ClientAnnouncement,
 	log *ipfsLog.ZapEventLogger) *widget.Button {
 	return widget.NewButton("Send File", func() {
@@ -177,7 +178,7 @@ func SendFileButton(ctx context.Context, cfg *config.Config, selectedFile *widge
 			return
 		}
 
-		err := SendFile(ctx, cfg, selectedFile.Text, ecdsaKeyPair, aesKey, ipfsAPI, clientAnnouncementChan, log)
+		err := SendFile(ctx, cfg, selectedFile.Text, ecdsaKeyPair, aesKey, nodeIpfs, ipfsAPI, clientAnnouncementChan, log)
 		if err != nil {
 			log.Errorln("Error sending file : ", err)
 			return

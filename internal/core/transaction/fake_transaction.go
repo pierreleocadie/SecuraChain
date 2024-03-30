@@ -59,11 +59,20 @@ func GenFakeAddTransaction() (*AddFileTransaction, error) {
 		return nil, fmt.Errorf("failed to encrypt extension: %s", err)
 	}
 
-	announcement := NewClientAnnouncement(ownerECDSAKeyPair, randomFileCid, encryptedFilename, encryptedExtension, 1234, checksum[:])
-	announcementB, _ := announcement.Serialize()
-	log.Printf("Announcement: %s\n", string(announcementB))
+	randomClientAddrInfo, err := generateRandomAddrInfo()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create random AddrInfo: %s", err)
+	}
+
+	randomStorageAddrInfo, err := generateRandomAddrInfo()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create random AddrInfo: %s", err)
+	}
+
+	announcement := NewClientAnnouncement(ownerECDSAKeyPair, randomClientAddrInfo, randomFileCid, encryptedFilename, encryptedExtension, 1234, checksum[:])
+
 	time.Sleep(1 * time.Second)
-	addFileTransaction := NewAddFileTransaction(announcement, randomFileCid, false, nodeECDSAKeyPair, randomeNodeID)
+	addFileTransaction := NewAddFileTransaction(announcement, randomFileCid, false, nodeECDSAKeyPair, randomeNodeID, randomStorageAddrInfo)
 	bd, _ := addFileTransaction.Serialize()
 	log.Printf("Transaction: %s\n", string(bd))
 
@@ -105,45 +114,18 @@ func genRandomPeerID() (peer.ID, error) {
 	return pid, nil
 }
 
-func GenFakeAddTransactionWithSameOwner() (*AddFileTransaction, error) {
-	// Set up a valid AddFileTransaction
-	nodeECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
+func generateRandomAddrInfo() (peer.AddrInfo, error) {
+	// Generate a new RSA key pair for this host
+	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create ECDSA key pair: %s", err)
+		return peer.AddrInfo{}, err
 	}
 
-	ownerAesKey, err := aes.NewAESKey()
+	// Convert the RSA key pair into a libp2p Peer ID
+	pid, err := peer.IDFromPrivateKey(priv)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create AES key: %s", err)
+		return peer.AddrInfo{}, err
 	}
 
-	randomeNodeID, err := genRandomPeerID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create peer.ID: %s", err)
-	}
-
-	randomFileCid := merkledag.NodeWithData(unixfs.FilePBData([]byte("fileCID"), uint64(len([]byte("fileCID"))))).Cid() // Random CIDv0
-
-	checksum := sha256.Sum256([]byte("checksum"))
-	encryptedFilename, err := ownerAesKey.EncryptData([]byte("filename"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt filename: %s", err)
-	}
-
-	encryptedExtension, err := ownerAesKey.EncryptData([]byte("extension"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt extension: %s", err)
-	}
-
-	announcement := NewClientAnnouncement(sameOwner, randomFileCid, encryptedFilename, encryptedExtension, 1234, checksum[:])
-	time.Sleep(1 * time.Second)
-	addFileTransaction := NewAddFileTransaction(announcement, randomFileCid, false, nodeECDSAKeyPair, randomeNodeID)
-	bd, _ := addFileTransaction.Serialize()
-	log.Printf("Transaction: %s\n", string(bd))
-
-	// if !ValidateTransaction(addFileTransaction) {
-	// 	return nil, fmt.Errorf("ValidateTransaction failed for a valid AddFileTransaction")
-	// }
-
-	return addFileTransaction, nil
+	return peer.AddrInfo{ID: pid}, nil
 }
