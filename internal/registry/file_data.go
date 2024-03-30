@@ -13,13 +13,13 @@ import (
 
 // FileRegistry represents a registry of owners' files.
 type FileRegistry struct {
-	Filename                []byte        `json:"filename"`
-	Extension               []byte        `json:"extension"`
-	FileSize                uint64        `json:"fileSize"`
-	Checksum                []byte        `json:"checksum"`
-	IPFSStorageNodeAddrInfo peer.AddrInfo `json:"ipfsStorageNodeAddrInfo"`
-	FileCid                 cid.Cid       `json:"fileCid"`
-	TransactionTimestamp    int64         `json:"transactionTimestamp"`
+	Filename             []byte          `json:"filename"`
+	Extension            []byte          `json:"extension"`
+	FileSize             uint64          `json:"fileSize"`
+	Checksum             []byte          `json:"checksum"`
+	Providers            []peer.AddrInfo `json:"ipfsStorageNodeAddrInfo"`
+	FileCid              cid.Cid         `json:"fileCid"`
+	TransactionTimestamp int64           `json:"transactionTimestamp"`
 }
 
 // IndexingRegistry represents the registry for indexing files owned by a specific address.
@@ -46,14 +46,23 @@ func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, addFi
 	ownerAddressStr := fmt.Sprintf("%x", addFileTransac.OwnerAddress)
 	log.Debugln("Owner address converted to string : ", ownerAddressStr)
 
+	// If the file already exists, add the new provider to the list of providers
+	for _, file := range r.IndexingFiles[ownerAddressStr] {
+		if file.FileCid == addFileTransac.FileCid {
+			file.Providers = append(file.Providers, addFileTransac.IPFSStorageNodeAddrInfo)
+			log.Debugln("[AddFileToRegistry] - File already exists, new provider added to the list of providers")
+			return SaveRegistryToFile(log, config, config.IndexingRegistryPath, r)
+		}
+	}
+
 	newData := FileRegistry{
-		Filename:                addFileTransac.Filename,
-		Extension:               addFileTransac.Extension,
-		FileSize:                addFileTransac.FileSize,
-		Checksum:                addFileTransac.Checksum,
-		IPFSStorageNodeAddrInfo: addFileTransac.IPFSStorageNodeAddrInfo,
-		FileCid:                 addFileTransac.FileCid,
-		TransactionTimestamp:    addFileTransac.AnnouncementTimestamp,
+		Filename:             addFileTransac.Filename,
+		Extension:            addFileTransac.Extension,
+		FileSize:             addFileTransac.FileSize,
+		Checksum:             addFileTransac.Checksum,
+		Providers:            []peer.AddrInfo{addFileTransac.IPFSStorageNodeAddrInfo},
+		FileCid:              addFileTransac.FileCid,
+		TransactionTimestamp: addFileTransac.AnnouncementTimestamp,
 	}
 	log.Debugln("New FileRegistry : ", newData)
 
