@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 
@@ -17,7 +18,7 @@ type FileRegistry struct {
 	Extension            []byte          `json:"extension"`
 	FileSize             uint64          `json:"fileSize"`
 	Checksum             []byte          `json:"checksum"`
-	Providers            []peer.AddrInfo `json:"ipfsStorageNodeAddrInfo"`
+	Providers            []peer.AddrInfo `json:"providers"`
 	FileCid              cid.Cid         `json:"fileCid"`
 	TransactionTimestamp int64           `json:"transactionTimestamp"`
 }
@@ -48,7 +49,7 @@ func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, addFi
 
 	// If the file already exists, add the new provider to the list of providers
 	for _, file := range r.IndexingFiles[ownerAddressStr] {
-		if file.FileCid == addFileTransac.FileCid {
+		if bytes.Equal(file.Filename, addFileTransac.Filename) && bytes.Equal(file.Extension, addFileTransac.Extension) && file.FileSize == addFileTransac.FileSize && bytes.Equal(file.Checksum, addFileTransac.Checksum) && file.FileCid == addFileTransac.FileCid {
 			file.Providers = append(file.Providers, addFileTransac.IPFSStorageNodeAddrInfo)
 			log.Debugln("[AddFileToRegistry] - File already exists, new provider added to the list of providers")
 			return SaveRegistryToFile(log, config, config.IndexingRegistryPath, r)
