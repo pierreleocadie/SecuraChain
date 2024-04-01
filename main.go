@@ -24,6 +24,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
+	"github.com/pierreleocadie/SecuraChain/pkg/aes"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 	poccontext "github.com/pierreleocadie/SecuraChain/poc-context"
 )
@@ -208,82 +209,42 @@ func main() {
 	 */
 	// Convert the bootstrap peers from string to multiaddr
 	bootstrapPeersStrings := []string{
-		"/ip4/172.232.117.250/tcp/1211/p2p/12D3KooWMqZawvjTD2P9hBhSdQeEADSd3usAeLgV5F5rJfqYT8TZ",
-		"/ip4/172.232.117.250/udp/1211/quic-v1/p2p/12D3KooWMqZawvjTD2P9hBhSdQeEADSd3usAeLgV5F5rJfqYT8TZ",
-		"/ip6/2600:3c08::f03c:94ff:fed9:59fe/tcp/1211/p2p/12D3KooWMqZawvjTD2P9hBhSdQeEADSd3usAeLgV5F5rJfqYT8TZ",
-		"/ip6/2600:3c08::f03c:94ff:fed9:59fe/udp/1211/quic-v1/p2p/12D3KooWMqZawvjTD2P9hBhSdQeEADSd3usAeLgV5F5rJfqYT8TZ",
-		"/ip4/172.233.26.236/tcp/1211/p2p/12D3KooWRC27gbmjCso8suocDESgjcs1qWdH8RDYd52FmaFaj99G",
-		"/ip4/172.233.26.236/udp/1211/quic-v1/p2p/12D3KooWRC27gbmjCso8suocDESgjcs1qWdH8RDYd52FmaFaj99G",
-		"/ip6/2600:3c0d::f03c:94ff:fed9:59d7/tcp/1211/p2p/12D3KooWRC27gbmjCso8suocDESgjcs1qWdH8RDYd52FmaFaj99G",
-		"/ip6/2600:3c0d::f03c:94ff:fed9:59d7/udp/1211/quic-v1/p2p/12D3KooWRC27gbmjCso8suocDESgjcs1qWdH8RDYd52FmaFaj99G",
-		"/ip4/172.233.107.228/tcp/1211/p2p/12D3KooWGBR6EMyXw5WgVQPDXSJhuRnjCmqsTq2wdr4tmM3wK5Bk",
-		"/ip4/172.233.107.228/udp/1211/quic-v1/p2p/12D3KooWGBR6EMyXw5WgVQPDXSJhuRnjCmqsTq2wdr4tmM3wK5Bk",
-		"/ip6/2a01:7e02::f03c:94ff:fed9:c936/tcp/1211/p2p/12D3KooWGBR6EMyXw5WgVQPDXSJhuRnjCmqsTq2wdr4tmM3wK5Bk",
-		"/ip6/2a01:7e02::f03c:94ff:fed9:c936/udp/1211/quic-v1/p2p/12D3KooWGBR6EMyXw5WgVQPDXSJhuRnjCmqsTq2wdr4tmM3wK5Bk",
-		"/ip4/172.105.102.102/tcp/1211/p2p/12D3KooWLQNTEsbJ6DTwMDmxTBMKoVJupVsZaNscE18LtRc4hWnW",
-		"/ip4/172.105.102.102/udp/1211/quic-v1/p2p/12D3KooWLQNTEsbJ6DTwMDmxTBMKoVJupVsZaNscE18LtRc4hWnW",
-		"/ip6/2600:3c04::f03c:94ff:fed9:c988/tcp/1211/p2p/12D3KooWLQNTEsbJ6DTwMDmxTBMKoVJupVsZaNscE18LtRc4hWnW",
-		"/ip6/2600:3c04::f03c:94ff:fed9:c988/udp/1211/quic-v1/p2p/12D3KooWLQNTEsbJ6DTwMDmxTBMKoVJupVsZaNscE18LtRc4hWnW",
-		"/ip4/213.52.130.17/tcp/1211/p2p/12D3KooWCTuXGnTrJ8FCCf1JiifePwWnvTZtnhSZaHSX9Gk4NFB7",
-		"/ip4/213.52.130.17/udp/1211/quic-v1/p2p/12D3KooWCTuXGnTrJ8FCCf1JiifePwWnvTZtnhSZaHSX9Gk4NFB7",
-		"/ip6/2a01:7e00::f03c:94ff:fed9:2cf3/tcp/1211/p2p/12D3KooWCTuXGnTrJ8FCCf1JiifePwWnvTZtnhSZaHSX9Gk4NFB7",
-		"/ip6/2a01:7e00::f03c:94ff:fed9:2cf3/udp/1211/quic-v1/p2p/12D3KooWCTuXGnTrJ8FCCf1JiifePwWnvTZtnhSZaHSX9Gk4NFB7",
-		"/ip4/172.105.17.227/tcp/1211/p2p/12D3KooWH7r2zqJLonqUCyvU7a7wsZBeYRsiWXgXBfKjnuSZnPxx",
-		"/ip4/172.105.17.227/udp/1211/quic-v1/p2p/12D3KooWH7r2zqJLonqUCyvU7a7wsZBeYRsiWXgXBfKjnuSZnPxx",
-		"/ip6/2600:3c04::f03c:94ff:fed9:591a/tcp/1211/p2p/12D3KooWH7r2zqJLonqUCyvU7a7wsZBeYRsiWXgXBfKjnuSZnPxx",
-		"/ip6/2600:3c04::f03c:94ff:fed9:591a/udp/1211/quic-v1/p2p/12D3KooWH7r2zqJLonqUCyvU7a7wsZBeYRsiWXgXBfKjnuSZnPxx",
-		"/ip6/2400:8901::f03c:94ff:fed9:2c0a/tcp/1211/p2p/12D3KooWD6qmTGCShu8w9YZfm3LcyLA7iBx63vG6zTgXsWXC2zRA",
-		"/ip6/2400:8901::f03c:94ff:fed9:2c0a/udp/1211/quic-v1/p2p/12D3KooWD6qmTGCShu8w9YZfm3LcyLA7iBx63vG6zTgXsWXC2zRA",
-		"/ip4/192.46.226.192/tcp/1211/p2p/12D3KooWD6qmTGCShu8w9YZfm3LcyLA7iBx63vG6zTgXsWXC2zRA",
-		"/ip4/192.46.226.192/udp/1211/quic-v1/p2p/12D3KooWD6qmTGCShu8w9YZfm3LcyLA7iBx63vG6zTgXsWXC2zRA",
-		"/ip4/172.233.26.167/tcp/1211/p2p/12D3KooWJLqZsLATmeTBnukCqdVa5nENjK1bg5Wxn4WnRmb84W5E",
-		"/ip4/172.233.26.167/udp/1211/quic-v1/p2p/12D3KooWJLqZsLATmeTBnukCqdVa5nENjK1bg5Wxn4WnRmb84W5E",
-		"/ip6/2600:3c0d::f03c:94ff:fed9:590b/tcp/1211/p2p/12D3KooWJLqZsLATmeTBnukCqdVa5nENjK1bg5Wxn4WnRmb84W5E",
-		"/ip6/2600:3c0d::f03c:94ff:fed9:590b/udp/1211/quic-v1/p2p/12D3KooWJLqZsLATmeTBnukCqdVa5nENjK1bg5Wxn4WnRmb84W5E",
-		"/ip6/2600:3c03::f03c:94ff:fed9:c9f3/udp/1211/quic-v1/p2p/12D3KooWRQ7vwPZubf9gLMLqWu8qmeb7EZ1wRgJEQu3XwTABgpcA",
-		"/ip4/162.216.16.195/tcp/1211/p2p/12D3KooWRQ7vwPZubf9gLMLqWu8qmeb7EZ1wRgJEQu3XwTABgpcA",
-		"/ip4/162.216.16.195/udp/1211/quic-v1/p2p/12D3KooWRQ7vwPZubf9gLMLqWu8qmeb7EZ1wRgJEQu3XwTABgpcA",
-		"/ip6/2600:3c03::f03c:94ff:fed9:c9f3/tcp/1211/p2p/12D3KooWRQ7vwPZubf9gLMLqWu8qmeb7EZ1wRgJEQu3XwTABgpcA",
-		"/ip4/172.105.17.253/tcp/1211/p2p/12D3KooWDnLdXuQKuQ2ZjXn21NJMQ4TStTMGTM1f7cJLiU8E5v2C",
-		"/ip4/172.105.17.253/udp/1211/quic-v1/p2p/12D3KooWDnLdXuQKuQ2ZjXn21NJMQ4TStTMGTM1f7cJLiU8E5v2C",
-		"/ip6/2600:3c04::f03c:94ff:fed9:2ced/tcp/1211/p2p/12D3KooWDnLdXuQKuQ2ZjXn21NJMQ4TStTMGTM1f7cJLiU8E5v2C",
-		"/ip6/2600:3c04::f03c:94ff:fed9:2ced/udp/1211/quic-v1/p2p/12D3KooWDnLdXuQKuQ2ZjXn21NJMQ4TStTMGTM1f7cJLiU8E5v2C",
-		"/ip6/2400:8907::f03c:94ff:fed9:594e/tcp/1211/p2p/12D3KooWFBTCckyXPWCEuiHQfd6CZPRjRaDa78dgvvPgxHHKepMm",
-		"/ip6/2400:8907::f03c:94ff:fed9:594e/udp/1211/quic-v1/p2p/12D3KooWFBTCckyXPWCEuiHQfd6CZPRjRaDa78dgvvPgxHHKepMm",
-		"/ip4/172.105.178.132/tcp/1211/p2p/12D3KooWFBTCckyXPWCEuiHQfd6CZPRjRaDa78dgvvPgxHHKepMm",
-		"/ip4/172.105.178.132/udp/1211/quic-v1/p2p/12D3KooWFBTCckyXPWCEuiHQfd6CZPRjRaDa78dgvvPgxHHKepMm",
-		"/ip4/172.105.177.80/tcp/1211/p2p/12D3KooWCGUrUgBVUgSH38bzaRG93VStAq6xGE7BEC5PXTusVshx",
-		"/ip4/172.105.177.80/udp/1211/quic-v1/p2p/12D3KooWCGUrUgBVUgSH38bzaRG93VStAq6xGE7BEC5PXTusVshx",
-		"/ip6/2400:8907::f03c:94ff:fed9:5982/tcp/1211/p2p/12D3KooWCGUrUgBVUgSH38bzaRG93VStAq6xGE7BEC5PXTusVshx",
-		"/ip6/2400:8907::f03c:94ff:fed9:5982/udp/1211/quic-v1/p2p/12D3KooWCGUrUgBVUgSH38bzaRG93VStAq6xGE7BEC5PXTusVshx",
-		"/ip4/45.79.143.117/tcp/1211/p2p/12D3KooWSzXGP1ar5buxDxs8CDqwcSFsRPDNLHRvC7PVQsFuRuxk",
-		"/ip4/45.79.143.117/udp/1211/quic-v1/p2p/12D3KooWSzXGP1ar5buxDxs8CDqwcSFsRPDNLHRvC7PVQsFuRuxk",
-		"/ip6/2600:3c03::f03c:94ff:fed9:590c/tcp/1211/p2p/12D3KooWSzXGP1ar5buxDxs8CDqwcSFsRPDNLHRvC7PVQsFuRuxk",
-		"/ip6/2600:3c03::f03c:94ff:fed9:590c/udp/1211/quic-v1/p2p/12D3KooWSzXGP1ar5buxDxs8CDqwcSFsRPDNLHRvC7PVQsFuRuxk",
-		"/ip6/2600:3c03::f03c:94ff:fed9:2c9b/udp/1211/quic-v1/p2p/12D3KooWCzMUNRreaR5ySS6sCibwsLASvovbiDe1UXFkqH4EeNyW",
-		"/ip4/45.33.68.151/tcp/1211/p2p/12D3KooWCzMUNRreaR5ySS6sCibwsLASvovbiDe1UXFkqH4EeNyW",
-		"/ip4/45.33.68.151/udp/1211/quic-v1/p2p/12D3KooWCzMUNRreaR5ySS6sCibwsLASvovbiDe1UXFkqH4EeNyW",
-		"/ip6/2600:3c03::f03c:94ff:fed9:2c9b/tcp/1211/p2p/12D3KooWCzMUNRreaR5ySS6sCibwsLASvovbiDe1UXFkqH4EeNyW",
-		"/ip4/172.233.40.200/udp/1211/quic-v1/p2p/12D3KooWQNJZqfT6mJf9rAGS3PaSgEE6AGWkbtgNAiqefN19gXNU",
-		"/ip6/2600:3c0e::f03c:94ff:fed9:c958/tcp/1211/p2p/12D3KooWQNJZqfT6mJf9rAGS3PaSgEE6AGWkbtgNAiqefN19gXNU",
-		"/ip6/2600:3c0e::f03c:94ff:fed9:c958/udp/1211/quic-v1/p2p/12D3KooWQNJZqfT6mJf9rAGS3PaSgEE6AGWkbtgNAiqefN19gXNU",
-		"/ip4/172.233.40.200/tcp/1211/p2p/12D3KooWQNJZqfT6mJf9rAGS3PaSgEE6AGWkbtgNAiqefN19gXNU",
-		"/ip4/178.79.168.116/tcp/1211/p2p/12D3KooWSnNxwWBUu6PrNXZcDCLPhqof3pX3x7AR1D8aUULVYG9t",
-		"/ip4/178.79.168.116/udp/1211/quic-v1/p2p/12D3KooWSnNxwWBUu6PrNXZcDCLPhqof3pX3x7AR1D8aUULVYG9t",
-		"/ip6/2a01:7e00::f03c:94ff:fed9:c977/tcp/1211/p2p/12D3KooWSnNxwWBUu6PrNXZcDCLPhqof3pX3x7AR1D8aUULVYG9t",
-		"/ip6/2a01:7e00::f03c:94ff:fed9:c977/udp/1211/quic-v1/p2p/12D3KooWSnNxwWBUu6PrNXZcDCLPhqof3pX3x7AR1D8aUULVYG9t",
-		"/ip4/172.232.117.254/tcp/1211/p2p/12D3KooWR8642yA54AsAuq2KmJ4VCyCLcKBKM6Qs83CWrot4rGN6",
-		"/ip4/172.232.117.254/udp/1211/quic-v1/p2p/12D3KooWR8642yA54AsAuq2KmJ4VCyCLcKBKM6Qs83CWrot4rGN6",
-		"/ip6/2600:3c08::f03c:94ff:fed9:5940/tcp/1211/p2p/12D3KooWR8642yA54AsAuq2KmJ4VCyCLcKBKM6Qs83CWrot4rGN6",
-		"/ip6/2600:3c08::f03c:94ff:fed9:5940/udp/1211/quic-v1/p2p/12D3KooWR8642yA54AsAuq2KmJ4VCyCLcKBKM6Qs83CWrot4rGN6",
-		"/ip6/2400:8901::f03c:94ff:fed9:598e/udp/1211/quic-v1/p2p/12D3KooWKvkqtkHP2Sc56h3CWy4dZ3ng4Zk5uR75RgFDGFp153Bg",
-		"/ip4/139.162.3.71/tcp/1211/p2p/12D3KooWKvkqtkHP2Sc56h3CWy4dZ3ng4Zk5uR75RgFDGFp153Bg",
-		"/ip4/139.162.3.71/udp/1211/quic-v1/p2p/12D3KooWKvkqtkHP2Sc56h3CWy4dZ3ng4Zk5uR75RgFDGFp153Bg",
-		"/ip6/2400:8901::f03c:94ff:fed9:598e/tcp/1211/p2p/12D3KooWKvkqtkHP2Sc56h3CWy4dZ3ng4Zk5uR75RgFDGFp153Bg",
-		"/ip6/2a01:7e02::f03c:94ff:fed9:2c58/tcp/1211/p2p/12D3KooWR8kScV9yAxi9Xx2ZzRDHnM6t3mRVUNSeyXLDtJChAp7F",
-		"/ip6/2a01:7e02::f03c:94ff:fed9:2c58/udp/1211/quic-v1/p2p/12D3KooWR8kScV9yAxi9Xx2ZzRDHnM6t3mRVUNSeyXLDtJChAp7F",
-		"/ip4/172.233.121.225/tcp/1211/p2p/12D3KooWR8kScV9yAxi9Xx2ZzRDHnM6t3mRVUNSeyXLDtJChAp7F",
-		"/ip4/172.233.121.225/udp/1211/quic-v1/p2p/12D3KooWR8kScV9yAxi9Xx2ZzRDHnM6t3mRVUNSeyXLDtJChAp7F",
+		"/ip4/172.105.127.219/tcp/1211/p2p/12D3KooWEqqHDESDpxKdETWYkwVDx3MkWrFs9CnVFXqJkjdirwRe",
+		"/ip4/172.105.127.219/udp/1211/quic-v1/p2p/12D3KooWEqqHDESDpxKdETWYkwVDx3MkWrFs9CnVFXqJkjdirwRe",
+		"/ip6/2400:8901::f03c:94ff:fe72:258d/tcp/1211/p2p/12D3KooWEqqHDESDpxKdETWYkwVDx3MkWrFs9CnVFXqJkjdirwRe",
+		"/ip6/2400:8901::f03c:94ff:fe72:258d/udp/1211/quic-v1/p2p/12D3KooWEqqHDESDpxKdETWYkwVDx3MkWrFs9CnVFXqJkjdirwRe",
+		"/ip4/23.92.19.54/tcp/1211/p2p/12D3KooWM3qc1VUe8PR6d84NFQX7seEXbhqHabs4CVhzrvpmDLJq",
+		"/ip4/23.92.19.54/udp/1211/quic-v1/p2p/12D3KooWM3qc1VUe8PR6d84NFQX7seEXbhqHabs4CVhzrvpmDLJq",
+		"/ip6/2600:3c03::f03c:94ff:fe72:257e/tcp/1211/p2p/12D3KooWM3qc1VUe8PR6d84NFQX7seEXbhqHabs4CVhzrvpmDLJq",
+		"/ip6/2600:3c03::f03c:94ff:fe72:257e/udp/1211/quic-v1/p2p/12D3KooWM3qc1VUe8PR6d84NFQX7seEXbhqHabs4CVhzrvpmDLJq",
+		"/ip4/172.233.121.225/tcp/1211/p2p/12D3KooWDQBRhA62hzMnDJGWuniuos4c9MMjpnEL7KYLH94gTru8",
+		"/ip4/172.233.121.225/udp/1211/quic-v1/p2p/12D3KooWDQBRhA62hzMnDJGWuniuos4c9MMjpnEL7KYLH94gTru8",
+		"/ip6/2a01:7e02::f03c:94ff:fe72:2529/tcp/1211/p2p/12D3KooWDQBRhA62hzMnDJGWuniuos4c9MMjpnEL7KYLH94gTru8",
+		"/ip6/2a01:7e02::f03c:94ff:fe72:2529/udp/1211/quic-v1/p2p/12D3KooWDQBRhA62hzMnDJGWuniuos4c9MMjpnEL7KYLH94gTru8",
+		"/ip4/139.177.199.80/tcp/1211/p2p/12D3KooWSpvtDqN8vbVqdQdixSZQkiBz7TSNjuLmzgGFA9GKkdef",
+		"/ip4/139.177.199.80/udp/1211/quic-v1/p2p/12D3KooWSpvtDqN8vbVqdQdixSZQkiBz7TSNjuLmzgGFA9GKkdef",
+		"/ip6/2600:3c04::f03c:94ff:fe72:2548/tcp/1211/p2p/12D3KooWSpvtDqN8vbVqdQdixSZQkiBz7TSNjuLmzgGFA9GKkdef",
+		"/ip6/2600:3c04::f03c:94ff:fe72:2548/udp/1211/quic-v1/p2p/12D3KooWSpvtDqN8vbVqdQdixSZQkiBz7TSNjuLmzgGFA9GKkdef",
+		"/ip6/2600:3c04::f03c:94ff:fe72:254c/udp/1211/quic-v1/p2p/12D3KooWFhFWwnMQcyRZG8u37Jjzo85uKHZ8R14x6taCsFBPLhZL",
+		"/ip4/139.177.199.86/tcp/1211/p2p/12D3KooWFhFWwnMQcyRZG8u37Jjzo85uKHZ8R14x6taCsFBPLhZL",
+		"/ip4/139.177.199.86/udp/1211/quic-v1/p2p/12D3KooWFhFWwnMQcyRZG8u37Jjzo85uKHZ8R14x6taCsFBPLhZL",
+		"/ip6/2600:3c04::f03c:94ff:fe72:254c/tcp/1211/p2p/12D3KooWFhFWwnMQcyRZG8u37Jjzo85uKHZ8R14x6taCsFBPLhZL",
+		"/ip4/172.233.16.56/udp/1211/quic-v1/p2p/12D3KooWSV4qvfd7DNg3nD9Vk9t7BkZoeotgYTGgV1xTykhMU5qY",
+		"/ip6/2600:3c0d::f03c:94ff:fe72:2544/tcp/1211/p2p/12D3KooWSV4qvfd7DNg3nD9Vk9t7BkZoeotgYTGgV1xTykhMU5qY",
+		"/ip6/2600:3c0d::f03c:94ff:fe72:2544/udp/1211/quic-v1/p2p/12D3KooWSV4qvfd7DNg3nD9Vk9t7BkZoeotgYTGgV1xTykhMU5qY",
+		"/ip4/172.233.16.56/tcp/1211/p2p/12D3KooWSV4qvfd7DNg3nD9Vk9t7BkZoeotgYTGgV1xTykhMU5qY",
+		"/ip4/178.79.130.200/tcp/1211/p2p/12D3KooWSoox2vhrHdoMXWUia2bQQ9stPieWvEKqN83wC17VEvrC",
+		"/ip4/178.79.130.200/udp/1211/quic-v1/p2p/12D3KooWSoox2vhrHdoMXWUia2bQQ9stPieWvEKqN83wC17VEvrC",
+		"/ip6/2a01:7e00::f03c:94ff:fe72:25dd/tcp/1211/p2p/12D3KooWSoox2vhrHdoMXWUia2bQQ9stPieWvEKqN83wC17VEvrC",
+		"/ip6/2a01:7e00::f03c:94ff:fe72:25dd/udp/1211/quic-v1/p2p/12D3KooWSoox2vhrHdoMXWUia2bQQ9stPieWvEKqN83wC17VEvrC",
+		"/ip4/172.233.61.180/tcp/1211/p2p/12D3KooWHa5MEUYR37JFxuvvX5oCvjc1sYcnqeetc4zhPWs4nnRj",
+		"/ip4/172.233.61.180/udp/1211/quic-v1/p2p/12D3KooWHa5MEUYR37JFxuvvX5oCvjc1sYcnqeetc4zhPWs4nnRj",
+		"/ip6/2600:3c0e::f03c:94ff:fe72:25c9/tcp/1211/p2p/12D3KooWHa5MEUYR37JFxuvvX5oCvjc1sYcnqeetc4zhPWs4nnRj",
+		"/ip6/2600:3c0e::f03c:94ff:fe72:25c9/udp/1211/quic-v1/p2p/12D3KooWHa5MEUYR37JFxuvvX5oCvjc1sYcnqeetc4zhPWs4nnRj",
+		"/ip4/172.235.8.119/tcp/1211/p2p/12D3KooWBoRG7jBwJ98nbVex9hyczUdzbc4JCPUsTj73kRmgU7ND",
+		"/ip4/172.235.8.119/udp/1211/quic-v1/p2p/12D3KooWBoRG7jBwJ98nbVex9hyczUdzbc4JCPUsTj73kRmgU7ND",
+		"/ip6/2600:3c08::f03c:94ff:fe72:25f0/tcp/1211/p2p/12D3KooWBoRG7jBwJ98nbVex9hyczUdzbc4JCPUsTj73kRmgU7ND",
+		"/ip6/2600:3c08::f03c:94ff:fe72:25f0/udp/1211/quic-v1/p2p/12D3KooWBoRG7jBwJ98nbVex9hyczUdzbc4JCPUsTj73kRmgU7ND",
 	}
 	var bootstrapPeersMultiaddr []multiaddr.Multiaddr
 	for _, peer := range bootstrapPeersStrings {
@@ -406,10 +367,35 @@ func main() {
 			log.Panicf("Failed to join NewTransaction topic: %s", err)
 		}
 
+		nodeECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
+		if err != nil {
+			log.Fatalf("failed to create ECDSA key pair: %s", err)
+		}
+
+		ownerECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
+		if err != nil {
+			log.Fatalf("failed to create ECDSA key pair: %s", err)
+		}
+
+		ownerAesKey, err := aes.NewAESKey()
+		if err != nil {
+			log.Fatalf("failed to create AES key: %s", err)
+		}
+
+		encryptedFilename, err := ownerAesKey.EncryptData([]byte("filename"))
+		if err != nil {
+			log.Fatalf("failed to encrypt filename: %s", err)
+		}
+
+		encryptedExtension, err := ownerAesKey.EncryptData([]byte("extension"))
+		if err != nil {
+			log.Fatalf("failed to encrypt extension: %s", err)
+		}
+
 		go func() {
 			for {
 				time.Sleep(5 * time.Second)
-				fakeTrx, err := poccontext.GenFakeTransaction()
+				fakeTrx, err := poccontext.GenFakeTransactionWithSameKeyPair(nodeECDSAKeyPair, ownerECDSAKeyPair, ownerAesKey, encryptedFilename, encryptedExtension)
 				if err != nil {
 					log.Println("Failed to generate fake transaction:", err)
 					continue
