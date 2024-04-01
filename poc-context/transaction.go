@@ -77,6 +77,42 @@ func GenFakeTransaction() (*transaction.AddFileTransaction, error) {
 	return addFileTransaction, nil
 }
 
+func GenFakeTransactionWithSameKeyPair(nodeECDSAKeyPair ecdsa.KeyPair, ownerECDSAKeyPair ecdsa.KeyPair, ownerAesKey aes.Key, encryptedFilename []byte, encryptedExtension []byte) (*transaction.AddFileTransaction, error) {
+	randomeNodeID, err := generateRandomPeerID()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create peer.ID: %s", err)
+	}
+
+	// Generate a random uuid for the file CID
+	// randomFilename := uuid.New().String()
+	randomFilename := "fileCID"
+	randomFileCid := merkledag.NodeWithData(unixfs.FilePBData([]byte(randomFilename), uint64(len([]byte(randomFilename))))).Cid() // Random CIDv0
+
+	checksum := sha256.Sum256([]byte("checksum"))
+
+	randomClientAddrInfo, err := generateRandomAddrInfo()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create random AddrInfo: %s", err)
+	}
+
+	randomStorageAddrInfo, err := generateRandomAddrInfo()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create random AddrInfo: %s", err)
+	}
+
+	announcement := transaction.NewClientAnnouncement(ownerECDSAKeyPair, randomClientAddrInfo, randomFileCid, encryptedFilename, encryptedExtension, 1234, checksum[:])
+	time.Sleep(1 * time.Second)
+	addFileTransaction := transaction.NewAddFileTransaction(announcement, randomFileCid, false, nodeECDSAKeyPair, randomeNodeID, randomStorageAddrInfo)
+	bd, _ := addFileTransaction.Serialize()
+	log.Printf("Transaction: %s\n", string(bd))
+
+	if !consensus.ValidateTransaction(addFileTransaction) {
+		return nil, fmt.Errorf("ValidateTransaction failed for a valid AddFileTransaction")
+	}
+
+	return addFileTransaction, nil
+}
+
 func generateRandomPeerID() (peer.ID, error) {
 	// Generate a new RSA key pair for this host
 	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
