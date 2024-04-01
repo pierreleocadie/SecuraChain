@@ -53,7 +53,7 @@ func main() { //nolint: funlen, gocyclo
 	* IPFS NODE
 	 */
 	ipfsAPI, nodeIpfs := node.InitializeIPFSNode(ctx, cfg, log)
-	dhtAPI := ipfsAPI.Dht()
+	// dhtAPI := ipfsAPI.Dht()
 
 	/*
 	* IPFS MEMORY MANAGEMENT
@@ -184,34 +184,13 @@ func main() { //nolint: funlen, gocyclo
 
 			// Download the file
 			fileImmutablePath := path.FromCid(clientAnnouncement.FileCid)
-			providers, err := dhtAPI.FindProviders(ctx, fileImmutablePath)
+
+			err = ipfsAPI.Swarm().Connect(ctx, clientAnnouncement.IPFSClientNodeAddrInfo)
 			if err != nil {
-				log.Errorln("Error finding providers : ", err)
+				log.Errorf("Failed to connect to provider: %s", err)
 				continue
 			}
-		outer:
-			for {
-				providers, err := dhtAPI.FindProviders(ctx, fileImmutablePath)
-				if err != nil {
-					log.Errorln("Error finding providers : ", err)
-					continue
-				}
-				for provider := range providers {
-					log.Debugln("Found provider : ", provider.ID.String())
-					break outer
-				}
-				log.Debugf("Channel contains %d providers", len(providers))
-				if len(providers) >= 1 {
-					break
-				}
-			}
-			for provider := range providers {
-				err := ipfsAPI.Swarm().Connect(ctx, provider)
-				if err != nil {
-					log.Errorf("Failed to connect to provider: %s", err)
-					continue
-				}
-			}
+
 			log.Debugf("Downloading file %s", fileImmutablePath)
 			err = ipfs.GetFile(ctx, cfg, ipfsAPI, fileImmutablePath)
 			if err != nil {

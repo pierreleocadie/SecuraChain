@@ -10,7 +10,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
-	"github.com/ipfs/boxo/path"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
@@ -61,7 +60,7 @@ func main() { //nolint: funlen, gocyclo
 	if err != nil {
 		log.Panicf("Failed to spawn IPFS node: %s", err)
 	}
-	dhtAPI := ipfsAPI.Dht()
+	// dhtAPI := ipfsAPI.Dht()
 
 	log.Debugf("IPFS node spawned with PeerID: %s", nodeIpfs.Identity.String())
 
@@ -138,36 +137,13 @@ func main() { //nolint: funlen, gocyclo
 		for {
 			clientAnnouncement := <-clientAnnouncementChan
 			clientAnnouncementJSON, err := clientAnnouncement.Serialize()
-			clientAnnouncementPath := path.FromCid(clientAnnouncement.FileCid)
+			// clientAnnouncementPath := path.FromCid(clientAnnouncement.FileCid)
 			if err != nil {
 				log.Errorln("Error serializing ClientAnnouncement : ", err)
 				continue
 			}
 
 			log.Debugln("Publishing ClientAnnouncement : ", string(clientAnnouncementJSON))
-			for {
-				providerStats, err := nodeIpfs.Provider.Stat()
-				if err != nil {
-					log.Errorln("Error getting provider stats : ", err)
-					continue
-				}
-				log.Debugln("Total provides : ", providerStats)
-				if providerStats.TotalProvides >= 1 {
-					break
-				}
-				time.Sleep(cfg.IpfsProvidersDiscoveryRefreshInterval)
-			}
-
-			// Find providers for the file
-			providers, err := dhtAPI.FindProviders(ctx, clientAnnouncementPath)
-			if err != nil {
-				log.Errorln("Error finding providers : ", err)
-				continue
-			}
-			for provider := range providers {
-				log.Debugln("Found provider : ", provider.ID.String())
-			}
-
 			err = clientAnnouncementTopic.Publish(ctx, clientAnnouncementJSON)
 			if err != nil {
 				log.Errorln("Error publishing ClientAnnouncement : ", err)
