@@ -64,8 +64,11 @@ type Config struct {
 	FileRights               int    `yaml:"fileRights"`
 	FileMetadataRegistryJSON string `yaml:"fileMetadataRegistryJson"`
 	MemorySpace              uint   `yaml:"memorySpace"`
-	BlockRegistryPath        string `yaml:"blockRegistryPath"`
-	IndexingRegistryPath     string `yaml:"indexingRegistryPath"`
+	FileSizeLimit            uint64 `yaml:"fileSizeLimit"`
+
+	// Blockchain
+	BlockRegistryPath    string `yaml:"blockRegistryPath"`
+	IndexingRegistryPath string `yaml:"indexingRegistryPath"`
 }
 
 // Function to load the yaml config file

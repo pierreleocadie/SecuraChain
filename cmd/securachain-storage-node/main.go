@@ -170,6 +170,12 @@ func main() { //nolint: funlen, gocyclo
 				continue
 			}
 
+			// Check if the file size is within the limit
+			if clientAnnouncement.FileSize > cfg.FileSizeLimit {
+				log.Debugf("File size exceeds the limit")
+				continue
+			}
+
 			// Check if we have enough space to store the file
 			freeMemorySpace, err := ipfs.FreeMemoryAvailable(ctx, nodeIpfs)
 			if err != nil {
