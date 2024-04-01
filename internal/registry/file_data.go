@@ -48,9 +48,9 @@ func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, addFi
 	log.Debugln("Owner address converted to string : ", ownerAddressStr)
 
 	// If the file already exists, add the new provider to the list of providers
-	for _, file := range r.IndexingFiles[ownerAddressStr] {
+	for i, file := range r.IndexingFiles[ownerAddressStr] {
 		if bytes.Equal(file.Filename, addFileTransac.Filename) && bytes.Equal(file.Extension, addFileTransac.Extension) && file.FileSize == addFileTransac.FileSize && bytes.Equal(file.Checksum, addFileTransac.Checksum) && file.FileCid == addFileTransac.FileCid {
-			file.Providers = append(file.Providers, addFileTransac.IPFSStorageNodeAddrInfo)
+			r.IndexingFiles[ownerAddressStr][i].Providers = append(r.IndexingFiles[ownerAddressStr][i].Providers, addFileTransac.IPFSStorageNodeAddrInfo)
 			log.Debugln("[AddFileToRegistry] - File already exists, new provider added to the list of providers")
 			return SaveRegistryToFile(log, config, config.IndexingRegistryPath, r)
 		}
