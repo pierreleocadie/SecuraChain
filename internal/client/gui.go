@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"net/url"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -21,8 +22,8 @@ import (
 
 func CreateECDSAWidgets(w fyne.Window, ecdsaInput *widget.Label, log *ipfsLog.ZapEventLogger, ecdsaKeyPair *ecdsa.KeyPair) (fyne.CanvasObject, *widget.Button, *widget.Button) { //nolint: lll
 	ecdsaBrowseButton := BrowseButton(w, ecdsaInput, log)
-	ecdsaButton := GenerateECDSAKeyPairButton(ecdsaInput, log)
-	ecdsaButtonLoad := LoadECDSAButton(ecdsaKeyPair, ecdsaInput, log)
+	ecdsaButton := GenerateECDSAKeyPairButton(w, ecdsaInput, log)
+	ecdsaButtonLoad := LoadECDSAButton(w, ecdsaKeyPair, ecdsaInput, log)
 
 	hBoxECDSA := container.New(
 		layout.NewHBoxLayout(),
@@ -36,8 +37,8 @@ func CreateECDSAWidgets(w fyne.Window, ecdsaInput *widget.Label, log *ipfsLog.Za
 
 func CreateAESWidgets(w fyne.Window, aesInput *widget.Label, log *ipfsLog.ZapEventLogger, aesKey *aes.Key) (fyne.CanvasObject, *widget.Button, *widget.Button) { //nolint: lll
 	aesBrowseButton := BrowseButton(w, aesInput, log)
-	aesButton := GenerateAESKeyButton(aesInput, log)
-	aesButtonLoad := LoadAESButton(aesKey, aesInput, log)
+	aesButton := GenerateAESKeyButton(w, aesInput, log)
+	aesButtonLoad := LoadAESButton(w, aesKey, aesInput, log)
 
 	hBoxAES := container.New(
 		layout.NewHBoxLayout(),
@@ -69,6 +70,7 @@ func BrowseButton(w fyne.Window, inputLabel *widget.Label, log *ipfsLog.ZapEvent
 				if er == nil {
 					inputLabel.SetText(u.Path)
 					log.Debugf("Key will be saved in : %v", u.Path)
+					dialog.ShowInformation("Directory Selected", "Directory selected successfully", w)
 				}
 			}
 		}, w)
@@ -76,44 +78,51 @@ func BrowseButton(w fyne.Window, inputLabel *widget.Label, log *ipfsLog.ZapEvent
 	})
 }
 
-func LoadECDSAButton(ecdsaKeyPair *ecdsa.KeyPair, ecdsaInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
+func LoadECDSAButton(w fyne.Window, ecdsaKeyPair *ecdsa.KeyPair, ecdsaInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
 	return widget.NewButton("Load ECDSA Key Pair", func() {
 		if ecdsaInputLabel.Text == "" {
 			log.Debug("Please select a directory to save the ECDSA key pair")
+			dialog.ShowError(errors.New("please select a directory to save the ECDSA key pair"), w)
 			return
 		}
 
 		ecdsaKeyPairL, err := ecdsa.LoadKeys("ecdsaPrivateKey", "ecdsaPublicKey", ecdsaInputLabel.Text)
 		if err != nil {
 			log.Errorln("Error loading ECDSA key pair : ", err)
+			dialog.ShowError(err, w)
 			return
 		}
 		*ecdsaKeyPair = ecdsaKeyPairL
 		log.Debug("ECDSA key pair loaded")
+		dialog.ShowInformation("ECDSA Key Pair Loaded", "ECDSA key pair loaded successfully", w)
 	})
 }
 
-func LoadAESButton(aesKey *aes.Key, aesInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
+func LoadAESButton(w fyne.Window, aesKey *aes.Key, aesInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
 	return widget.NewButton("Load AES Key", func() {
 		if aesInputLabel.Text == "" {
 			log.Debug("Please select a directory to save the AES key")
+			dialog.ShowError(errors.New("please select a directory to save the AES key"), w)
 			return
 		}
 
 		aesKeyL, err := aes.LoadKey("aesKey", aesInputLabel.Text)
 		if err != nil {
 			log.Errorln("Error loading AES key : ", err)
+			dialog.ShowError(err, w)
 			return
 		}
 		*aesKey = aesKeyL
 		log.Debug("AES key loaded")
+		dialog.ShowInformation("AES Key Loaded", "AES key loaded successfully", w)
 	})
 }
 
-func GenerateECDSAKeyPairButton(ecdsaInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
+func GenerateECDSAKeyPairButton(w fyne.Window, ecdsaInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
 	return widget.NewButton("Generate ECDSA Key Pair", func() {
 		if ecdsaInputLabel.Text == "" {
 			log.Debug("Please select a directory to save the ECDSA key pair")
+			dialog.ShowError(errors.New("please select a directory to save the ECDSA key pair"), w)
 			return
 		}
 
@@ -125,27 +134,31 @@ func GenerateECDSAKeyPairButton(ecdsaInputLabel *widget.Label, log *ipfsLog.ZapE
 		err = ecdsaKeyPair.SaveKeys("ecdsaPrivateKey", "ecdsaPublicKey", ecdsaInputLabel.Text)
 		if err != nil {
 			log.Errorln("Error saving ECDSA key pair : ", err)
+			dialog.ShowError(err, w)
 			return
 		}
 	})
 }
 
-func GenerateAESKeyButton(aesInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
+func GenerateAESKeyButton(w fyne.Window, aesInputLabel *widget.Label, log *ipfsLog.ZapEventLogger) *widget.Button {
 	return widget.NewButton("Generate AES Key", func() {
 		if aesInputLabel.Text == "" {
 			log.Debug("Please select a directory to save the AES key")
+			dialog.ShowError(errors.New("please select a directory to save the AES key"), w)
 			return
 		}
 
 		aesKey, err := aes.NewAESKey()
 		if err != nil {
 			log.Errorln("Error generating AES key : ", err)
+			dialog.ShowError(err, w)
 			return
 		}
 
 		err = aesKey.SaveKey("aesKey", aesInputLabel.Text)
 		if err != nil {
 			log.Errorln("Error saving AES key : ", err)
+			dialog.ShowError(err, w)
 			return
 		}
 	})
@@ -157,31 +170,37 @@ func SelectFileButton(w fyne.Window, selectedFileInputLabel *widget.Label, log *
 			if err == nil && (file != nil) {
 				selectedFileInputLabel.SetText(file.URI().Path())
 				log.Debugf("File selected : %v", selectedFileInputLabel.Text)
+				dialog.ShowInformation("File Selected", "File selected successfully", w)
 			}
 		}, w)
 		dialog.Show()
 	})
 }
 
-func SendFileButton(ctx context.Context, cfg *config.Config, selectedFile *widget.Label,
+func SendFileButton(ctx context.Context, cfg *config.Config, w fyne.Window, selectedFile *widget.Label,
 	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, nodeIpfs *core.IpfsNode, ipfsAPI iface.CoreAPI,
 	clientAnnouncementChan chan *transaction.ClientAnnouncement,
 	log *ipfsLog.ZapEventLogger) *widget.Button {
 	return widget.NewButton("Send File", func() {
 		if *ecdsaKeyPair == nil {
 			log.Debug("Please generate or load an ECDSA key pair")
+			dialog.ShowError(errors.New("please generate or load an ECDSA key pair"), w)
 			return
 		}
 
 		if *aesKey == nil {
 			log.Debug("Please generate or load an AES key")
+			dialog.ShowError(errors.New("please generate or load an AES key"), w)
 			return
 		}
 
 		err := SendFile(ctx, cfg, selectedFile.Text, ecdsaKeyPair, aesKey, nodeIpfs, ipfsAPI, clientAnnouncementChan, log)
 		if err != nil {
 			log.Errorln("Error sending file : ", err)
+			dialog.ShowError(err, w)
 			return
 		}
+
+		dialog.ShowInformation("Announcement Sent", "Announcement sent successfully. Please wait for some storage nodes to download your file.", w)
 	})
 }

@@ -209,6 +209,7 @@ func main() { //nolint: funlen, gocyclo
 	// create a new button to send a file over the network
 	sendFileButton := client.SendFileButton(ctx,
 		cfg,
+		w,
 		selectedFileLabel,
 		&ecdsaKeyPair,
 		&aesKey,
