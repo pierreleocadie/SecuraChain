@@ -57,12 +57,15 @@ type Config struct {
 	BlacklistStringFlag                string `yaml:"blacklistStringFlag"`
 	AskingBlockchainStringFlag         string `yaml:"askingBlockchainStringFlag"`
 	ReceiveBlockchainStringFlag        string `yaml:"receiveBlockchainStringFlag"`
+	AskMyFilesStringFlag               string `yaml:"askMyFilesStringFlag"`
+	SendFilesStringFlag                string `yaml:"sendFilesStringFlag"`
 
 	// Embedded IPFS node
 	FileRights               int    `yaml:"fileRights"`
 	FileMetadataRegistryJSON string `yaml:"fileMetadataRegistryJson"`
 	MemorySpace              uint   `yaml:"memorySpace"`
-	RegistryPath             string `yaml:"registryPath"`
+	BlockRegistryPath        string `yaml:"blockRegistryPath"`
+	IndexingRegistryPath     string `yaml:"indexingRegistryPath"`
 }
 
 // Function to load the yaml config file

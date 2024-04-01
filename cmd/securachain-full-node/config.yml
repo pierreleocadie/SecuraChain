@@ -6,7 +6,8 @@ ecdsaKeyPairPath: ""
 aesKeyPath: ""
 lowWater: 160
 highWater: 192
-bootstrapPeers: [
+bootstrapPeers:  [
+
         "/ip4/172.105.127.219/tcp/1211/p2p/12D3KooWEqqHDESDpxKdETWYkwVDx3MkWrFs9CnVFXqJkjdirwRe",
         "/ip4/172.105.127.219/udp/1211/quic-v1/p2p/12D3KooWEqqHDESDpxKdETWYkwVDx3MkWrFs9CnVFXqJkjdirwRe",
         "/ip6/2400:8901::f03c:94ff:fe72:258d/tcp/1211/p2p/12D3KooWEqqHDESDpxKdETWYkwVDx3MkWrFs9CnVFXqJkjdirwRe",
@@ -67,6 +68,12 @@ rendezvousStringFlag: "SecuraChainNetwork"
 clientAnnouncementStringFlag: "ClientAnnouncement"
 storageNodeResponseStringFlag: "StorageNodeResponse"
 keepRelayConnectionAliveStringFlag: "KeepRelayConnectionAlive"
+askingBlockchainStringFlag: "AskingBlockchain"  
+receiveBlockchainStringFlag: "ReceiveBlockchain"
+askMyFilesStringFlag: "AskMyFiles"
+sendFilesStringFlag: "SendFiles"
 fileRights: 0700
 fileMetadataRegistryJson: "fileMetadataRegistry.json"
+blockRegistryPath: "blocksRegistry.json"
+indexingRegistryPath: "indexingRegistry.json"
 memorySpace: 10 # in GB
