@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"slices"
 	"time"
@@ -458,7 +459,8 @@ func main() {
 			log.Debugln("Files asked by a peer ", msg.GetFrom().String())
 
 			// Send the files of the owner
-			if !fullnode.SendOwnersFiles(log, ctx, cfg, string(msg.Data), sendFilesTopic) {
+			ownerAddressStr := fmt.Sprintf("%x", msg.Data)
+			if !fullnode.SendOwnersFiles(log, ctx, cfg, ownerAddressStr, sendFilesTopic) {
 				log.Debugln("Error sending the files of the owner")
 				continue
 			}
