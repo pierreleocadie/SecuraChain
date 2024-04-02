@@ -10,7 +10,12 @@ import (
 )
 
 type Registeries interface {
-	IndexingRegistry | FileRegistry | BlockRegistry | BlockData
+	IndexingRegistry | FileRegistry | BlockRegistry | BlockData | RegistryMessage
+}
+
+type RegistryMessage struct {
+	OwnerPublicKey string
+	Registry       []FileRegistry
 }
 
 // SaveRegistryToFile saves any registry to a JSON file.

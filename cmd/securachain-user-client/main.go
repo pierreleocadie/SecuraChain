@@ -23,6 +23,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
+	"github.com/pierreleocadie/SecuraChain/internal/registry"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
@@ -221,15 +222,58 @@ func main() { //nolint: funlen, gocyclo
 	}()
 
 	// Join the topic SendFilesStringFlag
-	// sendFilesTopic, err := ps.Join(cfg.SendFilesStringFlag)
-	// if err != nil {
-	// 	log.Panicf("Failed to join SendFiles topic : %s\n", err)
-	// }
+	sendFilesTopic, err := ps.Join(cfg.SendFilesStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join SendFiles topic : %s\n", err)
+	}
 
-	// subSendFiles, err := sendFilesTopic.Subscribe()
-	// if err != nil {
-	// 	log.Panicf("Failed to subscribe to SendFiles topic : %s\n", err)
-	// }
+	subSendFiles, err := sendFilesTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to SendFiles topic : %s\n", err)
+	}
+
+	// Handle incoming SendFiles messages
+	go func() {
+		for {
+			msg, err := subSendFiles.Next(ctx)
+			if err != nil {
+				log.Errorf("Failed to get next message from SendFiles topic: %s", err)
+				continue
+			}
+			log.Debugln("Received SendFiles message from ", msg.GetFrom().String())
+			log.Debugln("SendFiles: ", string(msg.Data))
+			filesRegistry, err := registry.DeserializeRegistry[registry.RegistryMessage](log, msg.Data)
+			if err != nil {
+				log.Errorln("Error deserializing RegistryMessage : ", err)
+				continue
+			}
+			ownerECDSAPubKeyBytes, err := ecdsaKeyPair.PublicKeyToBytes()
+			if err != nil {
+				log.Errorln("Error getting public key : ", err)
+				continue
+			}
+			ownerECDSAPubKeyStr := fmt.Sprintf("%x", ownerECDSAPubKeyBytes)
+			if filesRegistry.OwnerPublicKey == ownerECDSAPubKeyStr {
+				log.Debugln("Owner of the files is the current user")
+				filesListStr := ""
+				for _, fileRegistry := range filesRegistry.Registry {
+					filename, err := aesKey.DecryptData(fileRegistry.Filename)
+					if err != nil {
+						log.Errorln("Error decrypting filename : ", err)
+						continue
+					}
+					fileExtension, err := aesKey.DecryptData(fileRegistry.Extension)
+					if err != nil {
+						log.Errorln("Error decrypting file extension : ", err)
+						continue
+					}
+					fileCid := fileRegistry.FileCid.String()
+					filesListStr += fmt.Sprintf("Filename: %s%s, CID: %s\n", filename, fileExtension, fileCid)
+				}
+				dialog.ShowInformation("Files List", filesListStr, w)
+			}
+		}
+	}()
 
 	/*
 	* GUI FYNE
