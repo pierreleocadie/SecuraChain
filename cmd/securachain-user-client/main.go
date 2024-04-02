@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -36,6 +37,10 @@ func main() { //nolint: funlen, gocyclo
 	var ecdsaKeyPair ecdsa.KeyPair
 	var aesKey aes.Key
 	var clientAnnouncementChan = make(chan *transaction.ClientAnnouncement)
+	var askFilesListChan = make(chan []byte)
+
+	a := app.New()
+	w := a.NewWindow("SecuraChain User Client")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -126,12 +131,6 @@ func main() { //nolint: funlen, gocyclo
 		log.Warnf("Failed to join clientAnnouncement topic: %s", err)
 	}
 
-	// Subscribe to clientAnnouncementStringFlag topic
-	subClientAnnouncement, err := clientAnnouncementTopic.Subscribe()
-	if err != nil {
-		log.Warnf("Failed to subscribe to clientAnnouncement topic: %s", err)
-	}
-
 	// Handle publishing ClientAnnouncement messages
 	go func() {
 		for {
@@ -148,20 +147,6 @@ func main() { //nolint: funlen, gocyclo
 			if err != nil {
 				log.Errorln("Error publishing ClientAnnouncement : ", err)
 				continue
-			}
-		}
-	}()
-
-	// Handle incoming ClientAnnouncement messages
-	go func() {
-		for {
-			msg, err := subClientAnnouncement.Next(ctx)
-			if err != nil {
-				log.Errorln("Error getting next message from clientAnnouncement topic : ", err)
-				continue
-			}
-			if msg.GetFrom().String() != host.ID().String() {
-				log.Debugln("Received ClientAnnouncement message from ", msg.GetFrom().String())
 			}
 		}
 	}()
@@ -187,14 +172,42 @@ func main() { //nolint: funlen, gocyclo
 			}
 			log.Debugln("Received StorageNodeResponse message from ", msg.GetFrom().String())
 			log.Debugln("StorageNodeResponse: ", string(msg.Data))
+			dialog.ShowInformation("Storage Node Response", string(msg.Data), nil)
 		}
 	}()
+
+	// Join the topic AskMyFilesStringFlag
+	askMyFilesTopic, err := ps.Join(cfg.AskMyFilesStringFlag)
+	if err != nil {
+		panic(err)
+	}
+
+	// Handle publishing AskMyFiles messages
+	go func() {
+		for {
+			askMyFiles := <-askFilesListChan
+			err := askMyFilesTopic.Publish(ctx, askMyFiles)
+			if err != nil {
+				log.Errorln("Error publishing AskMyFiles : ", err)
+				continue
+			}
+		}
+	}()
+
+	// Join the topic SendFilesStringFlag
+	// sendFilesTopic, err := ps.Join(cfg.SendFilesStringFlag)
+	// if err != nil {
+	// 	log.Panicf("Failed to join SendFiles topic : %s\n", err)
+	// }
+
+	// subSendFiles, err := sendFilesTopic.Subscribe()
+	// if err != nil {
+	// 	log.Panicf("Failed to subscribe to SendFiles topic : %s\n", err)
+	// }
 
 	/*
 	* GUI FYNE
 	 */
-	a := app.New()
-	w := a.NewWindow("SecuraChain User Client")
 	w.Resize(fyne.NewSize(cfg.WindowWidth, cfg.WindowHeight))
 
 	ecdsaInput := widget.NewLabel("")
@@ -205,6 +218,8 @@ func main() { //nolint: funlen, gocyclo
 
 	selectedFileLabel := widget.NewLabel("")
 	hBoxSelectFile, _ := client.CreateFileSelectionWidgets(w, selectedFileLabel, log)
+
+	askFilesListButton := client.AskFilesListButton(w, cfg, &ecdsaKeyPair, askFilesListChan, log)
 
 	// create a new button to send a file over the network
 	sendFileButton := client.SendFileButton(ctx,
@@ -232,6 +247,7 @@ func main() { //nolint: funlen, gocyclo
 		widget.NewLabel("Select File:"),
 		hBoxSelectFile,
 		sendFileButton,
+		askFilesListButton,
 	)
 
 	protocolUpdatedSub, err := host.EventBus().Subscribe(new(event.EvtPeerProtocolsUpdated))

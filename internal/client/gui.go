@@ -177,6 +177,26 @@ func SelectFileButton(w fyne.Window, selectedFileInputLabel *widget.Label, log *
 	})
 }
 
+func AskFilesListButton(w fyne.Window, cfg *config.Config, ecdsaKeyPair *ecdsa.KeyPair,
+	askFilesListChan chan []byte, log *ipfsLog.ZapEventLogger) *widget.Button {
+	return widget.NewButton("Ask Files List", func() {
+		if *ecdsaKeyPair == nil {
+			log.Debug("Please generate or load an ECDSA key pair")
+			dialog.ShowError(errors.New("please generate or load an ECDSA key pair"), w)
+			return
+		}
+
+		err := AskFilesList(cfg, *ecdsaKeyPair, askFilesListChan, log)
+		if err != nil {
+			log.Errorln("Error asking files list : ", err)
+			dialog.ShowError(err, w)
+			return
+		}
+
+		dialog.ShowInformation("Files List Requested", "Files list requested successfully. Please wait for some nodes to send you their files list.", w)
+	})
+}
+
 func SendFileButton(ctx context.Context, cfg *config.Config, w fyne.Window, selectedFile *widget.Label,
 	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, nodeIpfs *core.IpfsNode, ipfsAPI iface.CoreAPI,
 	clientAnnouncementChan chan *transaction.ClientAnnouncement,
