@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
+	"fmt"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -172,7 +174,31 @@ func main() { //nolint: funlen, gocyclo
 			}
 			log.Debugln("Received StorageNodeResponse message from ", msg.GetFrom().String())
 			log.Debugln("StorageNodeResponse: ", string(msg.Data))
-			dialog.ShowInformation("Storage Node Response", string(msg.Data), nil)
+			addFileTransaction, err := transaction.DeserializeAddFileTransaction(msg.Data)
+			if err != nil {
+				log.Errorln("Error deserializing AddFileTransaction : ", err)
+				continue
+			}
+			ecdsaPubKeyByte, err := ecdsaKeyPair.PublicKeyToBytes()
+			if err != nil {
+				log.Errorln("Error getting public key : ", err)
+				continue
+			}
+			if bytes.Equal(addFileTransaction.OwnerAddress, ecdsaPubKeyByte) {
+				log.Debugln("Owner of the file is the current user")
+				filename, err := aesKey.DecryptData(addFileTransaction.Filename)
+				if err != nil {
+					log.Errorln("Error decrypting filename : ", err)
+					continue
+				}
+				fileExtension, err := aesKey.DecryptData(addFileTransaction.Extension)
+				if err != nil {
+					log.Errorln("Error decrypting file extension : ", err)
+					continue
+				}
+				filenameStr := fmt.Sprintf("Your file %s%s has been stored successfully by a storage node.", filename, fileExtension)
+				dialog.ShowInformation("Storage Node Response", filenameStr, w)
+			}
 		}
 	}()
 
