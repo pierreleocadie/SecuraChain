@@ -20,7 +20,7 @@ type RegistryMessage struct {
 }
 
 // SaveRegistryToFile saves any registry to a JSON file.
-func SaveRegistryToFile(log *ipfsLog.ZapEventLogger, config *config.Config, filename string, registry interface{}) error {
+func SaveRegistryToFile(log *ipfsLog.ZapEventLogger, config *config.Config, registry interface{}) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -42,6 +42,15 @@ func SaveRegistryToFile(log *ipfsLog.ZapEventLogger, config *config.Config, file
 	if err != nil {
 		log.Errorln("Error serializing registry")
 		return err
+	}
+
+	//name the file depending on the type of registry
+	filename := ""
+	switch registry.(type) {
+	case IndexingRegistry:
+		filename = config.IndexingRegistryPath
+	case BlockRegistry:
+		filename = config.BlockRegistryPath
 	}
 
 	return os.WriteFile(filepath.Clean(filename), data, os.FileMode(config.FileRights))
