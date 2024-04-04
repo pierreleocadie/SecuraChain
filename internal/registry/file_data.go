@@ -33,7 +33,7 @@ func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, addFi
 	var r IndexingRegistry
 
 	// Load existing registry if it exists
-	r, err := LoadRegistryFile[IndexingRegistry](log, config.IndexingRegistryPath)
+	r, err := LoadRegistryFile[IndexingRegistry](log, config, config.IndexingRegistryPath)
 	if err != nil && !os.IsNotExist(err) {
 		log.Errorln("Error loading indexing registry:", err)
 		return err
@@ -81,7 +81,7 @@ func DeleteFileFromRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, 
 	var r IndexingRegistry
 
 	// Load existing registry if it exists
-	r, err := LoadRegistryFile[IndexingRegistry](log, config.IndexingRegistryPath)
+	r, err := LoadRegistryFile[IndexingRegistry](log, config, config.IndexingRegistryPath)
 	if err != nil && !os.IsNotExist(err) {
 		log.Errorln("Error loading indexing registry:", err)
 		return err

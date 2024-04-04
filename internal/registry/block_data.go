@@ -30,7 +30,7 @@ func AddBlockToRegistry(log *ipfsLog.ZapEventLogger, b *block.Block, config *con
 	var blockRegistery BlockRegistry
 
 	// Load existing registry if it exists
-	blockRegistery, err := LoadRegistryFile[BlockRegistry](log, config.BlockRegistryPath)
+	blockRegistery, err := LoadRegistryFile[BlockRegistry](log, config, config.BlockRegistryPath)
 	if err != nil && !os.IsNotExist(err) {
 		log.Errorln("Error loading block registry:", err)
 		return err

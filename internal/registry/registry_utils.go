@@ -2,6 +2,7 @@ package registry
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -19,22 +20,57 @@ type RegistryMessage struct {
 }
 
 // SaveRegistryToFile saves any registry to a JSON file.
-func SaveRegistryToFile(log *ipfsLog.ZapEventLogger, config *config.Config, filePath string, registry interface{}) error {
+func SaveRegistryToFile(log *ipfsLog.ZapEventLogger, config *config.Config, filename string, registry interface{}) error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	defaultFilePath := filepath.Join(home, ".securachainData/")
+	// Ensure the output directory exists or create it.
+	if err := os.MkdirAll(defaultFilePath, os.FileMode(config.FileRights)); err != nil {
+		return fmt.Errorf("error creating output directory: %v", err)
+	}
+
+	if err = os.Chdir(defaultFilePath); err != nil {
+		return err
+	}
+
+	log.Debugln("Changing directory to", defaultFilePath)
+
 	data, err := json.Marshal(registry)
 	if err != nil {
 		log.Errorln("Error serializing registry")
 		return err
 	}
 
-	return os.WriteFile(filepath.Clean(filePath), data, os.FileMode(config.FileRights))
+	return os.WriteFile(filepath.Clean(filename), data, os.FileMode(config.FileRights))
 }
 
 // LoadRegistryFile loads the registry data from the specified file path and returns it.
 // The registry data is deserialized into the provided generic type R.
 // It returns the deserialized registry data and any error encountered during the process.
-func LoadRegistryFile[R Registeries](log *ipfsLog.ZapEventLogger, filePath string) (R, error) {
+func LoadRegistryFile[R Registeries](log *ipfsLog.ZapEventLogger, config *config.Config, filename string) (R, error) {
 	var registry R
-	data, err := os.ReadFile(filepath.Clean(filePath))
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return registry, err
+	}
+
+	defaultFilePath := filepath.Join(home, ".securachainData/")
+	// Ensure the output directory exists or create it.
+	if err := os.MkdirAll(defaultFilePath, os.FileMode(config.FileRights)); err != nil {
+		return registry, fmt.Errorf("error creating output directory: %v", err)
+	}
+
+	if err = os.Chdir(defaultFilePath); err != nil {
+		return registry, err
+	}
+
+	log.Debugln("Changing directory to", defaultFilePath)
+
+	data, err := os.ReadFile(filepath.Clean(filename))
 	if err != nil {
 		log.Errorln("Error reading file", err)
 		return registry, err
