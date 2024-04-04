@@ -88,7 +88,7 @@ func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipf
 // SendBlocksRegistryToNetwork sends the registry of the blockchain to the network.
 func SendBlocksRegistryToNetwork(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, network *pubsub.Topic) bool {
 	// Get the registry of the blockchain
-	r, err := registry.LoadRegistryFile[registry.BlockRegistry](log, config.BlockRegistryPath)
+	r, err := registry.LoadRegistryFile[registry.BlockRegistry](log, config, config.BlockRegistryPath)
 	if err != nil {
 		log.Errorln("Error loading the registry of the blockchain : ", err)
 		return false

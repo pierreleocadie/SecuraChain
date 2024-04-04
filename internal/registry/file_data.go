@@ -33,7 +33,7 @@ func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, addFi
 	var r IndexingRegistry
 
 	// Load existing registry if it exists
-	r, err := LoadRegistryFile[IndexingRegistry](log, config.IndexingRegistryPath)
+	r, err := LoadRegistryFile[IndexingRegistry](log, config, config.IndexingRegistryPath)
 	if err != nil && !os.IsNotExist(err) {
 		log.Errorln("Error loading indexing registry:", err)
 		return err
@@ -52,7 +52,7 @@ func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, addFi
 		if bytes.Equal(file.Filename, addFileTransac.Filename) && bytes.Equal(file.Extension, addFileTransac.Extension) && file.FileSize == addFileTransac.FileSize && bytes.Equal(file.Checksum, addFileTransac.Checksum) && file.FileCid == addFileTransac.FileCid {
 			r.IndexingFiles[ownerAddressStr][i].Providers = append(r.IndexingFiles[ownerAddressStr][i].Providers, addFileTransac.IPFSStorageNodeAddrInfo)
 			log.Debugln("[AddFileToRegistry] - File already exists, new provider added to the list of providers")
-			return SaveRegistryToFile(log, config, config.IndexingRegistryPath, r)
+			return SaveRegistryToFile(log, config, r)
 		}
 	}
 
@@ -73,7 +73,7 @@ func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, addFi
 	log.Debugln("[AddFileToRegistry] - File added to registry")
 
 	// Save the updated registry
-	return SaveRegistryToFile(log, config, config.IndexingRegistryPath, r)
+	return SaveRegistryToFile(log, config, r)
 }
 
 // DeleteFileFromRegistry deletes a file and the data associated from the registry.
@@ -81,7 +81,7 @@ func DeleteFileFromRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, 
 	var r IndexingRegistry
 
 	// Load existing registry if it exists
-	r, err := LoadRegistryFile[IndexingRegistry](log, config.IndexingRegistryPath)
+	r, err := LoadRegistryFile[IndexingRegistry](log, config, config.IndexingRegistryPath)
 	if err != nil && !os.IsNotExist(err) {
 		log.Errorln("Error loading indexing registry:", err)
 		return err
@@ -100,5 +100,5 @@ func DeleteFileFromRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, 
 
 	log.Debugln("[AddFileToRegistry] - File deleted from the registry")
 	// Save the updated registry
-	return SaveRegistryToFile(log, config, config.IndexingRegistryPath, r)
+	return SaveRegistryToFile(log, config, r)
 }

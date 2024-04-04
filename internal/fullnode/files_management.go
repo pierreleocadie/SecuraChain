@@ -15,7 +15,7 @@ func searchMyFiles(log *ipfsLog.ZapEventLogger, config *config.Config, myPublicK
 	var myFiles []registry.FileRegistry
 
 	// Get the indexing registry
-	r, err := registry.LoadRegistryFile[registry.IndexingRegistry](log, config.IndexingRegistryPath)
+	r, err := registry.LoadRegistryFile[registry.IndexingRegistry](log, config, config.IndexingRegistryPath)
 	if err != nil {
 		log.Errorln("Error loading the indexing registry : ", err)
 	}

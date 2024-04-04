@@ -30,7 +30,7 @@ func AddBlockToRegistry(log *ipfsLog.ZapEventLogger, b *block.Block, config *con
 	var blockRegistery BlockRegistry
 
 	// Load existing registry if it exists
-	blockRegistery, err := LoadRegistryFile[BlockRegistry](log, config.BlockRegistryPath)
+	blockRegistery, err := LoadRegistryFile[BlockRegistry](log, config, config.BlockRegistryPath)
 	if err != nil && !os.IsNotExist(err) {
 		log.Errorln("Error loading block registry:", err)
 		return err
@@ -48,7 +48,7 @@ func AddBlockToRegistry(log *ipfsLog.ZapEventLogger, b *block.Block, config *con
 
 	// Save updated registry back to file
 	log.Infoln("Block registry created or updated successfully")
-	return SaveRegistryToFile(log, config, config.BlockRegistryPath, blockRegistery)
+	return SaveRegistryToFile(log, config, blockRegistery)
 }
 
 // ConvertToBlock reads the contents of the file at the given file path and converts it into a block.Block object.

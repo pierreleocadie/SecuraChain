@@ -70,6 +70,7 @@ askMyFilesStringFlag: "AskMyFiles"
 sendFilesStringFlag: "SendFiles"
 fileRights: 0700
 fileMetadataRegistryJson: "fileMetadataRegistry.json"
+securaChainDataPath: ".securachainData/"
 blockRegistryPath: "blocksRegistry.json"
 indexingRegistryPath: "indexingRegistry.json"
 memorySpace: 10 # in GB
