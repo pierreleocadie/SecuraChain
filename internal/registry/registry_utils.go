@@ -26,7 +26,7 @@ func SaveRegistryToFile(log *ipfsLog.ZapEventLogger, config *config.Config, regi
 		return err
 	}
 
-	defaultFilePath := filepath.Join(home, ".securachainData/")
+	defaultFilePath := filepath.Join(home, config.SecuraChainDataPath)
 	// Ensure the output directory exists or create it.
 	if err := os.MkdirAll(defaultFilePath, os.FileMode(config.FileRights)); err != nil {
 		return fmt.Errorf("error creating output directory: %v", err)
@@ -67,7 +67,7 @@ func LoadRegistryFile[R Registeries](log *ipfsLog.ZapEventLogger, config *config
 		return registry, err
 	}
 
-	defaultFilePath := filepath.Join(home, ".securachainData/")
+	defaultFilePath := filepath.Join(home, config.SecuraChainDataPath)
 	// Ensure the output directory exists or create it.
 	if err := os.MkdirAll(defaultFilePath, os.FileMode(config.FileRights)); err != nil {
 		return registry, fmt.Errorf("error creating output directory: %v", err)

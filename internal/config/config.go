@@ -67,6 +67,7 @@ type Config struct {
 	FileSizeLimit            uint64 `yaml:"fileSizeLimit"`
 
 	// Blockchain
+	SecuraChainDataPath  string `yaml:"securaChainDataPath"`
 	BlockRegistryPath    string `yaml:"blockRegistryPath"`
 	IndexingRegistryPath string `yaml:"indexingRegistryPath"`
 }
