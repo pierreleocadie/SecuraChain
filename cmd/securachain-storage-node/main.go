@@ -86,7 +86,7 @@ func main() { //nolint: funlen, gocyclo
 	/*
 	* DHT DISCOVERY
 	 */
-	node.SetupDHTDiscovery(ctx, cfg, host, false)
+	node.SetupDHTDiscovery(ctx, cfg, host, false, log)
 
 	/*
 	* PUBSUB

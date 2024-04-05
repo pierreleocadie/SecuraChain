@@ -76,7 +76,7 @@ func main() { //nolint: funlen
 	* DHT DISCOVERY
 	 */
 	// Setup DHT discovery
-	node.SetupDHTDiscovery(ctx, cfg, host, true)
+	node.SetupDHTDiscovery(ctx, cfg, host, true, log)
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES

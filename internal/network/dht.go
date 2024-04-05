@@ -5,10 +5,10 @@ package network
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -40,21 +40,22 @@ func NewDHTDiscovery(bootstrapNode bool, rendezvousString string, bootstrapPeers
 
 // Run starts the DHT functionality of the node. It initializes the DHT, connects to
 // bootstrap peers if necessary, and sets up continuous discovery of new peers.
-func (d *DHT) Run(ctx context.Context, host host.Host) error {
-	if err := d.startDHT(ctx, host); err != nil {
+func (d *DHT) Run(ctx context.Context, host host.Host, log *ipfsLog.ZapEventLogger) error {
+	if err := d.startDHT(ctx, host, log); err != nil {
 		return fmt.Errorf("[Run] starting DHT failed: %w", err)
 	}
 
 	if d.BootstrapNode {
-		log.Print("[Run] BOOTSTRAP NODE - DHT IN SERVER MODE")
+		log.Info("[Run] BOOTSTRAP NODE - DHT IN SERVER MODE")
 	} else {
 		if err := d.IpfsDHT.Bootstrap(ctx); err != nil {
+			log.Errorf("[Run] DHT bootstrap failed: %v", err)
 			return fmt.Errorf("[Run] DHT bootstrap failed: %w", err)
 		}
-		log.Println("[Run] Bootstrapping DHT...")
-		d.bootstrapPeers(ctx, host)
+		log.Info("[Run] Bootstrapping DHT...")
+		d.bootstrapPeers(ctx, host, log)
 
-		log.Println("[Run] Announcing ourselves...")
+		log.Info("[Run] Announcing ourselves...")
 		routingDiscovery := routing.NewRoutingDiscovery(d.IpfsDHT)
 
 		go func() {
@@ -63,7 +64,7 @@ func (d *DHT) Run(ctx context.Context, host host.Host) error {
 			for {
 				select {
 				case <-ticker.C:
-					d.announceAndConnect(ctx, host, routingDiscovery)
+					d.announceAndConnect(ctx, host, routingDiscovery, log)
 				case <-ctx.Done():
 					return
 				}
@@ -75,7 +76,7 @@ func (d *DHT) Run(ctx context.Context, host host.Host) error {
 
 // startDHT initializes the DHT for the given host. If the node is a bootstrap node,
 // it initializes the DHT in server mode.
-func (d *DHT) startDHT(ctx context.Context, host host.Host) error {
+func (d *DHT) startDHT(ctx context.Context, host host.Host, log *ipfsLog.ZapEventLogger) error {
 	if d.IpfsDHT != nil {
 		return nil // DHT already initialized
 	}
@@ -87,7 +88,7 @@ func (d *DHT) startDHT(ctx context.Context, host host.Host) error {
 		d.IpfsDHT, err = dht.New(ctx, host, dht.Mode(dht.ModeClient), dht.AddressFilter(FilterOutPrivateAddrs))
 	}
 	if err != nil {
-		log.Println("[startDHT] Error creating new DHT : ", err)
+		log.Errorln("[startDHT] Error creating new DHT : ", err)
 	}
 
 	return err
@@ -95,12 +96,12 @@ func (d *DHT) startDHT(ctx context.Context, host host.Host) error {
 
 // bootstrapPeers connects the host to the predefined bootstrap peers. It ensures
 // the node is connected to the network and can start participating in peer discovery.
-func (d *DHT) bootstrapPeers(ctx context.Context, host host.Host) {
+func (d *DHT) bootstrapPeers(ctx context.Context, host host.Host, log *ipfsLog.ZapEventLogger) {
 	var wg sync.WaitGroup
 	for _, peerAddr := range d.BootstrapPeers {
 		peerInfo, err := peer.AddrInfoFromP2pAddr(peerAddr)
 		if err != nil {
-			log.Printf("[bootstrapPeers] Invalid peer address: %v", err)
+			log.Errorf("[bootstrapPeers] Invalid peer address: %v", err)
 			continue
 		}
 
@@ -112,10 +113,10 @@ func (d *DHT) bootstrapPeers(ctx context.Context, host host.Host) {
 		go func(pi peer.AddrInfo) {
 			defer wg.Done()
 			if err := host.Connect(ctx, pi); err != nil {
-				log.Println("[bootstrapPeers] Connection failed")
+				log.Warn("[bootstrapPeers] Connection failed")
 				// log.Printf("Connection failed to %s: %v", pi.ID, err)
 			} else {
-				log.Printf("[bootstrapPeers] Connection successful to %s", pi.ID)
+				log.Infof("[bootstrapPeers] Connection successful to %s", pi.ID)
 			}
 		}(*peerInfo)
 	}
@@ -124,16 +125,16 @@ func (d *DHT) bootstrapPeers(ctx context.Context, host host.Host) {
 
 // announceAndConnect advertises the node on the network and connects to discovered peers.
 // It uses the provided routing discovery to find and establish connections with other peers.
-func (d *DHT) announceAndConnect(ctx context.Context, host host.Host, routingDiscovery *routing.RoutingDiscovery) {
+func (d *DHT) announceAndConnect(ctx context.Context, host host.Host, routingDiscovery *routing.RoutingDiscovery, log *ipfsLog.ZapEventLogger) {
 	if _, err := routingDiscovery.Advertise(ctx, d.RendezvousString); err != nil {
-		log.Printf("[announceAndConnect] Error announcing self : %v", err)
+		log.Errorf("[announceAndConnect] Error announcing self : %v", err)
 		return
 	}
-	log.Println("[announceAndConnect] Successfully announced!")
+	log.Debug("[announceAndConnect] Successfully announced!")
 
 	peersChan, err := routingDiscovery.FindPeers(ctx, d.RendezvousString)
 	if err != nil {
-		log.Printf("[announceAndConnect] Error finding peers : %v", err)
+		log.Errorf("[announceAndConnect] Error finding peers : %v", err)
 		return
 	}
 
@@ -143,13 +144,13 @@ func (d *DHT) announceAndConnect(ctx context.Context, host host.Host, routingDis
 		}
 
 		if host.Network().Connectedness(p.ID) != network.Connected {
-			log.Printf("[announceAndConnect] Found peer: %s", p.ID)
+			log.Debugf("[announceAndConnect] Found peer: %s", p.ID)
 			if err := host.Connect(ctx, p); err != nil {
-				log.Println("[announceAndConnect] Connection failed")
+				log.Errorf("[announceAndConnect] Connection failed")
 				// log.Printf("[announceAndConnect] Connection failed: %v", err)
 				d.IgnoredPeers[p.ID] = true
 			} else {
-				log.Printf("[announceAndConnect] Connection successful: %s", p.ID)
+				log.Infof("[announceAndConnect] Connection successful: %s", p.ID)
 			}
 		}
 	}

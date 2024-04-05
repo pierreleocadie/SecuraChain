@@ -50,7 +50,7 @@ func main() { //nolint: funlen
 	* DHT DISCOVERY
 	 */
 	// Setup DHT discovery
-	_ = node.SetupDHTDiscovery(ctx, cfg, h, false)
+	_ = node.SetupDHTDiscovery(ctx, cfg, h, false, log)
 
 	/*
 	* PUBSUB

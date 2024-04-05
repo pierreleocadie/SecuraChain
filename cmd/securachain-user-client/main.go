@@ -80,7 +80,7 @@ func main() { //nolint: funlen, gocyclo
 	defer host.Close()
 
 	// Setup DHT discovery
-	_ = node.SetupDHTDiscovery(ctx, cfg, host, false)
+	_ = node.SetupDHTDiscovery(ctx, cfg, host, false, log)
 
 	/*
 	* PUBSUB

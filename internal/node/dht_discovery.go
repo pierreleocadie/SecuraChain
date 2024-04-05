@@ -2,15 +2,15 @@ package node
 
 import (
 	"context"
-	"log"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/network"
 )
 
-func SetupDHTDiscovery(ctx context.Context, cfg *config.Config, host host.Host, bootstrapNode bool) *network.DHT {
+func SetupDHTDiscovery(ctx context.Context, cfg *config.Config, host host.Host, bootstrapNode bool, log *ipfsLog.ZapEventLogger) *network.DHT {
 	/*
 	* NETWORK PEER DISCOVERY WITH DHT
 	 */
@@ -20,7 +20,7 @@ func SetupDHTDiscovery(ctx context.Context, cfg *config.Config, host host.Host, 
 		for _, peer := range cfg.BootstrapPeers {
 			peerMultiaddr, err := multiaddr.NewMultiaddr(peer)
 			if err != nil {
-				log.Println("Error converting bootstrap peer to multiaddr : ", err)
+				log.Errorln("Error converting bootstrap peer to multiaddr : ", err)
 				return nil
 			}
 			bootstrapPeersMultiaddr = append(bootstrapPeersMultiaddr, peerMultiaddr)
@@ -36,7 +36,7 @@ func SetupDHTDiscovery(ctx context.Context, cfg *config.Config, host host.Host, 
 	)
 
 	// Run DHT
-	if err := dhtDiscovery.Run(ctx, host); err != nil {
+	if err := dhtDiscovery.Run(ctx, host, log); err != nil {
 		log.Fatalf("Failed to run DHT: %s", err)
 		return nil
 	}
