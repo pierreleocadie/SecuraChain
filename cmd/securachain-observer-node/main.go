@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"flag"
+	"net/http"
+	"sync"
 
+	"github.com/gorilla/websocket"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
@@ -11,11 +14,23 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
+	"github.com/pierreleocadie/SecuraChain/internal/visualisation"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
 
 var (
 	yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
+	clients            = make(map[*websocket.Conn]bool) // Enregistrer les clients connectés
+	clientsMutex       sync.Mutex
+	upgrader           = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			return true // Ne faites pas cela dans une application de production
+		},
+	}
+	data    []visualisation.Data
+	oldData []visualisation.Data
 )
 
 func main() { //nolint: funlen
@@ -74,6 +89,17 @@ func main() { //nolint: funlen
 
 	// KeepRelayConnectionAlive
 	node.PubsubKeepRelayConnectionAlive(ctx, ps, host, cfg, log)
+
+	/*
+	* NETWORK VISUALISATION - WEBSOCKET SERVER
+	 */
+	http.HandleFunc("/ws", visualisation.CreateHandler(upgrader, data, &clientsMutex, clients, log))
+	go func() {
+		err := http.ListenAndServe(":8080", nil)
+		if err != nil {
+			log.Infoln("ListenAndServe: ", err)
+		}
+	}()
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES
