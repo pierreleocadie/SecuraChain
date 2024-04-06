@@ -11,7 +11,12 @@ import (
 func TestECDSAKeyPairGeneration(t *testing.T) {
 	t.Parallel()
 
-	keyPair, err := NewECDSAKeyPair()
+	log := ipfsLog.Logger("ecdsa_test")
+	if err := ipfsLog.SetLogLevel("ecdsa_test", "DEBUG"); err != nil {
+		log.Errorln("Failed to set log level : ", err)
+	}
+
+	keyPair, err := NewECDSAKeyPair(log)
 	if err != nil {
 		t.Fatalf("Failed to generate ECDSA key pair: %v", err)
 	}
@@ -28,16 +33,21 @@ func TestECDSAKeyPairGeneration(t *testing.T) {
 func TestECDSASignAndVerify(t *testing.T) {
 	t.Parallel()
 
+	log := ipfsLog.Logger("ecdsa_test")
+	if err := ipfsLog.SetLogLevel("ecdsa_test", "DEBUG"); err != nil {
+		log.Errorln("Failed to set log level : ", err)
+	}
+
 	data := []byte("Hello, SecuraChain!")
 	hash := sha256.Sum256(data)
-	keyPair, _ := NewECDSAKeyPair()
+	keyPair, _ := NewECDSAKeyPair(log)
 	signature, err := keyPair.Sign(hash[:])
 
 	if err != nil {
 		t.Fatalf("Failed to sign data: %v", err)
 	}
 
-	if !VerifySignature(keyPair.PublicKey(), hash[:], signature) {
+	if !VerifySignature(log, keyPair.PublicKey(), hash[:], signature) {
 		t.Error("Failed to verify the signature of the data")
 	}
 }
@@ -55,7 +65,7 @@ func TestSaveAndLoadKeys(t *testing.T) {
 	publicKeyFile := "temp_public"
 	storagePath := "../../temp"
 
-	keyPair, _ := NewECDSAKeyPair()
+	keyPair, _ := NewECDSAKeyPair(log)
 
 	err := keyPair.SaveKeys(privateKeyFile, publicKeyFile, storagePath)
 

@@ -18,23 +18,27 @@ const (
 
 // SaveKeys saves the private and public keys of the ECDSA key pair to specified files.
 // The keys are saved in PEM format.
-func (keyPair *ecdsaKeyPair) SaveKeys(privateKeyFilename, publicKeyFilename, storagePath string) error {
-	if err := keyPair.saveKeyToFile(keyPair.PrivateKeyToBytes, privateKeyFilename, storagePath); err != nil {
+func (keyPair *ecdsaKeyPair) SaveKeys(log *ipfsLog.ZapEventLogger, privateKeyFilename, publicKeyFilename, storagePath string) error {
+	if err := keyPair.saveKeyToFile(log, keyPair.PrivateKeyToBytes, privateKeyFilename, storagePath); err != nil {
+		log.Errorln("Failed to save private key: ", err)
 		return fmt.Errorf("failed to save private key: %w", err)
 	}
 
-	if err := keyPair.saveKeyToFile(keyPair.PublicKeyToBytes, publicKeyFilename, storagePath); err != nil {
+	if err := keyPair.saveKeyToFile(log, keyPair.PublicKeyToBytes, publicKeyFilename, storagePath); err != nil {
+		log.Errorln("Failed to save public key: ", err)
 		return fmt.Errorf("failed to save public key: %w", err)
 	}
 
+	log.Debugln("Keys saved successfully")
 	return nil
 }
 
 // saveKeyToFile writes the provided key to a file in PEM format.
 // It constructs the full path using the storagePath and filename parameters.
-func (keyPair *ecdsaKeyPair) saveKeyToFile(keyFunc func() ([]byte, error), filename, storagePath string) error {
+func (keyPair *ecdsaKeyPair) saveKeyToFile(log *ipfsLog.ZapEventLogger, keyFunc func() ([]byte, error), filename, storagePath string) error {
 	keyBytes, err := keyFunc()
 	if err != nil {
+		log.Errorln("Failed to get key bytes: ", err)
 		return err
 	}
 
@@ -48,6 +52,7 @@ func (keyPair *ecdsaKeyPair) saveKeyToFile(keyFunc func() ([]byte, error), filen
 
 	filePath := path.Join(storagePath, filename+fileExtPEM)
 
+	log.Debugln("Saving key to file: ", filePath)
 	return os.WriteFile(filePath, pemBytes, filePerm)
 }
 
@@ -55,21 +60,25 @@ func (keyPair *ecdsaKeyPair) saveKeyToFile(keyFunc func() ([]byte, error), filen
 func LoadKeys(log *ipfsLog.ZapEventLogger, privateKeyFilename, publicKeyFilename, storagePath string) (KeyPair, error) {
 	privateKeyBytes, err := utils.LoadKeyFromFile(log, privateKeyFilename, storagePath)
 	if err != nil {
+		log.Errorln("Failed to load private key: ", err)
 		return nil, err
 	}
 
-	privateKey, err := PrivateKeyFromBytes(privateKeyBytes)
+	privateKey, err := PrivateKeyFromBytes(log, privateKeyBytes)
 	if err != nil {
+		log.Errorln("Failed to create private key: ", err)
 		return nil, err
 	}
 
 	publicKeyBytes, err := utils.LoadKeyFromFile(log, publicKeyFilename, storagePath)
 	if err != nil {
+		log.Errorln("Failed to load public key: ", err)
 		return nil, err
 	}
 
-	publicKey, err := PublicKeyFromBytes(publicKeyBytes)
+	publicKey, err := PublicKeyFromBytes(log, publicKeyBytes)
 	if err != nil {
+		log.Errorln("Failed to create public key: ", err)
 		return nil, err
 	}
 
