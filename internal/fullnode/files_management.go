@@ -36,12 +36,6 @@ func searchMyFiles(log *ipfsLog.ZapEventLogger, config *config.Config, myPublicK
 func SendOwnersFiles(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, myPublicKey string, owner *pubsub.Topic) bool {
 	myFiles := searchMyFiles(log, config, myPublicKey)
 
-	// myFilesBytes, err := registry.SerializeRegistry(log, myFiles)
-	// if err != nil {
-	// 	log.Errorln("Error serializing my files : ", err)
-	// 	return false
-	// }
-
 	myFilesBytes, err := registry.SerializeRegistry(log, registry.RegistryMessage{OwnerPublicKey: myPublicKey, Registry: myFiles})
 	if err != nil {
 		log.Errorln("Error serializing my files : ", err)

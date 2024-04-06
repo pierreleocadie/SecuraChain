@@ -21,7 +21,7 @@ func PrevBlockStored(log *ipfsLog.ZapEventLogger, b *block.Block, db *blockchain
 	}
 
 	if prevBlockStored == nil {
-		log.Debugln("Previous block not found in db")
+		log.Warn("Previous block not found in db")
 		return false, nil
 	}
 
