@@ -126,7 +126,7 @@ func GenerateECDSAKeyPairButton(w fyne.Window, ecdsaInputLabel *widget.Label, lo
 			return
 		}
 
-		ecdsaKeyPair, err := ecdsa.NewECDSAKeyPair()
+		ecdsaKeyPair, err := ecdsa.NewECDSAKeyPair(log)
 		if err != nil {
 			return
 		}

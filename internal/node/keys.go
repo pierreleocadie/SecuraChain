@@ -14,7 +14,7 @@ func GenerateKeys(cfg *config.Config, log *ipfsLog.ZapEventLogger) {
 		log.Panicf("Failed to sanitize ECDSA key pair path: %s", err)
 	}
 
-	ecdsaKeyPair, err := ecdsa.NewECDSAKeyPair()
+	ecdsaKeyPair, err := ecdsa.NewECDSAKeyPair(log)
 	if err != nil {
 		log.Panicf("Failed to create ECDSA key pair: %s", err)
 	}

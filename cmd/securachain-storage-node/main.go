@@ -208,7 +208,7 @@ func main() { //nolint: funlen, gocyclo
 			}
 
 			// Add the file to IPFS
-			fileImmutablePathCid, err := ipfs.AddFile(ctx, cfg, ipfsAPI, downloadedFilePath)
+			fileImmutablePathCid, err := ipfs.AddFile(log, ctx, cfg, ipfsAPI, downloadedFilePath)
 			if err != nil {
 				log.Errorf("Failed to add file to IPFS: %s", err)
 				continue

@@ -3,25 +3,25 @@ package transaction
 import (
 	"crypto/sha256"
 	"fmt"
-	"log"
 	"time"
 
 	merkledag "github.com/ipfs/boxo/ipld/merkledag"
 	unixfs "github.com/ipfs/boxo/ipld/unixfs"
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
-func GenFakeAddTransaction() (*AddFileTransaction, error) {
+func GenFakeAddTransaction(log *ipfsLog.ZapEventLogger) (*AddFileTransaction, error) {
 	// Set up a valid AddFileTransaction
-	nodeECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
+	nodeECDSAKeyPair, err := ecdsa.NewECDSAKeyPair(log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ECDSA key pair: %s", err)
 	}
 
-	ownerECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
+	ownerECDSAKeyPair, err := ecdsa.NewECDSAKeyPair(log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ECDSA key pair: %s", err)
 	}
@@ -63,7 +63,7 @@ func GenFakeAddTransaction() (*AddFileTransaction, error) {
 	time.Sleep(1 * time.Second)
 	addFileTransaction := NewAddFileTransaction(announcement, randomFileCid, false, nodeECDSAKeyPair, randomeNodeID, randomStorageAddrInfo)
 	bd, _ := addFileTransaction.Serialize()
-	log.Printf("Transaction: %s\n", string(bd))
+	log.Debugln("Transaction: %s\n", string(bd))
 
 	// if !ValidateTransaction(addFileTransaction) {
 	// 	return nil, fmt.Errorf("ValidateTransaction failed for a valid AddFileTransaction")
@@ -72,9 +72,9 @@ func GenFakeAddTransaction() (*AddFileTransaction, error) {
 	return addFileTransaction, nil
 }
 
-func GenFakeDeleteTransaction() (*DeleteFileTransaction, error) {
+func GenFakeDeleteTransaction(log *ipfsLog.ZapEventLogger) (*DeleteFileTransaction, error) {
 	// Set up a valid DeleteFileTransaction
-	ownerECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
+	ownerECDSAKeyPair, err := ecdsa.NewECDSAKeyPair(log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ECDSA key pair: %s", err)
 	}

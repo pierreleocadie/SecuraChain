@@ -36,7 +36,7 @@ func main() { //nolint: funlen
 		log.Panicln("Please provide a path to the yaml config file. Flag: -config <path/to/config.yaml>")
 	}
 
-	cfg, err := config.LoadConfig(*yamlConfigFilePath)
+	cfg, err := config.LoadConfig(log, *yamlConfigFilePath)
 	if err != nil {
 		log.Panicln("Error loading config file : ", err)
 	}
