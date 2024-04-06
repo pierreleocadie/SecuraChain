@@ -23,16 +23,19 @@ type RegistryMessage struct {
 func SaveRegistryToFile(log *ipfsLog.ZapEventLogger, config *config.Config, registry interface{}) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
+		log.Errorln("Error getting user home directory")
 		return err
 	}
 
 	defaultFilePath := filepath.Join(home, config.SecuraChainDataPath)
 	// Ensure the output directory exists or create it.
 	if err := os.MkdirAll(defaultFilePath, os.FileMode(config.FileRights)); err != nil {
+		log.Errorln("Error creating output directory")
 		return fmt.Errorf("error creating output directory: %v", err)
 	}
 
 	if err = os.Chdir(defaultFilePath); err != nil {
+		log.Errorln("Error changing directory")
 		return err
 	}
 
@@ -53,6 +56,7 @@ func SaveRegistryToFile(log *ipfsLog.ZapEventLogger, config *config.Config, regi
 		filename = config.BlockRegistryPath
 	}
 
+	log.Debugln("Saving registry to", filename)
 	return os.WriteFile(filepath.Clean(filename), data, os.FileMode(config.FileRights))
 }
 
@@ -64,16 +68,19 @@ func LoadRegistryFile[R Registeries](log *ipfsLog.ZapEventLogger, config *config
 
 	home, err := os.UserHomeDir()
 	if err != nil {
+		log.Errorln("Error getting user home directory")
 		return registry, err
 	}
 
 	defaultFilePath := filepath.Join(home, config.SecuraChainDataPath)
 	// Ensure the output directory exists or create it.
 	if err := os.MkdirAll(defaultFilePath, os.FileMode(config.FileRights)); err != nil {
+		log.Errorln("Error creating output directory")
 		return registry, fmt.Errorf("error creating output directory: %v", err)
 	}
 
 	if err = os.Chdir(defaultFilePath); err != nil {
+		log.Errorln("Error changing directory")
 		return registry, err
 	}
 
