@@ -12,8 +12,7 @@ import (
 )
 
 func PubsubKeepRelayConnectionAlive(ctx context.Context,
-	ps *pubsub.PubSub, cfg *config.Config,
-	log *ipfsLog.ZapEventLogger, host host.Host) {
+	ps *pubsub.PubSub, host host.Host, cfg *config.Config, log *ipfsLog.ZapEventLogger) {
 	// Run KeepRelayConnectionAlive only if its behind a NAT
 	if !network.NATDiscovery(log) {
 		return

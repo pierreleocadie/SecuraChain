@@ -5,7 +5,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -21,7 +20,6 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
-	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/internal/registry"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
@@ -91,42 +89,7 @@ func main() { //nolint: funlen, gocyclo
 	}
 
 	// KeepRelayConnectionAlive
-	keepRelayConnectionAliveTopic, err := ps.Join(cfg.KeepRelayConnectionAliveStringFlag)
-	if err != nil {
-		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
-	}
-
-	// Subscribe to KeepRelayConnectionAlive topic
-	subKeepRelayConnectionAlive, err := keepRelayConnectionAliveTopic.Subscribe()
-	if err != nil {
-		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
-	}
-
-	// Handle incoming KeepRelayConnectionAlive messages
-	go func() {
-		for {
-			msg, err := subKeepRelayConnectionAlive.Next(ctx)
-			if err != nil {
-				log.Errorf("Failed to get next message from KeepRelayConnectionAlive topic: %s", err)
-				continue
-			}
-			log.Debugf("Received KeepRelayConnectionAlive message from %s", msg.GetFrom().String())
-			log.Debugf("KeepRelayConnectionAlive: %s", string(msg.Data))
-		}
-	}()
-
-	// Handle outgoing KeepRelayConnectionAlive messages
-	go func() {
-		for {
-			time.Sleep(cfg.KeepRelayConnectionAliveInterval)
-			err := keepRelayConnectionAliveTopic.Publish(ctx, netwrk.GeneratePacket(host.ID()))
-			if err != nil {
-				log.Errorf("Failed to publish KeepRelayConnectionAlive message: %s", err)
-				continue
-			}
-			log.Debugf("KeepRelayConnectionAlive message sent successfully")
-		}
-	}()
+	node.PubsubKeepRelayConnectionAlive(ctx, ps, host, cfg, log)
 
 	// Join the topic clientAnnouncementStringFlag
 	clientAnnouncementTopic, err := ps.Join(cfg.ClientAnnouncementStringFlag)
