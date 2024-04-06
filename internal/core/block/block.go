@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"time"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
@@ -34,9 +35,10 @@ type Block struct {
 }
 
 // NewBlock creates a new block using the provided transactions and the previous block hash
-func NewBlock(transactions []transaction.Transaction, prevBlockHash []byte, height uint32, minerAddr ecdsa.KeyPair) *Block {
+func NewBlock(log *ipfsLog.ZapEventLogger, transactions []transaction.Transaction, prevBlockHash []byte, height uint32, minerAddr ecdsa.KeyPair) *Block {
 	minerAddrBytes, err := minerAddr.PublicKeyToBytes()
 	if err != nil {
+		log.Errorln("Error converting public key to bytes")
 		return nil
 	}
 
@@ -51,25 +53,31 @@ func NewBlock(transactions []transaction.Transaction, prevBlockHash []byte, heig
 		},
 		Transactions: transactions,
 	}
-	block.Header.MerkleRoot = block.ComputeMerkleRoot()
+	block.Header.MerkleRoot = block.ComputeMerkleRoot(log)
+
+	log.Debugln("New block created")
 	return block
 }
 
 // calculateMerkleRoot computes the Merkle root of the transactions in the block
-func (b *Block) ComputeMerkleRoot() []byte {
+func (b *Block) ComputeMerkleRoot(log *ipfsLog.ZapEventLogger) []byte {
 	var txHashes [][]byte
 	for _, tx := range b.Transactions {
+		log.Debugln("Computing hash for transaction")
 		txBytes, _ := json.Marshal(tx)
 		txHash := sha256.Sum256(txBytes)
 		txHashes = append(txHashes, txHash[:])
 	}
-	return computeMerkleRootForHashes(txHashes)
+
+	log.Debugln("Computing Merkle root for block")
+	return computeMerkleRootForHashes(log, txHashes)
 }
 
 // calculateMerkleRootForHashes recursively calculates the Merkle root for a slice of transaction hashes
-func computeMerkleRootForHashes(hashes [][]byte) []byte {
+func computeMerkleRootForHashes(log *ipfsLog.ZapEventLogger, hashes [][]byte) []byte {
 	if len(hashes) == 0 {
 		// Handle the case where there are no transactions
+		log.Debugln("No transactions to compute Merkle root")
 		return []byte{}
 	}
 
@@ -86,11 +94,11 @@ func computeMerkleRootForHashes(hashes [][]byte) []byte {
 			newLayer = append(newLayer, hashes[i])
 		}
 	}
-	return computeMerkleRootForHashes(newLayer)
+	return computeMerkleRootForHashes(log, newLayer)
 }
 
 // Serialize converts the block into a byte slice
-func (b *Block) Serialize() ([]byte, error) {
+func (b *Block) Serialize(log *ipfsLog.ZapEventLogger) ([]byte, error) {
 	aux := struct {
 		Header       Header                           `json:"header"`
 		Transactions []transaction.TransactionWrapper `json:"transactions"`
@@ -102,8 +110,10 @@ func (b *Block) Serialize() ([]byte, error) {
 		var txWrapped transaction.TransactionWrapper
 		switch txType := tx.(type) {
 		case *transaction.AddFileTransaction:
+			log.Debugln("Serializing AddFileTransaction")
 			data, err := json.Marshal(tx)
 			if err != nil {
+				log.Errorln("Error serializing AddFileTransaction")
 				return nil, err
 			}
 			txWrapped = transaction.TransactionWrapper{
@@ -111,8 +121,10 @@ func (b *Block) Serialize() ([]byte, error) {
 				Data: data,
 			}
 		case *transaction.DeleteFileTransaction:
+			log.Debugln("Serializing DeleteFileTransaction")
 			data, err := json.Marshal(tx)
 			if err != nil {
+				log.Errorln("Error serializing DeleteFileTransaction")
 				return nil, err
 			}
 			txWrapped = transaction.TransactionWrapper{
@@ -120,6 +132,7 @@ func (b *Block) Serialize() ([]byte, error) {
 				Data: data,
 			}
 		default:
+			log.Errorln("Unknown transaction type")
 			return nil, fmt.Errorf("unknown transaction type: %v", txType)
 		}
 		aux.Transactions = append(aux.Transactions, txWrapped)
@@ -128,13 +141,14 @@ func (b *Block) Serialize() ([]byte, error) {
 }
 
 // DeserializeBlock converts a byte slice back into a Block
-func DeserializeBlock(data []byte) (*Block, error) {
+func DeserializeBlock(log *ipfsLog.ZapEventLogger, data []byte) (*Block, error) {
 	var aux struct {
 		Header       Header                           `json:"header"`
 		Transactions []transaction.TransactionWrapper `json:"transactions"`
 	}
 
 	if err := json.Unmarshal(data, &aux); err != nil {
+		log.Errorln("Error deserializing block")
 		return nil, err
 	}
 
@@ -146,13 +160,17 @@ func DeserializeBlock(data []byte) (*Block, error) {
 		var tx transaction.Transaction
 		switch wrappedTrx.Type {
 		case "AddFileTransaction":
+			log.Debugln("Deserializing AddFileTransaction")
 			tx = &transaction.AddFileTransaction{}
 		case "DeleteFileTransaction":
+			log.Debugln("Deserializing DeleteFileTransaction")
 			tx = &transaction.DeleteFileTransaction{}
 		default:
+			log.Errorln("Unknown transaction type")
 			return nil, fmt.Errorf("unknown transaction type: %v", wrappedTrx.Type)
 		}
 		if err := json.Unmarshal(wrappedTrx.Data, &tx); err != nil {
+			log.Errorln("Error deserializing transaction")
 			return nil, err
 		}
 		block.Transactions = append(block.Transactions, tx)
@@ -161,21 +179,25 @@ func DeserializeBlock(data []byte) (*Block, error) {
 }
 
 // SignBlock signs the block with the given private key and adds the signature to the block header
-func (b *Block) SignBlock(privateKey ecdsa.KeyPair) error {
-	headerHash := ComputeHash(b)
+func (b *Block) SignBlock(log *ipfsLog.ZapEventLogger, privateKey ecdsa.KeyPair) error {
+	headerHash := ComputeHash(log, b)
 	signature, err := privateKey.Sign(headerHash)
 	if err != nil {
+		log.Errorln("Error signing block")
 		return err
 	}
 
+	log.Debugln("Block signed")
 	b.Header.Signature = signature
 	return nil
 }
 
 // IsGenesisBlock checks if the block is the genesis block
-func IsGenesisBlock(b *Block) bool {
+func IsGenesisBlock(log *ipfsLog.ZapEventLogger, b *Block) bool {
 	if b.PrevBlock == nil && b.Header.Height == 1 {
+		log.Debugln("Block is the genesis block")
 		return true
 	}
+	log.Debugln("Block is not the genesis block")
 	return false
 }
