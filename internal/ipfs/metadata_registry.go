@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ipfs/boxo/path"
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
@@ -49,10 +50,10 @@ func loadFromJSON(filePath string) (MetadataRegistry, error) {
 	return registry, err
 }
 
-func AddFileMetadataToRegistry(config *config.Config, fileCid path.ImmutablePath, filePath string) error {
+func AddFileMetadataToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, fileCid path.ImmutablePath, filePath string) error {
 	var metadataRegistry = MetadataRegistry{}
 
-	fileName, fileSize, fileType, err := utils.FileInfo(filePath)
+	fileName, fileSize, fileType, err := utils.FileInfo(log, filePath)
 	if err != nil {
 		log.Fatalf("Error getting file info: %v", err)
 	}
@@ -69,21 +70,21 @@ func AddFileMetadataToRegistry(config *config.Config, fileCid path.ImmutablePath
 		metadataRegistry.Files = append(metadataRegistry.Files, fileMetadata)
 
 		if err := saveToJSON(config, config.FileMetadataRegistryJSON, metadataRegistry); err != nil {
-			log.Printf("Error saving JSON data %v", err)
+			log.Errorln("Error saving JSON data %v", err)
 			return err
 		}
 	}
 
 	metadataRegistry, err = loadFromJSON(config.FileMetadataRegistryJSON)
 	if err != nil {
-		log.Printf("Error loading JSON data %v", err)
+		log.Errorln("Error loading JSON data %v", err)
 		return err
 	}
 
 	metadataRegistry.Files = append(metadataRegistry.Files, fileMetadata)
 
 	if err := saveToJSON(config, config.FileMetadataRegistryJSON, metadataRegistry); err != nil {
-		log.Printf("Error saving JSON data %v", err)
+		log.Errorln("Error saving JSON data %v", err)
 		return err
 	}
 

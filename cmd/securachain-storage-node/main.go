@@ -175,7 +175,7 @@ func main() { //nolint: funlen, gocyclo
 			}
 
 			downloadedFilePath := filepath.Join(home, ".IPFS_Downloads", clientAnnouncement.FileCid.String())
-			checksum, err := utils.ComputeFileChecksum(downloadedFilePath)
+			checksum, err := utils.ComputeFileChecksum(log, downloadedFilePath)
 			if err != nil {
 				log.Errorf("Failed to compute checksum of downloaded file: %s", err)
 				continue
@@ -323,5 +323,5 @@ func main() { //nolint: funlen, gocyclo
 		}
 	}()
 
-	utils.WaitForTermSignal()
+	utils.WaitForTermSignal(log)
 }

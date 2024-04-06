@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"os"
 	"testing"
+
+	ipfsLog "github.com/ipfs/go-log/v2"
 )
 
 func TestECDSAKeyPairGeneration(t *testing.T) {
@@ -43,6 +45,11 @@ func TestECDSASignAndVerify(t *testing.T) {
 func TestSaveAndLoadKeys(t *testing.T) {
 	t.Parallel()
 
+	log := ipfsLog.Logger("ecdsa_test")
+	if err := ipfsLog.SetLogLevel("ecdsa_test", "DEBUG"); err != nil {
+		log.Errorln("Failed to set log level : ", err)
+	}
+
 	// Paths for temporary testing
 	privateKeyFile := "temp_private"
 	publicKeyFile := "temp_public"
@@ -56,7 +63,7 @@ func TestSaveAndLoadKeys(t *testing.T) {
 		t.Fatalf("Failed to save keys: %v", err)
 	}
 
-	loadedKeyPair, err := LoadKeys(privateKeyFile, publicKeyFile, storagePath)
+	loadedKeyPair, err := LoadKeys(log, privateKeyFile, publicKeyFile, storagePath)
 
 	if err != nil {
 		t.Fatalf("Failed to load keys: %v", err)

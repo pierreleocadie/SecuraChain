@@ -8,15 +8,16 @@ import (
 	"io"
 	"os"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
 
 // EncryptFile encrypts a file using AES encryption in CFB mode.
 // It takes as input the paths for the input and output files.
 // Returns an error if encryption fails.
-func (aesKey *aesKey) EncryptFile(inputFilePath, outputFilePath string) error {
+func (aesKey *aesKey) EncryptFile(log *ipfsLog.ZapEventLogger, inputFilePath, outputFilePath string) error {
 	// Sanitize the input file path.
-	cleanInputFilePath, err := utils.SanitizePath(inputFilePath)
+	cleanInputFilePath, err := utils.SanitizePath(log, inputFilePath)
 	if err != nil {
 		return fmt.Errorf("could not sanitize input file path: %v", err)
 	}
@@ -29,7 +30,7 @@ func (aesKey *aesKey) EncryptFile(inputFilePath, outputFilePath string) error {
 	defer inputFile.Close()
 
 	// Sanitize the output file path.
-	cleanOutputFilePath, err := utils.SanitizePath(outputFilePath)
+	cleanOutputFilePath, err := utils.SanitizePath(log, outputFilePath)
 	if err != nil {
 		return fmt.Errorf("could not sanitize output file path: %v", err)
 	}
@@ -75,9 +76,9 @@ func (aesKey *aesKey) EncryptFile(inputFilePath, outputFilePath string) error {
 // DecryptFile decrypts a file that was encrypted using AES encryption in CFB mode.
 // It takes as input the paths for the input and output files.
 // Returns an error if decryption fails.
-func (aesKey *aesKey) DecryptFile(inputFilePath, outputFilePath string) error {
+func (aesKey *aesKey) DecryptFile(log *ipfsLog.ZapEventLogger, inputFilePath, outputFilePath string) error {
 	// Sanitize the input file path.
-	cleanInputFilePath, err := utils.SanitizePath(inputFilePath)
+	cleanInputFilePath, err := utils.SanitizePath(log, inputFilePath)
 	if err != nil {
 		return fmt.Errorf("could not sanitize input file path: %v", err)
 	}
@@ -90,7 +91,7 @@ func (aesKey *aesKey) DecryptFile(inputFilePath, outputFilePath string) error {
 	defer inputFile.Close()
 
 	// Sanitize the output file path.
-	cleanOutputFilePath, err := utils.SanitizePath(outputFilePath)
+	cleanOutputFilePath, err := utils.SanitizePath(log, outputFilePath)
 	if err != nil {
 		return fmt.Errorf("could not sanitize output file path: %v", err)
 	}

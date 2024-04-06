@@ -46,7 +46,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	cfg, err := config.LoadConfig(*yamlConfigFilePath)
+	cfg, err := config.LoadConfig(log, *yamlConfigFilePath)
 	if err != nil {
 		log.Errorln("Error loading config file : ", err)
 		os.Exit(1)
@@ -490,5 +490,5 @@ func main() {
 		}
 	}()
 
-	utils.WaitForTermSignal()
+	utils.WaitForTermSignal(log)
 }

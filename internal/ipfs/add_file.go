@@ -4,29 +4,29 @@ package ipfs
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/ipfs/boxo/path"
+	ipfsLog "github.com/ipfs/go-log/v2"
 	icore "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 )
 
 // AddFileToIPFS adds a file to IPFS and returns its CID. It also collects and saves file metadata.
 // The function handles the file addition process and records metadata such as file size, type, name, and user public key.
-func AddFile(ctx context.Context, config *config.Config, ipfsAPI icore.CoreAPI, filePath string) (path.ImmutablePath, error) {
-	file, err := PrepareFileForIPFS(filePath)
+func AddFile(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, ipfsAPI icore.CoreAPI, filePath string) (path.ImmutablePath, error) {
+	file, err := PrepareFileForIPFS(log, filePath)
 	if err != nil {
-		log.Println("could not get File:", err)
+		log.Errorln("could not get File:", err)
 	}
 
 	fileCid, err := ipfsAPI.Unixfs().Add(ctx, file)
 	if err != nil {
-		log.Printf("Could not add file to IPFS %v", err)
+		log.Errorln("Could not add file to IPFS %v", err)
 		return path.ImmutablePath{}, err
 	}
-	log.Printf("File added with CID: %s", fileCid.String())
+	log.Errorln("File added with CID: %s", fileCid.String())
 
 	// Adding the file on the storage node (local system)
 	home, err := os.UserHomeDir()

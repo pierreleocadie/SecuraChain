@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
 
@@ -51,8 +52,8 @@ func (keyPair *ecdsaKeyPair) saveKeyToFile(keyFunc func() ([]byte, error), filen
 }
 
 // LoadKeys retrieves the private and public keys from specified files and constructs an ECDSA key pair.
-func LoadKeys(privateKeyFilename, publicKeyFilename, storagePath string) (KeyPair, error) {
-	privateKeyBytes, err := utils.LoadKeyFromFile(privateKeyFilename, storagePath)
+func LoadKeys(log *ipfsLog.ZapEventLogger, privateKeyFilename, publicKeyFilename, storagePath string) (KeyPair, error) {
+	privateKeyBytes, err := utils.LoadKeyFromFile(log, privateKeyFilename, storagePath)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +63,7 @@ func LoadKeys(privateKeyFilename, publicKeyFilename, storagePath string) (KeyPai
 		return nil, err
 	}
 
-	publicKeyBytes, err := utils.LoadKeyFromFile(publicKeyFilename, storagePath)
+	publicKeyBytes, err := utils.LoadKeyFromFile(log, publicKeyFilename, storagePath)
 	if err != nil {
 		return nil, err
 	}

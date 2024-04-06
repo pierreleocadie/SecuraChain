@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 	"gopkg.in/yaml.v3"
 )
@@ -74,10 +75,10 @@ type Config struct {
 }
 
 // Function to load the yaml config file
-func LoadConfig(yamlConfigFilePath string) (*Config, error) {
+func LoadConfig(log *ipfsLog.ZapEventLogger, yamlConfigFilePath string) (*Config, error) {
 	// Load the config file
 	config := Config{}
-	sanitizedPath, err := utils.SanitizePath(yamlConfigFilePath)
+	sanitizedPath, err := utils.SanitizePath(log, yamlConfigFilePath)
 	if err != nil {
 		return nil, err
 	}

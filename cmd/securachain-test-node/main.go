@@ -83,5 +83,5 @@ func main() { //nolint: funlen
 		}
 	}()
 
-	utils.WaitForTermSignal()
+	utils.WaitForTermSignal(log)
 }

@@ -9,7 +9,7 @@ import (
 )
 
 func GenerateKeys(cfg *config.Config, log *ipfsLog.ZapEventLogger) {
-	ecdsaKeyPairPath, err := utils.SanitizePath(cfg.ECDSAKeyPairPath)
+	ecdsaKeyPairPath, err := utils.SanitizePath(log, cfg.ECDSAKeyPairPath)
 	if err != nil {
 		log.Panicf("Failed to sanitize ECDSA key pair path: %s", err)
 	}
@@ -24,7 +24,7 @@ func GenerateKeys(cfg *config.Config, log *ipfsLog.ZapEventLogger) {
 		log.Panicf("Failed to save ECDSA key pair: %s", err)
 	}
 
-	aesKeyPath, err := utils.SanitizePath(cfg.AESKeyPath)
+	aesKeyPath, err := utils.SanitizePath(log, cfg.AESKeyPath)
 	if err != nil {
 		log.Panicf("Failed to sanitize AES key path: %s", err)
 	}
@@ -43,22 +43,22 @@ func GenerateKeys(cfg *config.Config, log *ipfsLog.ZapEventLogger) {
 }
 
 func LoadKeys(cfg *config.Config, log *ipfsLog.ZapEventLogger) (ecdsa.KeyPair, aes.Key) {
-	ecdsaKeyPairPath, err := utils.SanitizePath(cfg.ECDSAKeyPairPath)
+	ecdsaKeyPairPath, err := utils.SanitizePath(log, cfg.ECDSAKeyPairPath)
 	if err != nil {
 		log.Panicf("Failed to sanitize ECDSA key pair path: %s", err)
 	}
 
-	ecdsaKeyPair, err := ecdsa.LoadKeys("ecdsaPrivateKey", "ecdsaPublicKey", ecdsaKeyPairPath)
+	ecdsaKeyPair, err := ecdsa.LoadKeys(log, "ecdsaPrivateKey", "ecdsaPublicKey", ecdsaKeyPairPath)
 	if err != nil {
 		log.Panicf("Failed to load ECDSA key pair: %s", err)
 	}
 
-	aesKeyPath, err := utils.SanitizePath(cfg.AESKeyPath)
+	aesKeyPath, err := utils.SanitizePath(log, cfg.AESKeyPath)
 	if err != nil {
 		log.Panicf("Failed to sanitize AES key path: %s", err)
 	}
 
-	aesKey, err := aes.LoadKey("aesKey", aesKeyPath)
+	aesKey, err := aes.LoadKey(log, "aesKey", aesKeyPath)
 	if err != nil {
 		log.Panicf("Failed to load AES key: %s", err)
 	}
