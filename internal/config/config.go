@@ -80,19 +80,23 @@ func LoadConfig(log *ipfsLog.ZapEventLogger, yamlConfigFilePath string) (*Config
 	config := Config{}
 	sanitizedPath, err := utils.SanitizePath(log, yamlConfigFilePath)
 	if err != nil {
+		log.Errorln("Error sanitizing path")
 		return nil, err
 	}
 
 	configBytes, err := os.ReadFile(sanitizedPath) // #nosec G304
 	if err != nil {
+		log.Errorln("Error reading config file")
 		return nil, err
 	}
 
 	// Unmarshal the config file
 	err = yaml.Unmarshal(configBytes, &config)
 	if err != nil {
+		log.Errorln("Error unmarshalling config file")
 		return nil, err
 	}
 
+	log.Debugln("Config file loaded successfully")
 	return &config, nil
 }
