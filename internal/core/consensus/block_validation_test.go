@@ -4,6 +4,7 @@ package consensus
 import (
 	"testing"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
@@ -12,50 +13,55 @@ import (
 func TestValidateBlock(t *testing.T) {
 	t.Parallel()
 
-	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
-	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
+	log := ipfsLog.Logger("consenus-test")
+	if err := ipfsLog.SetLogLevel("consenus-test", "DEBUG"); err != nil {
+		log.Errorln("Failed to set log level : ", err)
+	}
+
+	minerKeyPair, _ := ecdsa.NewECDSAKeyPair(log) // Replace with actual key pair generation
+	transactions := []transaction.Transaction{}   // Empty transaction list for simplicity
 
 	// Create a previous block
-	prevBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
+	prevBlock := block.NewBlock(log, transactions, nil, 1, minerKeyPair)
 
-	MineBlock(prevBlock)
+	MineBlock(log, prevBlock)
 
-	err := prevBlock.SignBlock(minerKeyPair)
+	err := prevBlock.SignBlock(log, minerKeyPair)
 	if err != nil {
 		t.Errorf("Failed to sign block: %s", err)
 	}
 
-	if !ValidateBlock(prevBlock, nil) {
+	if !ValidateBlock(log, prevBlock, nil) {
 		t.Errorf("ValidateBlock failed for the genesis block")
 	}
 
 	// Create a valid block
-	prevBlockHash := block.ComputeHash(prevBlock)
+	prevBlockHash := block.ComputeHash(log, prevBlock)
 
-	validBlock := block.NewBlock(transactions, prevBlockHash, 2, minerKeyPair)
+	validBlock := block.NewBlock(log, transactions, prevBlockHash, 2, minerKeyPair)
 
-	MineBlock(validBlock)
+	MineBlock(log, validBlock)
 
-	err = validBlock.SignBlock(minerKeyPair)
+	err = validBlock.SignBlock(log, minerKeyPair)
 	if err != nil {
 		t.Errorf("Failed to sign block: %s", err)
 	}
 
-	if !ValidateBlock(validBlock, prevBlock) {
+	if !ValidateBlock(log, validBlock, prevBlock) {
 		t.Errorf("ValidateBlock failed for a valid block")
 	}
 
 	// Create an invalid block (wrong previous hash)
-	invalidBlock := block.NewBlock(transactions, []byte("wronghash"), 3, minerKeyPair)
+	invalidBlock := block.NewBlock(log, transactions, []byte("wronghash"), 3, minerKeyPair)
 
-	MineBlock(invalidBlock)
+	MineBlock(log, invalidBlock)
 
-	err = invalidBlock.SignBlock(minerKeyPair)
+	err = invalidBlock.SignBlock(log, minerKeyPair)
 	if err != nil {
 		t.Errorf("Failed to sign block: %s", err)
 	}
 
-	if ValidateBlock(invalidBlock, validBlock) {
+	if ValidateBlock(log, invalidBlock, validBlock) {
 		t.Errorf("ValidateBlock succeeded for an invalid block with incorrect previous hash")
 	}
 }
