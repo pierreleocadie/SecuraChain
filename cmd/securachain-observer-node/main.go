@@ -35,13 +35,12 @@ var (
 	data          []visualisation.Data = []visualisation.Data{}
 	oldData       []visualisation.Data = []visualisation.Data{}
 	mapData                            = make(map[string]visualisation.Data)
-	mapDataMutex  sync.Mutex
-	peersDataChan = make(chan visualisation.Data, 200)
+	peersDataChan                      = make(chan []byte, 200)
 )
 
 func main() { //nolint: funlen
 	log := ipfsLog.Logger("observer-node")
-	err := ipfsLog.SetLogLevel("observer-node", "INFO")
+	err := ipfsLog.SetLogLevel("*", "DEBUG")
 	if err != nil {
 		log.Errorln("Error setting log level : ", err)
 	}
@@ -89,7 +88,10 @@ func main() { //nolint: funlen
 	/*
 	* PUBSUB
 	 */
-	ps, err := pubsub.NewGossipSub(ctx, host)
+	ps, err := pubsub.NewGossipSub(ctx, host,
+		pubsub.WithPeerOutboundQueueSize(200),
+		pubsub.WithValidateQueueSize(1000),
+	)
 	if err != nil {
 		log.Panicf("Failed to create GossipSub: %s", err)
 	}
@@ -103,7 +105,7 @@ func main() { //nolint: funlen
 		log.Warnf("Failed to join NetworkVisualisation topic: %s", err)
 	}
 
-	subNetworkVisualisation, err := networkVisualisationTopic.Subscribe()
+	subNetworkVisualisation, err := networkVisualisationTopic.Subscribe(pubsub.WithBufferSize(1000))
 	if err != nil {
 		log.Warnf("Failed to subscribe to NetworkVisualisation topic: %s", err)
 	}
@@ -248,68 +250,53 @@ func main() { //nolint: funlen
 			if err != nil {
 				log.Warnf("Failed to get next message from NetworkVisualisation topic: %s", err)
 			}
-			peerData := visualisation.Data{}
-			err = json.Unmarshal(msg.Data, &peerData)
-			if err != nil {
-				log.Warnf("Failed to unmarshal NetworkVisualisation message: %s", err)
-			}
-			peersDataChan <- peerData
-		}
-	}()
-
-	go func() {
-		for {
-			time.Sleep(10 * time.Second)
-			// Delete all peers that have an empty ConnectedPeers slice in the map, that means they are disconnected
-			mapDataMutex.Lock()
-			for key, value := range mapData {
-				if len(value.ConnectedPeers) == 0 {
-					delete(mapData, key)
-				}
-			}
-			mapDataMutex.Unlock()
+			peersDataChan <- msg.Data
 		}
 	}()
 
 	go func() {
 		i := 0
-		for range time.Tick(time.Second) {
-			peerData := <-peersDataChan
-			mapDataMutex.Lock()
-			if _, exists := mapData[peerData.PeerID]; exists {
-				// Check if the data is different
-				if reflect.DeepEqual(mapData[peerData.PeerID], peerData) {
-					mapDataMutex.Unlock()
+		for {
+			select {
+			case peerDataByte := <-peersDataChan:
+				peerData := visualisation.Data{}
+				err = json.Unmarshal(peerDataByte, &peerData)
+				if err != nil {
+					log.Warnf("Failed to unmarshal NetworkVisualisation message: %s", err)
+				}
+				_, exists := mapData[peerData.PeerID]
+				if exists && reflect.DeepEqual(mapData[peerData.PeerID], peerData) {
 					continue
 				}
-			} else {
-				i++
-				log.Infoln("New peer connected: ", peerData.PeerID, " - ", i)
-			}
-			//log.Infoln("Received NetworkVisualisation message from: ", msg.GetFrom())
-			mapDataMutex.Lock()
-			mapData[peerData.PeerID] = peerData
-			mapDataMutex.Unlock()
-			if len(oldData) == 0 && len(data) == 0 {
-				data = append(data, peerData)
-				visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "initData", Data: data}, log)
-			} else {
-				oldData = append(oldData, data...)
-				mapDataMutex.Lock()
-				newData := make([]visualisation.Data, 0, len(mapData))
-				// Transform the map into a slice
-				for _, value := range mapData {
-					newData = append(newData, value)
+				if !exists {
+					i++
+					log.Infoln("New peer added to mapData: ", i)
 				}
-				mapDataMutex.Unlock()
-				// Delete data
-				data = nil
-				// Add the new data
-				data = append(data, newData...)
-				diffData := visualisation.NewDiffData(oldData, data)
-				visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "dataUpdate", Data: diffData}, log)
+				//log.Infoln("Received NetworkVisualisation message from: ", msg.GetFrom())
+				mapData[peerData.PeerID] = peerData
+				if len(oldData) == 0 && len(data) == 0 {
+					data = append(data, peerData)
+					visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "initData", Data: data}, log)
+				} else {
+					oldData = append(oldData, data...)
+					newData := make([]visualisation.Data, 0, len(mapData))
+					// Transform the map into a slice
+					for _, value := range mapData {
+						newData = append(newData, value)
+					}
+					for key, value := range mapData {
+						if len(value.ConnectedPeers) == 0 {
+							delete(mapData, key)
+						}
+					}
+					// Delete data
+					data = nil
+					// Add the new data
+					data = append(data, newData...)
+					diffData := visualisation.NewDiffData(oldData, data)
+					visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "dataUpdate", Data: diffData}, log)
+				}
 			}
-			mapDataMutex.Unlock()
 		}
 	}()
 

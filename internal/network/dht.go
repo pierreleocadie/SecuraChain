@@ -83,9 +83,9 @@ func (d *DHT) startDHT(ctx context.Context, host host.Host, log *ipfsLog.ZapEven
 
 	var err error
 	if d.BootstrapNode {
-		d.IpfsDHT, err = dht.New(ctx, host, dht.Mode(dht.ModeServer), dht.AddressFilter(FilterOutPrivateAddrs))
+		d.IpfsDHT, err = dht.New(ctx, host, dht.Mode(dht.ModeServer), dht.AddressFilter(FilterOutPrivateAddrs), dht.Concurrency(200))
 	} else {
-		d.IpfsDHT, err = dht.New(ctx, host, dht.Mode(dht.ModeClient), dht.AddressFilter(FilterOutPrivateAddrs))
+		d.IpfsDHT, err = dht.New(ctx, host, dht.Mode(dht.ModeClient), dht.AddressFilter(FilterOutPrivateAddrs), dht.Concurrency(200))
 	}
 	if err != nil {
 		log.Errorln("[startDHT] Error creating new DHT : ", err)

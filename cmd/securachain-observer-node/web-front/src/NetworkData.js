@@ -20,6 +20,7 @@ function NetworkData() {
             switch(message.type) {
                 case 'initData':
                     // Initialisation avec les données complètes
+                    console.log(message.data)
                     processInitData(message.data);
                     break;
                 case 'dataUpdate':
