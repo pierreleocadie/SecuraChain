@@ -6,6 +6,7 @@ import (
 	"flag"
 	"net/http"
 	"reflect"
+	"runtime"
 	"sync"
 	"time"
 
@@ -60,6 +61,14 @@ func main() { //nolint: funlen
 		log.Panicln("Error loading config file : ", err)
 	}
 
+	pubsub.GossipSubD = 8
+	pubsub.GossipSubDlo = 5
+	pubsub.GossipSubDhi = 10
+	pubsub.GossipSubDscore = 8
+	pubsub.GossipSubDout = 8
+	pubsub.GossipSubDlazy = 8
+	pubsub.GossipSubGossipRetransmission = 12
+
 	/*
 	* NODE LIBP2P
 	 */
@@ -89,8 +98,10 @@ func main() { //nolint: funlen
 	* PUBSUB
 	 */
 	ps, err := pubsub.NewGossipSub(ctx, host,
-		pubsub.WithPeerOutboundQueueSize(200),
 		pubsub.WithValidateQueueSize(1000),
+		pubsub.WithPeerOutboundQueueSize(1000),
+		pubsub.WithValidateWorkers(runtime.NumCPU()*2),
+		pubsub.WithValidateThrottle(8192*2),
 	)
 	if err != nil {
 		log.Panicf("Failed to create GossipSub: %s", err)
@@ -245,11 +256,14 @@ func main() { //nolint: funlen
 
 	// Handle incoming NetworkVisualisation messages
 	go func() {
+		peersReceived := make(map[string]bool)
 		for {
 			msg, err := subNetworkVisualisation.Next(ctx)
 			if err != nil {
 				log.Warnf("Failed to get next message from NetworkVisualisation topic: %s", err)
 			}
+			peersReceived[msg.GetFrom().String()] = true
+			log.Debug("Number of peers received: ", len(peersReceived))
 			peersDataChan <- msg.Data
 		}
 	}()
