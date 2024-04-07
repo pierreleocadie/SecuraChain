@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"net/http"
 	"sync"
@@ -31,6 +32,7 @@ var (
 	}
 	data    []visualisation.Data
 	oldData []visualisation.Data
+	mapData = make(map[string]visualisation.Data)
 )
 
 func main() { //nolint: funlen
@@ -66,7 +68,7 @@ func main() { //nolint: funlen
 	* DHT DISCOVERY
 	 */
 	// Setup DHT discovery
-	node.SetupDHTDiscovery(ctx, cfg, host, false, log)
+	// node.SetupDHTDiscovery(ctx, cfg, host, false, log)
 
 	/*
 	 * NETWORK PEER DISCOVERY WITH mDNS
@@ -89,6 +91,54 @@ func main() { //nolint: funlen
 
 	// KeepRelayConnectionAlive
 	node.PubsubKeepRelayConnectionAlive(ctx, ps, host, cfg, log)
+
+	// NetworkVisualisation
+	networkVisualisationTopic, err := ps.Join(cfg.NetworkVisualisationStringFlag)
+	if err != nil {
+		log.Warnf("Failed to join NetworkVisualisation topic: %s", err)
+	}
+
+	subNetworkVisualisation, err := networkVisualisationTopic.Subscribe()
+	if err != nil {
+		log.Warnf("Failed to subscribe to NetworkVisualisation topic: %s", err)
+	}
+
+	// Handle incoming NetworkVisualisation messages
+	go func() {
+		for {
+			msg, err := subNetworkVisualisation.Next(ctx)
+			if err != nil {
+				log.Warnf("Failed to get next message from NetworkVisualisation topic: %s", err)
+			}
+			peerData := visualisation.Data{}
+			err = json.Unmarshal(msg.Data, &peerData)
+			if err != nil {
+				log.Warnf("Failed to unmarshal NetworkVisualisation message: %s", err)
+			}
+			log.Debugln("Received NetworkVisualisation message from: ", msg.GetFrom())
+			mapData[peerData.PeerID] = peerData
+			if len(oldData) == 0 && len(data) == 0 {
+				data = append(data, peerData)
+			} else {
+				newData := []visualisation.Data{}
+				oldData = append(oldData, data...)
+				// Delete all peers that have an empty ConnectedPeers slice in the map, that means they are disconnected
+				for key, value := range mapData {
+					if len(value.ConnectedPeers) == 0 {
+						delete(mapData, key)
+					}
+				}
+				// Transform the map into a slice
+				for _, value := range mapData {
+					newData = append(newData, value)
+				}
+				// Delete data
+				data = nil
+				// Add the new data
+				data = append(data, newData...)
+			}
+		}
+	}()
 
 	/*
 	* NETWORK VISUALISATION - WEBSOCKET SERVER
