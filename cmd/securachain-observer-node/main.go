@@ -6,6 +6,7 @@ import (
 	"flag"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -30,14 +31,14 @@ var (
 			return true // Ne faites pas cela dans une application de production
 		},
 	}
-	data    []visualisation.Data
-	oldData []visualisation.Data
-	mapData = make(map[string]visualisation.Data)
+	data    []visualisation.Data = []visualisation.Data{}
+	oldData []visualisation.Data = []visualisation.Data{}
+	mapData                      = make(map[string]visualisation.Data)
 )
 
 func main() { //nolint: funlen
 	log := ipfsLog.Logger("observer-node")
-	err := ipfsLog.SetLogLevel("*", "DEBUG")
+	err := ipfsLog.SetLogLevel("observer-node", "INFO")
 	if err != nil {
 		log.Errorln("Error setting log level : ", err)
 	}
@@ -68,13 +69,14 @@ func main() { //nolint: funlen
 	* DHT DISCOVERY
 	 */
 	// Setup DHT discovery
-	// node.SetupDHTDiscovery(ctx, cfg, host, false, log)
+	node.SetupDHTDiscovery(ctx, cfg, host, false, log)
 
 	/*
 	 * NETWORK PEER DISCOVERY WITH mDNS
 	 */
 	// Initialize mDNS
 	mdnsConfig := netwrk.NewMDNSDiscovery(cfg.RendezvousStringFlag)
+
 	// Run MDNS
 	if err := mdnsConfig.Run(host); err != nil {
 		log.Fatalf("Failed to run mDNS: %s", err)
@@ -103,6 +105,139 @@ func main() { //nolint: funlen
 		log.Warnf("Failed to subscribe to NetworkVisualisation topic: %s", err)
 	}
 
+	// Handle outgoing NetworkVisualisation messages
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			data := &visualisation.Data{
+				PeerID:   host.ID().String(),
+				NodeType: "FullNode",
+				ConnectedPeers: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range host.Network().Peers() {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				TopicsList: ps.GetTopics(),
+				KeepRelayConnectionAlive: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("KeepRelayConnectionAlive") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				BlockAnnouncement: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("BlockAnnouncement") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				AskingBlockchain: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("AskingBlockchain") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				ReceiveBlockchain: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("ReceiveBlockchain") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				ClientAnnouncement: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("ClientAnnouncement") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				StorageNodeResponse: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("StorageNodeResponse") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				FullNodeAnnouncement: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("FullNodeAnnouncement") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				AskMyFilesList: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("AskMyFilesList") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				ReceiveMyFilesList: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("ReceiveMyFilesList") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+			}
+			dataBytes, err := json.Marshal(data)
+			if err != nil {
+				log.Errorf("Failed to marshal NetworkVisualisation message: %s", err)
+				continue
+			}
+			err = networkVisualisationTopic.Publish(ctx, dataBytes)
+			if err != nil {
+				log.Errorf("Failed to publish NetworkVisualisation message: %s", err)
+				continue
+			}
+			log.Debugf("NetworkVisualisation message sent successfully")
+		}
+	}()
+
 	// Handle incoming NetworkVisualisation messages
 	go func() {
 		for {
@@ -115,10 +250,11 @@ func main() { //nolint: funlen
 			if err != nil {
 				log.Warnf("Failed to unmarshal NetworkVisualisation message: %s", err)
 			}
-			log.Debugln("Received NetworkVisualisation message from: ", msg.GetFrom())
+			log.Infoln("Received NetworkVisualisation message from: ", msg.GetFrom())
 			mapData[peerData.PeerID] = peerData
 			if len(oldData) == 0 && len(data) == 0 {
 				data = append(data, peerData)
+				visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "initData", Data: data}, log)
 			} else {
 				newData := []visualisation.Data{}
 				oldData = append(oldData, data...)
@@ -136,6 +272,7 @@ func main() { //nolint: funlen
 				data = nil
 				// Add the new data
 				data = append(data, newData...)
+				log.Infof("Data: %v", data)
 			}
 		}
 	}()
@@ -143,7 +280,7 @@ func main() { //nolint: funlen
 	/*
 	* NETWORK VISUALISATION - WEBSOCKET SERVER
 	 */
-	http.HandleFunc("/ws", visualisation.CreateHandler(upgrader, data, &clientsMutex, clients, log))
+	http.HandleFunc("/ws", visualisation.CreateHandler(upgrader, &data, &clientsMutex, clients, log))
 	go func() {
 		err := http.ListenAndServe(":8080", nil)
 		if err != nil {
