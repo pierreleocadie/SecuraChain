@@ -2,7 +2,6 @@ package ipfs
 
 import (
 	"encoding/json"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -28,25 +27,29 @@ type MetadataRegistry struct {
 }
 
 // saveToJSON saves the metadata registry records to a JSON file.
-func saveToJSON(config *config.Config, filePath string, registry MetadataRegistry) error {
+func saveToJSON(log *ipfsLog.ZapEventLogger, config *config.Config, filePath string, registry MetadataRegistry) error {
 	jsonData, err := json.Marshal(registry)
 	if err != nil {
+		log.Errorln("Error marshalling JSON data %v", err)
 		return err
 	}
 
+	log.Debugln("Saving metadata registry to", filePath)
 	return os.WriteFile(filepath.Clean(filePath), jsonData, os.FileMode(config.FileRights))
 }
 
 // loadFromJSON loads the metadata registry records from a JSON file.
-func loadFromJSON(filePath string) (MetadataRegistry, error) {
+func loadFromJSON(log *ipfsLog.ZapEventLogger, filePath string) (MetadataRegistry, error) {
 	var registry MetadataRegistry
 
 	jsonData, err := os.ReadFile(filepath.Clean(filePath))
 	if err != nil {
+		log.Errorln("Error reading JSON data %v", err)
 		return registry, err
 	}
 
 	err = json.Unmarshal(jsonData, &registry)
+	log.Debugln("Loading metadata registry from", filePath)
 	return registry, err
 }
 
@@ -55,7 +58,7 @@ func AddFileMetadataToRegistry(log *ipfsLog.ZapEventLogger, config *config.Confi
 
 	fileName, fileSize, fileType, err := utils.FileInfo(log, filePath)
 	if err != nil {
-		log.Fatalf("Error getting file info: %v", err)
+		log.Errorln("Error getting file info: %v", err)
 	}
 
 	fileMetadata := FileMetadata{
@@ -69,13 +72,13 @@ func AddFileMetadataToRegistry(log *ipfsLog.ZapEventLogger, config *config.Confi
 	if _, err := os.Stat(config.FileMetadataRegistryJSON); os.IsNotExist(err) {
 		metadataRegistry.Files = append(metadataRegistry.Files, fileMetadata)
 
-		if err := saveToJSON(config, config.FileMetadataRegistryJSON, metadataRegistry); err != nil {
+		if err := saveToJSON(log, config, config.FileMetadataRegistryJSON, metadataRegistry); err != nil {
 			log.Errorln("Error saving JSON data %v", err)
 			return err
 		}
 	}
 
-	metadataRegistry, err = loadFromJSON(config.FileMetadataRegistryJSON)
+	metadataRegistry, err = loadFromJSON(log, config.FileMetadataRegistryJSON)
 	if err != nil {
 		log.Errorln("Error loading JSON data %v", err)
 		return err
@@ -83,18 +86,19 @@ func AddFileMetadataToRegistry(log *ipfsLog.ZapEventLogger, config *config.Confi
 
 	metadataRegistry.Files = append(metadataRegistry.Files, fileMetadata)
 
-	if err := saveToJSON(config, config.FileMetadataRegistryJSON, metadataRegistry); err != nil {
+	if err := saveToJSON(log, config, config.FileMetadataRegistryJSON, metadataRegistry); err != nil {
 		log.Errorln("Error saving JSON data %v", err)
 		return err
 	}
 
+	log.Debugln("File metadata added to registry")
 	return nil
 }
 
-func RemoveFileMetadataFromRegistry(config *config.Config, fileCid path.ImmutablePath) error {
-	metadataRegistry, err := loadFromJSON(config.FileMetadataRegistryJSON)
+func RemoveFileMetadataFromRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, fileCid path.ImmutablePath) error {
+	metadataRegistry, err := loadFromJSON(log, config.FileMetadataRegistryJSON)
 	if err != nil {
-		log.Printf("Error loading JSON data %v", err)
+		log.Errorln("Error loading JSON data %v", err)
 		return err
 	}
 
@@ -107,10 +111,11 @@ func RemoveFileMetadataFromRegistry(config *config.Config, fileCid path.Immutabl
 	}
 
 	// Save the new metadata
-	if err := saveToJSON(config, config.FileMetadataRegistryJSON, metadataRegistry); err != nil {
-		log.Fatalf("Error saving JSON data: %v", err)
+	if err := saveToJSON(log, config, config.FileMetadataRegistryJSON, metadataRegistry); err != nil {
+		log.Errorln("Error saving JSON data: %v", err)
 		return err
 	}
 
+	log.Debugln("File metadata removed from registry")
 	return nil
 }

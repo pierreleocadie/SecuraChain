@@ -24,7 +24,7 @@ func PublishBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, config *conf
 	}
 
 	// Pin the file on IPFS
-	_, err = PinFile(ctx, ipfsApi, cidFile)
+	_, err = PinFile(log, ctx, ipfsApi, cidFile)
 	if err != nil {
 		log.Errorln("Error pinning the block to IPFS")
 		return false
@@ -46,7 +46,7 @@ func PublishBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, config *conf
 
 // addBlock serializes the given block and adds it to IPFS.
 func addBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, b *block.Block) (path.ImmutablePath, error) {
-	blockBytes, err := b.Serialize()
+	blockBytes, err := b.Serialize(log)
 	if err != nil {
 		log.Errorln("Error serializing block: ", err)
 		return path.ImmutablePath{}, fmt.Errorf("could not serialize block: %s", err)
