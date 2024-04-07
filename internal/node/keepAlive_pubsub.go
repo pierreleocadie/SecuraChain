@@ -38,6 +38,9 @@ func PubsubKeepRelayConnectionAlive(ctx context.Context,
 				log.Errorf("Failed to get next message from KeepRelayConnectionAlive topic: %s", err)
 				continue
 			}
+			if msg.GetFrom() == host.ID() {
+				continue
+			}
 			log.Debugf("Received KeepRelayConnectionAlive message from %s", msg.GetFrom().String())
 			log.Debugf("KeepRelayConnectionAlive: %s", string(msg.Data))
 		}
