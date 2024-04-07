@@ -55,18 +55,18 @@ function NetworkData() {
     const processInitData = (data) => {
         const nodes = data.map(node => ({
             id: node.peerID,
-            nodeType: node.nodeType,
-            connectedPeers: node.connectedPeers,
-            topicsList: node.topicsList,
-            keepRelayConnectionAlive: node.keepRelayConnectionAlive,
-            blockAnnouncement: node.blockAnnouncement,
-            askingBlockchain: node.askingBlockchain,
-            receiveBlockchain: node.receiveBlockchain,
-            clientAnnouncement: node.clientAnnouncement,
-            storageNodeResponse: node.storageNodeResponse,
-            fullNodeAnnouncement: node.fullNodeAnnouncement,
-            askMyFilesList: node.askMyFilesList,
-            receiveMyFilesList: node.receiveMyFilesList,
+            nodeType: node.nodeType ?? "Unknown",
+            connectedPeers: node.connectedPeers ?? [],
+            topicsList: node.topicsList ?? [],
+            keepRelayConnectionAlive: node.keepRelayConnectionAlive ?? [],
+            blockAnnouncement: node.blockAnnouncement ?? [],
+            askingBlockchain: node.askingBlockchain ?? [],
+            receiveBlockchain: node.receiveBlockchain ?? [],
+            clientAnnouncement: node.clientAnnouncement ?? [],
+            storageNodeResponse: node.storageNodeResponse ?? [],
+            fullNodeAnnouncement: node.fullNodeAnnouncement ?? [],
+            askMyFilesList: node.askMyFilesList ?? [],
+            receiveMyFilesList: node.receiveMyFilesList ?? [],
         }));
 
         const links = [];
@@ -92,18 +92,18 @@ function NetworkData() {
                 if (!newNodes.some(node => node.id === addedNode.peerID)) {
                     newNodes.push({
                         id: addedNode.peerID,
-                        nodeType: addedNode.nodeType,
-                        connectedPeers: addedNode.connectedPeers,
-                        topicsList: addedNode.topicsList,
-                        keepRelayConnectionAlive: addedNode.keepRelayConnectionAlive,
-                        blockAnnouncement: addedNode.blockAnnouncement,
-                        askingBlockchain: addedNode.askingBlockchain,
-                        receiveBlockchain: addedNode.receiveBlockchain,
-                        clientAnnouncement: addedNode.clientAnnouncement,
-                        storageNodeResponse: addedNode.storageNodeResponse,
-                        fullNodeAnnouncement: addedNode.fullNodeAnnouncement,
-                        askMyFilesList: addedNode.askMyFilesList,
-                        receiveMyFilesList: addedNode.receiveMyFilesList,
+                        nodeType: addedNode.nodeType ?? "Unknown",
+                        connectedPeers: addedNode.connectedPeers ?? [],
+                        topicsList: addedNode.topicsList ?? [],
+                        keepRelayConnectionAlive: addedNode.keepRelayConnectionAlive ?? [],
+                        blockAnnouncement: addedNode.blockAnnouncement ?? [],
+                        askingBlockchain: addedNode.askingBlockchain ?? [],
+                        receiveBlockchain: addedNode.receiveBlockchain ?? [],
+                        clientAnnouncement: addedNode.clientAnnouncement ?? [],
+                        storageNodeResponse: addedNode.storageNodeResponse ?? [],
+                        fullNodeAnnouncement: addedNode.fullNodeAnnouncement ?? [],
+                        askMyFilesList: addedNode.askMyFilesList ?? [],
+                        receiveMyFilesList: addedNode.receiveMyFilesList ?? [],
                     });
     
                     // Ajouter les liens pour le nouveau nœud
