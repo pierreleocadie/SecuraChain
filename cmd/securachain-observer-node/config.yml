@@ -71,6 +71,7 @@ askingBlockchainStringFlag: "AskingBlockchain"
 receiveBlockchainStringFlag: "ReceiveBlockchain"
 askMyFilesStringFlag: "AskMyFiles"
 sendFilesStringFlag: "SendFiles"
+networkVisualisationStringFlag: "NetworkVisualisation"
 fileRights: 0700
 fileMetadataRegistryJson: "fileMetadataRegistry.json"
 blockRegistryPath: "blocksRegistry.json"
