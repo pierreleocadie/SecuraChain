@@ -8,6 +8,7 @@ import (
 	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
@@ -71,6 +72,21 @@ func main() { //nolint: funlen
 			log.Errorln("Error starting web server: ", err)
 		}
 	}()
+
+	/*
+	* PUBLISH AND SUBSCRIBE TO TOPICS
+	 */
+	// Create a new PubSub service using the GossipSub router
+	ps, err := pubsub.NewGossipSub(ctx, host)
+	if err != nil {
+		log.Errorf("Failed to create new PubSub service:", err)
+	}
+
+	// KeepRelayConnectionAlive
+	// node.PubsubKeepRelayConnectionAlive(ctx, ps, host, cfg, log)
+
+	// NetworkVisualisation
+	node.PubsubNetworkVisualisation(ctx, ps, host, "BootstrapNode", cfg, log)
 
 	/*
 	* DHT DISCOVERY
