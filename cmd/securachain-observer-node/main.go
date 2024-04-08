@@ -15,6 +15,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/multiformats/go-multiaddr"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
@@ -41,7 +43,7 @@ var (
 
 func main() { //nolint: funlen
 	log := ipfsLog.Logger("observer-node")
-	err := ipfsLog.SetLogLevel("*", "DEBUG")
+	err := ipfsLog.SetLogLevel("observer-node", "DEBUG")
 	if err != nil {
 		log.Errorln("Error setting log level : ", err)
 	}
@@ -61,13 +63,13 @@ func main() { //nolint: funlen
 		log.Panicln("Error loading config file : ", err)
 	}
 
-	pubsub.GossipSubD = 8
-	pubsub.GossipSubDlo = 5
-	pubsub.GossipSubDhi = 10
-	pubsub.GossipSubDscore = 8
-	pubsub.GossipSubDout = 8
-	pubsub.GossipSubDlazy = 8
-	pubsub.GossipSubGossipRetransmission = 12
+	// pubsub.GossipSubD = 8
+	// pubsub.GossipSubDlo = 5
+	// pubsub.GossipSubDhi = 10
+	// pubsub.GossipSubDscore = 8
+	// pubsub.GossipSubDout = 8
+	// pubsub.GossipSubDlazy = 8
+	// pubsub.GossipSubGossipRetransmission = 12
 
 	/*
 	* NODE LIBP2P
@@ -121,13 +123,69 @@ func main() { //nolint: funlen
 		log.Warnf("Failed to subscribe to NetworkVisualisation topic: %s", err)
 	}
 
+	// Before starting we need to add each bootstrap peers data to the mapData
+	// and data slice to avoid problems with the visualisation of the network
+	// if we have an only node in the network connected to all the bootstrap peers
+	// we will have some problems to get data from the bootstrap peers
+	// so we need to add the bootstrap peers data to the mapData and data slice
+	// to avoid this problem
+	for _, p := range cfg.BootstrapPeers {
+		// Convert the bootstrap peer from string to multiaddr
+		peerMultiaddr, err := multiaddr.NewMultiaddr(p)
+		if err != nil {
+			log.Errorln("Error converting bootstrap peer to multiaddr : ", err)
+			return
+		}
+		// Get the peer ID from the multiaddr
+		peerIDstr, err := peerMultiaddr.ValueForProtocol(multiaddr.P_P2P)
+		if err != nil {
+			log.Errorln("Error getting peer ID from multiaddr : ", err)
+			return
+		}
+		// Convert the peer ID from string to peer.ID
+		peerID, err := peer.Decode(peerIDstr)
+		if err != nil {
+			log.Errorln("Error decoding peer ID : ", err)
+			return
+		}
+		// Check the connectedness of the peer
+		if host.Network().Connectedness(peerID) != network.Connected {
+			continue
+		}
+		// Get the peer data
+		peerData := visualisation.Data{
+			PeerID:                   peerID.String(),
+			NodeType:                 "BootstrapNode",
+			ConnectedPeers:           []string{host.ID().String()},
+			TopicsList:               []string{},
+			KeepRelayConnectionAlive: []string{},
+			BlockAnnouncement:        []string{},
+			AskingBlockchain:         []string{},
+			ReceiveBlockchain:        []string{},
+			ClientAnnouncement:       []string{},
+			StorageNodeResponse:      []string{},
+			FullNodeAnnouncement:     []string{},
+			AskMyFilesList:           []string{},
+			ReceiveMyFilesList:       []string{},
+		}
+		// Add the peer data to the mapData
+		mapData[peerData.PeerID] = peerData
+		// Add the peer data to the data slice
+		data = append(data, peerData)
+	}
+
+	log.Infoln("Bootstrap peers data added to the mapData and data slice")
+	log.Infof("Number of bootstrap peers data added: %d", len(cfg.BootstrapPeers))
+	log.Infof("Number of bootstrap peers data in the mapData: %d", len(mapData))
+	log.Infof("Data slice : %v", data)
+
 	// Handle outgoing NetworkVisualisation messages
 	go func() {
 		for {
 			time.Sleep(5 * time.Second)
 			data := &visualisation.Data{
 				PeerID:   host.ID().String(),
-				NodeType: "FullNode",
+				NodeType: "ObserverNode",
 				ConnectedPeers: func() []string {
 					peers := make([]string, 0)
 					for _, peer := range host.Network().Peers() {
