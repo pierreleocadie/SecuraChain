@@ -327,7 +327,6 @@ func main() { //nolint: funlen
 	}()
 
 	go func() {
-		i := 0
 		for {
 			select {
 			case peerDataByte := <-peersDataChan:
@@ -339,10 +338,6 @@ func main() { //nolint: funlen
 				_, exists := mapData[peerData.PeerID]
 				if exists && reflect.DeepEqual(mapData[peerData.PeerID], peerData) {
 					continue
-				}
-				if !exists {
-					i++
-					log.Infoln("New peer added to mapData: ", i)
 				}
 				//log.Infoln("Received NetworkVisualisation message from: ", msg.GetFrom())
 				mapData[peerData.PeerID] = peerData
