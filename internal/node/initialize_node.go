@@ -148,7 +148,7 @@ func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host { //no
 
 func InitializeIPFSNode(ctx context.Context, cfg *config.Config, log *ipfsLog.ZapEventLogger) (iface.CoreAPI, *core.IpfsNode) {
 	// Spawn an IPFS node
-	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx, cfg)
+	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(log, ctx, cfg)
 	if err != nil {
 		log.Panicf("Failed to spawn IPFS node: %s", err)
 	}
