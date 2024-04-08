@@ -5,8 +5,6 @@ import (
 	"encoding/base64"
 	"os"
 	"testing"
-
-	ipfsLog "github.com/ipfs/go-log/v2"
 )
 
 const (
@@ -46,11 +44,6 @@ func TestAESKeyString(t *testing.T) {
 func TestSaveAndLoadKey(t *testing.T) {
 	t.Parallel()
 
-	log := ipfsLog.Logger("aes_test")
-	if err := ipfsLog.SetLogLevel("aes_test", "DEBUG"); err != nil {
-		log.Errorln("Failed to set log level : ", err)
-	}
-
 	key, _ := NewAESKey()
 
 	// Save the key to a file.
@@ -61,7 +54,7 @@ func TestSaveAndLoadKey(t *testing.T) {
 	defer os.Remove(testStoragePath + testFileName + fileExtPEM)
 
 	// Load the key from the file.
-	loadedKey, err := LoadKey(log, testFileName, testStoragePath)
+	loadedKey, err := LoadKey(testFileName, testStoragePath)
 	if err != nil {
 		t.Fatalf("LoadKey failed: %v", err)
 	}

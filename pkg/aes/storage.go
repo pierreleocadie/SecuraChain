@@ -6,7 +6,6 @@ import (
 	"os"
 	"path"
 
-	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 )
 
@@ -46,8 +45,8 @@ func (aesKey *aesKey) saveKeyToFile(filename, storagePath string) error {
 
 // LoadKey reads an AES key from a file and returns it as an AESKey object.
 // It returns an error if the key cannot be read or is invalid.
-func LoadKey(log *ipfsLog.ZapEventLogger, filename, storagePath string) (Key, error) {
-	keyBytes, err := utils.LoadKeyFromFile(log, filename, storagePath)
+func LoadKey(filename, storagePath string) (Key, error) {
+	keyBytes, err := utils.LoadKeyFromFile(filename, storagePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load key: %w", err)
 	}

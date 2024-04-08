@@ -7,8 +7,6 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"fmt"
-
-	ipfsLog "github.com/ipfs/go-log/v2"
 )
 
 // KeyPair represents the interface to interact with an ECDSA key pair.
@@ -31,10 +29,9 @@ type ecdsaKeyPair struct {
 
 // NewECDSAKeyPair initializes a new ECDSA key pair using the P-256 elliptic curve.
 // It returns a pointer to an ecdsaKeyPair instance and an error, if any occurred during key generation.
-func NewECDSAKeyPair(log *ipfsLog.ZapEventLogger) (KeyPair, error) {
+func NewECDSAKeyPair() (KeyPair, error) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		log.Errorln("Failed to generate ECDSA key pair")
 		return nil, err
 	}
 
@@ -88,26 +85,22 @@ func (keyPair *ecdsaKeyPair) PublicKey() *ecdsa.PublicKey {
 
 // privateKeyFromBytes reconstructs an ECDSA private key from a given byte slice.
 // It returns the resulting private key and an error if the conversion fails.
-func PrivateKeyFromBytes(log *ipfsLog.ZapEventLogger, bytes []byte) (*ecdsa.PrivateKey, error) {
+func PrivateKeyFromBytes(bytes []byte) (*ecdsa.PrivateKey, error) {
 	privateKey, err := x509.ParseECPrivateKey(bytes)
 	if err != nil {
-		log.Errorln("Failed to parse ECDSA private key")
 		return nil, err
 	}
 
-	log.Debugln("Private key parsed successfully")
 	return privateKey, nil
 }
 
 // publicKeyFromBytes reconstructs an ECDSA public key from a given byte slice.
 // It returns the resulting public key and an error if the conversion fails.
-func PublicKeyFromBytes(log *ipfsLog.ZapEventLogger, bytes []byte) (*ecdsa.PublicKey, error) {
+func PublicKeyFromBytes(bytes []byte) (*ecdsa.PublicKey, error) {
 	publicKey, err := x509.ParsePKIXPublicKey(bytes)
 	if err != nil {
-		log.Errorln("Failed to parse ECDSA public key")
 		return nil, err
 	}
 
-	log.Debugln("Public key parsed successfully")
 	return publicKey.(*ecdsa.PublicKey), nil
 }

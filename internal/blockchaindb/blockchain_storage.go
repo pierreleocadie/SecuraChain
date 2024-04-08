@@ -36,7 +36,7 @@ func NewBlockchainDB(log *ipfsLog.ZapEventLogger, dbPath string) (*BlockchainDB,
 
 // SaveBlock serializes and stores a given block in the database.
 func (pdb *BlockchainDB) SaveBlock(log *ipfsLog.ZapEventLogger, key []byte, b *block.Block) error {
-	blockBytes, err := b.Serialize()
+	blockBytes, err := b.Serialize(log)
 	if err != nil {
 		log.Errorln("error serializing block")
 		return fmt.Errorf("error serializing block: %v", err)
@@ -65,7 +65,7 @@ func (pdb *BlockchainDB) GetBlock(log *ipfsLog.ZapEventLogger, key []byte) (*blo
 	}
 	defer closer.Close()
 
-	b, err := block.DeserializeBlock(blockData)
+	b, err := block.DeserializeBlock(log, blockData)
 	if err != nil {
 		log.Errorln("error deserializing block")
 		return nil, fmt.Errorf("error deserializing block: %v", err)
@@ -91,7 +91,7 @@ func (pdb *BlockchainDB) VerifyIntegrity(log *ipfsLog.ZapEventLogger) bool {
 			return false
 		}
 
-		if !consensus.ValidateBlock(currentBlock, prevBlock) {
+		if !consensus.ValidateBlock(log, currentBlock, prevBlock) {
 			log.Errorln("block validation failed")
 			return false
 		}
@@ -105,7 +105,7 @@ func (pdb *BlockchainDB) VerifyIntegrity(log *ipfsLog.ZapEventLogger) bool {
 
 // saveLastBlock updates the reference to the last block in the blockchain.
 func (pdb *BlockchainDB) saveLastBlock(log *ipfsLog.ZapEventLogger, lastBlock *block.Block) error {
-	serializedBlock, err := lastBlock.Serialize()
+	serializedBlock, err := lastBlock.Serialize(log)
 	if err != nil {
 		log.Errorln("error serializing block")
 		return fmt.Errorf("error serializing block: %v", err)

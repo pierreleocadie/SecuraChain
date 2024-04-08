@@ -38,7 +38,7 @@ func AddBlockToRegistry(log *ipfsLog.ZapEventLogger, b *block.Block, config *con
 
 	newData := BlockData{
 		ID:       b.Header.Height,
-		Key:      block.ComputeHash(b),
+		Key:      block.ComputeHash(log, b),
 		BlockCid: fileCid.RootCid(),
 		Provider: provider,
 	}
@@ -53,7 +53,7 @@ func AddBlockToRegistry(log *ipfsLog.ZapEventLogger, b *block.Block, config *con
 
 // ConvertToBlock reads the contents of the file at the given file path and converts it into a block.Block object.
 func ConvertToBlock(log *ipfsLog.ZapEventLogger, filePath string) (*block.Block, error) {
-	filePath, err := utils.SanitizePath(log, filePath)
+	filePath, err := utils.SanitizePath(filePath)
 	if err != nil {
 		log.Errorf("Error sanitizing file patxh %v\n", err)
 		return nil, err
@@ -65,5 +65,5 @@ func ConvertToBlock(log *ipfsLog.ZapEventLogger, filePath string) (*block.Block,
 	}
 
 	log.Debugln("File converted to block successfully")
-	return block.DeserializeBlock(data)
+	return block.DeserializeBlock(log, data)
 }

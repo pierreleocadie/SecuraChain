@@ -56,19 +56,19 @@ func main() { //nolint: funlen, gocyclo
 	/*
 	* IPFS MEMORY MANAGEMENT
 	 */
-	storageMax, err := ipfs.ChangeStorageMax(nodeIpfs, cfg.MemorySpace)
+	storageMax, err := ipfs.ChangeStorageMax(log, nodeIpfs, cfg.MemorySpace)
 	if err != nil {
 		log.Warnf("Failed to change storage max: %s", err)
 	}
 	log.Debugf("Storage max changed: %v", storageMax)
 
-	freeMemorySpace, err := ipfs.FreeMemoryAvailable(ctx, nodeIpfs)
+	freeMemorySpace, err := ipfs.FreeMemoryAvailable(log, ctx, nodeIpfs)
 	if err != nil {
 		log.Warnf("Failed to get free memory available: %s", err)
 	}
 	log.Debugf("Free memory available: %v", freeMemorySpace)
 
-	memoryUsedGB, err := ipfs.MemoryUsed(ctx, nodeIpfs)
+	memoryUsedGB, err := ipfs.MemoryUsed(log, ctx, nodeIpfs)
 	if err != nil {
 		log.Warnf("Failed to get memory used: %s", err)
 	}
@@ -140,7 +140,7 @@ func main() { //nolint: funlen, gocyclo
 			}
 
 			// Check if we have enough space to store the file
-			freeMemorySpace, err := ipfs.FreeMemoryAvailable(ctx, nodeIpfs)
+			freeMemorySpace, err := ipfs.FreeMemoryAvailable(log, ctx, nodeIpfs)
 			if err != nil {
 				log.Warnf("Failed to get free memory available: %s", err)
 			}
@@ -161,7 +161,7 @@ func main() { //nolint: funlen, gocyclo
 			}
 
 			log.Debugf("Downloading file %s", fileImmutablePath)
-			err = ipfs.GetFile(ctx, cfg, ipfsAPI, fileImmutablePath)
+			err = ipfs.GetFile(log, ctx, cfg, ipfsAPI, fileImmutablePath)
 			if err != nil {
 				log.Errorf("Failed to download file: %s", err)
 				continue
@@ -175,7 +175,7 @@ func main() { //nolint: funlen, gocyclo
 			}
 
 			downloadedFilePath := filepath.Join(home, ".IPFS_Downloads", clientAnnouncement.FileCid.String())
-			checksum, err := utils.ComputeFileChecksum(log, downloadedFilePath)
+			checksum, err := utils.ComputeFileChecksum(downloadedFilePath)
 			if err != nil {
 				log.Errorf("Failed to compute checksum of downloaded file: %s", err)
 				continue
@@ -215,7 +215,7 @@ func main() { //nolint: funlen, gocyclo
 			}
 
 			// Pin the file
-			pinned, err := ipfs.PinFile(ctx, ipfsAPI, fileImmutablePathCid)
+			pinned, err := ipfs.PinFile(log, ctx, ipfsAPI, fileImmutablePathCid)
 			if err != nil {
 				log.Errorf("Failed to pin file: %s", err)
 			}
@@ -323,5 +323,5 @@ func main() { //nolint: funlen, gocyclo
 		}
 	}()
 
-	utils.WaitForTermSignal(log)
+	utils.WaitForTermSignal()
 }

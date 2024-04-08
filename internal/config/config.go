@@ -78,7 +78,7 @@ type Config struct {
 func LoadConfig(log *ipfsLog.ZapEventLogger, yamlConfigFilePath string) (*Config, error) {
 	// Load the config file
 	config := Config{}
-	sanitizedPath, err := utils.SanitizePath(log, yamlConfigFilePath)
+	sanitizedPath, err := utils.SanitizePath(yamlConfigFilePath)
 	if err != nil {
 		log.Errorln("Error sanitizing path")
 		return nil, err

@@ -51,7 +51,7 @@ func SendFile(ctx context.Context, cfg *config.Config, selectedFile string, //no
 	}
 
 	// 3. Compute the checksum of the encrypted file
-	encryptedFileChecksum, err := utils.ComputeFileChecksum(log, encryptedFilePath)
+	encryptedFileChecksum, err := utils.ComputeFileChecksum(encryptedFilePath)
 	if err != nil {
 		log.Errorf("failed to compute checksum of encrypted file: %s", err)
 		return fmt.Errorf("failed to compute checksum of encrypted file: %s", err)
@@ -103,7 +103,7 @@ func getSelectedFileInfo(log *ipfsLog.ZapEventLogger, selectedFile string) (stri
 		return "", "", fmt.Errorf("please select a file")
 	}
 
-	filename, _, extension, err := utils.FileInfo(log, selectedFile)
+	filename, _, extension, err := utils.FileInfo(selectedFile)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get file info: %s", err)
 	}

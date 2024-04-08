@@ -16,23 +16,27 @@ import (
 
 func GenFakeAddTransaction(log *ipfsLog.ZapEventLogger) (*AddFileTransaction, error) {
 	// Set up a valid AddFileTransaction
-	nodeECDSAKeyPair, err := ecdsa.NewECDSAKeyPair(log)
+	nodeECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
 	if err != nil {
+		log.Errorf("failed to create ECDSA key pair: %s\n", err)
 		return nil, fmt.Errorf("failed to create ECDSA key pair: %s", err)
 	}
 
-	ownerECDSAKeyPair, err := ecdsa.NewECDSAKeyPair(log)
+	ownerECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
 	if err != nil {
+		log.Errorf("failed to create ECDSA key pair: %s\n", err)
 		return nil, fmt.Errorf("failed to create ECDSA key pair: %s", err)
 	}
 
 	ownerAesKey, err := aes.NewAESKey()
 	if err != nil {
+		log.Errorf("failed to create AES key: %s\n", err)
 		return nil, fmt.Errorf("failed to create AES key: %s", err)
 	}
 
-	randomeNodeID, err := genRandomPeerID()
+	randomeNodeID, err := genRandomPeerID(log)
 	if err != nil {
+		log.Errorf("failed to create peer.ID: %s\n", err)
 		return nil, fmt.Errorf("failed to create peer.ID: %s", err)
 	}
 
@@ -41,21 +45,25 @@ func GenFakeAddTransaction(log *ipfsLog.ZapEventLogger) (*AddFileTransaction, er
 	checksum := sha256.Sum256([]byte("checksum"))
 	encryptedFilename, err := ownerAesKey.EncryptData([]byte("filename"))
 	if err != nil {
+		log.Errorf("failed to encrypt filename: %s\n", err)
 		return nil, fmt.Errorf("failed to encrypt filename: %s", err)
 	}
 
 	encryptedExtension, err := ownerAesKey.EncryptData([]byte("extension"))
 	if err != nil {
+		log.Errorf("failed to encrypt extension: %s\n", err)
 		return nil, fmt.Errorf("failed to encrypt extension: %s", err)
 	}
 
-	randomClientAddrInfo, err := generateRandomAddrInfo()
+	randomClientAddrInfo, err := generateRandomAddrInfo(log)
 	if err != nil {
+		log.Errorf("failed to create random AddrInfo: %s\n", err)
 		return nil, fmt.Errorf("failed to create random AddrInfo: %s", err)
 	}
 
-	randomStorageAddrInfo, err := generateRandomAddrInfo()
+	randomStorageAddrInfo, err := generateRandomAddrInfo(log)
 	if err != nil {
+		log.Errorf("failed to create random AddrInfo: %s\n", err)
 		return nil, fmt.Errorf("failed to create random AddrInfo: %s", err)
 	}
 
@@ -74,8 +82,9 @@ func GenFakeAddTransaction(log *ipfsLog.ZapEventLogger) (*AddFileTransaction, er
 
 func GenFakeDeleteTransaction(log *ipfsLog.ZapEventLogger) (*DeleteFileTransaction, error) {
 	// Set up a valid DeleteFileTransaction
-	ownerECDSAKeyPair, err := ecdsa.NewECDSAKeyPair(log)
+	ownerECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
 	if err != nil {
+		log.Errorf("failed to create ECDSA key pair: %s\n", err)
 		return nil, fmt.Errorf("failed to create ECDSA key pair: %s", err)
 	}
 
@@ -84,37 +93,44 @@ func GenFakeDeleteTransaction(log *ipfsLog.ZapEventLogger) (*DeleteFileTransacti
 	deleteFileTransaction := NewDeleteFileTransaction(ownerECDSAKeyPair, randomeFileCID)
 	time.Sleep(1 * time.Second)
 
+	log.Debugln("Fake delete transaction created successfully")
 	return deleteFileTransaction, nil
 }
 
-func genRandomPeerID() (peer.ID, error) {
+func genRandomPeerID(log *ipfsLog.ZapEventLogger) (peer.ID, error) {
 	// Generate a new RSA key pair for this host
 	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
 	if err != nil {
+		log.Errorln("Error generating RSA key pair")
 		return "", err
 	}
 
 	// Convert the RSA key pair into a libp2p Peer ID
 	pid, err := peer.IDFromPrivateKey(priv)
 	if err != nil {
+		log.Errorln("Error converting RSA key pair to Peer ID")
 		return "", err
 	}
 
+	log.Debugln("Random Peer ID generated successfully")
 	return pid, nil
 }
 
-func generateRandomAddrInfo() (peer.AddrInfo, error) {
+func generateRandomAddrInfo(log *ipfsLog.ZapEventLogger) (peer.AddrInfo, error) {
 	// Generate a new RSA key pair for this host
 	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
 	if err != nil {
+		log.Errorln("Error generating RSA key pair")
 		return peer.AddrInfo{}, err
 	}
 
 	// Convert the RSA key pair into a libp2p Peer ID
 	pid, err := peer.IDFromPrivateKey(priv)
 	if err != nil {
+		log.Errorln("Error converting RSA key pair to Peer ID")
 		return peer.AddrInfo{}, err
 	}
 
+	log.Debugln("Random AddrInfo generated successfully")
 	return peer.AddrInfo{ID: pid}, nil
 }

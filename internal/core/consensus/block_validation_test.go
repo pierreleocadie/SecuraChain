@@ -18,8 +18,8 @@ func TestValidateBlock(t *testing.T) {
 		log.Errorln("Failed to set log level : ", err)
 	}
 
-	minerKeyPair, _ := ecdsa.NewECDSAKeyPair(log) // Replace with actual key pair generation
-	transactions := []transaction.Transaction{}   // Empty transaction list for simplicity
+	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
+	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
 
 	// Create a previous block
 	prevBlock := block.NewBlock(log, transactions, nil, 1, minerKeyPair)

@@ -86,7 +86,7 @@ func LoadECDSAButton(w fyne.Window, ecdsaKeyPair *ecdsa.KeyPair, ecdsaInputLabel
 			return
 		}
 
-		ecdsaKeyPairL, err := ecdsa.LoadKeys(log, "ecdsaPrivateKey", "ecdsaPublicKey", ecdsaInputLabel.Text)
+		ecdsaKeyPairL, err := ecdsa.LoadKeys("ecdsaPrivateKey", "ecdsaPublicKey", ecdsaInputLabel.Text)
 		if err != nil {
 			log.Errorln("Error loading ECDSA key pair : ", err)
 			dialog.ShowError(err, w)
@@ -106,7 +106,7 @@ func LoadAESButton(w fyne.Window, aesKey *aes.Key, aesInputLabel *widget.Label, 
 			return
 		}
 
-		aesKeyL, err := aes.LoadKey(log, "aesKey", aesInputLabel.Text)
+		aesKeyL, err := aes.LoadKey("aesKey", aesInputLabel.Text)
 		if err != nil {
 			log.Errorln("Error loading AES key : ", err)
 			dialog.ShowError(err, w)
@@ -126,7 +126,7 @@ func GenerateECDSAKeyPairButton(w fyne.Window, ecdsaInputLabel *widget.Label, lo
 			return
 		}
 
-		ecdsaKeyPair, err := ecdsa.NewECDSAKeyPair(log)
+		ecdsaKeyPair, err := ecdsa.NewECDSAKeyPair()
 		if err != nil {
 			return
 		}

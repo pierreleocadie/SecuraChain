@@ -4,19 +4,12 @@ import (
 	"crypto/sha256"
 	"os"
 	"testing"
-
-	ipfsLog "github.com/ipfs/go-log/v2"
 )
 
 func TestECDSAKeyPairGeneration(t *testing.T) {
 	t.Parallel()
 
-	log := ipfsLog.Logger("ecdsa_test")
-	if err := ipfsLog.SetLogLevel("ecdsa_test", "DEBUG"); err != nil {
-		log.Errorln("Failed to set log level : ", err)
-	}
-
-	keyPair, err := NewECDSAKeyPair(log)
+	keyPair, err := NewECDSAKeyPair()
 	if err != nil {
 		t.Fatalf("Failed to generate ECDSA key pair: %v", err)
 	}
@@ -33,21 +26,16 @@ func TestECDSAKeyPairGeneration(t *testing.T) {
 func TestECDSASignAndVerify(t *testing.T) {
 	t.Parallel()
 
-	log := ipfsLog.Logger("ecdsa_test")
-	if err := ipfsLog.SetLogLevel("ecdsa_test", "DEBUG"); err != nil {
-		log.Errorln("Failed to set log level : ", err)
-	}
-
 	data := []byte("Hello, SecuraChain!")
 	hash := sha256.Sum256(data)
-	keyPair, _ := NewECDSAKeyPair(log)
+	keyPair, _ := NewECDSAKeyPair()
 	signature, err := keyPair.Sign(hash[:])
 
 	if err != nil {
 		t.Fatalf("Failed to sign data: %v", err)
 	}
 
-	if !VerifySignature(log, keyPair.PublicKey(), hash[:], signature) {
+	if !VerifySignature(keyPair.PublicKey(), hash[:], signature) {
 		t.Error("Failed to verify the signature of the data")
 	}
 }
@@ -55,17 +43,12 @@ func TestECDSASignAndVerify(t *testing.T) {
 func TestSaveAndLoadKeys(t *testing.T) {
 	t.Parallel()
 
-	log := ipfsLog.Logger("ecdsa_test")
-	if err := ipfsLog.SetLogLevel("ecdsa_test", "DEBUG"); err != nil {
-		log.Errorln("Failed to set log level : ", err)
-	}
-
 	// Paths for temporary testing
 	privateKeyFile := "temp_private"
 	publicKeyFile := "temp_public"
 	storagePath := "../../temp"
 
-	keyPair, _ := NewECDSAKeyPair(log)
+	keyPair, _ := NewECDSAKeyPair()
 
 	err := keyPair.SaveKeys(privateKeyFile, publicKeyFile, storagePath)
 
@@ -73,7 +56,7 @@ func TestSaveAndLoadKeys(t *testing.T) {
 		t.Fatalf("Failed to save keys: %v", err)
 	}
 
-	loadedKeyPair, err := LoadKeys(log, privateKeyFile, publicKeyFile, storagePath)
+	loadedKeyPair, err := LoadKeys(privateKeyFile, publicKeyFile, storagePath)
 
 	if err != nil {
 		t.Fatalf("Failed to load keys: %v", err)

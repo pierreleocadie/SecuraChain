@@ -62,7 +62,7 @@ func main() { //nolint: funlen, gocyclo
 	* IPFS NODE
 	 */
 	// Spawn an IPFS node
-	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx, cfg)
+	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(log, ctx, cfg)
 	if err != nil {
 		log.Panicf("Failed to spawn IPFS node: %s", err)
 	}

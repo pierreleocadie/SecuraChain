@@ -17,7 +17,7 @@ func TestBlock_Serialize(t *testing.T) {
 		log.Errorln("Failed to set log level : ", err)
 	}
 
-	minerKeyPair, _ := ecdsa.NewECDSAKeyPair(log) // Replace with actual key pair generation
+	minerKeyPair, _ := ecdsa.NewECDSAKeyPair() // Replace with actual key pair generation
 	transactions := []transaction.Transaction{}
 
 	for i := 0; i < 3; i++ {

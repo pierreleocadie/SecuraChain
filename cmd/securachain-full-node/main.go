@@ -60,19 +60,19 @@ func main() {
 	/*
 	* IPFS MEMORY MANAGEMENT
 	 */
-	storageMax, err := ipfs.ChangeStorageMax(nodeIpfs, cfg.MemorySpace)
+	storageMax, err := ipfs.ChangeStorageMax(log, nodeIpfs, cfg.MemorySpace)
 	if err != nil {
 		log.Warnf("Failed to change storage max: %s", err)
 	}
 	log.Debugf("Storage max changed: %v", storageMax)
 
-	freeMemorySpace, err := ipfs.FreeMemoryAvailable(ctx, nodeIpfs)
+	freeMemorySpace, err := ipfs.FreeMemoryAvailable(log, ctx, nodeIpfs)
 	if err != nil {
 		log.Warnf("Failed to get free memory available: %s", err)
 	}
 	log.Debugf("Free memory available: %v", freeMemorySpace)
 
-	memoryUsedGB, err := ipfs.MemoryUsed(ctx, nodeIpfs)
+	memoryUsedGB, err := ipfs.MemoryUsed(log, ctx, nodeIpfs)
 	if err != nil {
 		log.Warnf("Failed to get memory used: %s", err)
 	}
@@ -195,9 +195,9 @@ func main() {
 				log.Debugln("State : block processing enabled ", blockProcessingEnabled)
 
 				// 1 . Validation of the block
-				if block.IsGenesisBlock(bReceive) {
+				if block.IsGenesisBlock(log, bReceive) {
 					log.Debugln("Genesis block")
-					if !consensus.ValidateBlock(bReceive, nil) {
+					if !consensus.ValidateBlock(log, bReceive, nil) {
 						log.Debugln("Genesis block is invalid")
 						continue
 					}
@@ -220,7 +220,7 @@ func main() {
 						log.Debugln("Error getting the previous block : %s\n", err)
 					}
 
-					if !consensus.ValidateBlock(bReceive, prevBlock) {
+					if !consensus.ValidateBlock(log, bReceive, prevBlock) {
 						log.Debugln("Block is invalid")
 						continue
 					}
@@ -295,8 +295,8 @@ func main() {
 
 			// 3 . Valid the downloaded blocks
 			for _, b := range listOfMissingBlocks {
-				if block.IsGenesisBlock(b) {
-					if !consensus.ValidateBlock(b, nil) {
+				if block.IsGenesisBlock(log, b) {
+					if !consensus.ValidateBlock(log, b, nil) {
 						log.Debugln("Genesis block is invalid")
 						continue
 					}
@@ -306,7 +306,7 @@ func main() {
 					if err != nil {
 						log.Debugln("Error getting the previous block : %s\n", err)
 					}
-					if !consensus.ValidateBlock(b, prevBlock) {
+					if !consensus.ValidateBlock(log, b, prevBlock) {
 						log.Debugln("Block is invalid")
 						continue
 					}
@@ -374,8 +374,8 @@ func main() {
 				}
 
 				// 3 . Validation of the block
-				if block.IsGenesisBlock(b) {
-					if !consensus.ValidateBlock(b, nil) {
+				if block.IsGenesisBlock(log, b) {
+					if !consensus.ValidateBlock(log, b, nil) {
 						log.Debugln("Genesis block is invalid")
 						break
 					}
@@ -386,7 +386,7 @@ func main() {
 						log.Debugln("Error getting the previous block : %s\n", err)
 					}
 
-					if !consensus.ValidateBlock(b, prevBlock) {
+					if !consensus.ValidateBlock(log, b, prevBlock) {
 						log.Debugln("Block is invalid")
 						break
 					}
@@ -490,5 +490,5 @@ func main() {
 		}
 	}()
 
-	utils.WaitForTermSignal(log)
+	utils.WaitForTermSignal()
 }

@@ -56,7 +56,7 @@ func loadFromJSON(log *ipfsLog.ZapEventLogger, filePath string) (MetadataRegistr
 func AddFileMetadataToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, fileCid path.ImmutablePath, filePath string) error {
 	var metadataRegistry = MetadataRegistry{}
 
-	fileName, fileSize, fileType, err := utils.FileInfo(log, filePath)
+	fileName, fileSize, fileType, err := utils.FileInfo(filePath)
 	if err != nil {
 		log.Errorln("Error getting file info: %v", err)
 	}

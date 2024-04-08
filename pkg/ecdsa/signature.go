@@ -3,8 +3,6 @@ package ecdsa
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
-
-	ipfsLog "github.com/ipfs/go-log/v2"
 )
 
 // Sign signs the given hash of the data using the private key of the ecdsaKeyPair.
@@ -16,8 +14,7 @@ import (
 // Returns:
 //   - A byte slice representing the ASN.1 signature.
 //   - An error if signing fails.
-func (keyPair *ecdsaKeyPair) Sign(log *ipfsLog.ZapEventLogger, hash []byte) ([]byte, error) {
-	log.Debugln("Signing data")
+func (keyPair *ecdsaKeyPair) Sign(hash []byte) ([]byte, error) {
 	return ecdsa.SignASN1(rand.Reader, keyPair.privateKey, hash)
 }
 
@@ -29,7 +26,6 @@ func (keyPair *ecdsaKeyPair) Sign(log *ipfsLog.ZapEventLogger, hash []byte) ([]b
 //
 // Returns:
 //   - A boolean indicating whether the verification was successful.
-func VerifySignature(log *ipfsLog.ZapEventLogger, publicKey *ecdsa.PublicKey, hash, signature []byte) bool {
-	log.Debugln("Verifying signature")
+func VerifySignature(publicKey *ecdsa.PublicKey, hash, signature []byte) bool {
 	return ecdsa.VerifyASN1(publicKey, hash, signature)
 }

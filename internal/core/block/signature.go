@@ -14,12 +14,12 @@ func VerifyBlock(log *ipfsLog.ZapEventLogger, currentBlock *Block) bool {
 
 	headerHash := ComputeHash(log, currentBlock)
 
-	ecdsaPublicKey, err := ecdsa.PublicKeyFromBytes(log, currentBlock.MinerAddr)
+	ecdsaPublicKey, err := ecdsa.PublicKeyFromBytes(currentBlock.MinerAddr)
 	if err != nil {
 		log.Errorln("Block validation failed: %s", err)
 		return false
 	}
 
 	log.Debugln("Verifying block signature")
-	return ecdsa.VerifySignature(log, ecdsaPublicKey, headerHash, currentBlock.Header.Signature)
+	return ecdsa.VerifySignature(ecdsaPublicKey, headerHash, currentBlock.Header.Signature)
 }

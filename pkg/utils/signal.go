@@ -1,19 +1,16 @@
 package utils
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
-
-	ipfsLog "github.com/ipfs/go-log/v2"
 )
 
-func WaitForTermSignal(log *ipfsLog.ZapEventLogger) {
+func WaitForTermSignal() {
 	// wait for a SIGINT or SIGTERM signal
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	<-ch
-
-	log.Debugln("Received signal, shutting down...")
-
+	fmt.Println("Received signal, shutting down...")
 }

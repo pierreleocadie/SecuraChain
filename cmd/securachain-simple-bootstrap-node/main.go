@@ -101,5 +101,5 @@ func main() { //nolint: funlen
 	}()
 
 	// Wait for a termination signal
-	utils.WaitForTermSignal(log)
+	utils.WaitForTermSignal()
 }

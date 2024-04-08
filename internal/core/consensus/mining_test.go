@@ -20,8 +20,8 @@ func TestMineBlock(t *testing.T) {
 	}
 
 	// Create a sample block
-	minerKeyPair, _ := ecdsa.NewECDSAKeyPair(log) // Replace with actual key pair generation
-	transactions := []transaction.Transaction{}   // Empty transaction list for simplicity
+	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
+	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
 
 	newBlock := block.NewBlock(log, transactions, []byte("GenesisBlock"), 1, minerKeyPair)
 

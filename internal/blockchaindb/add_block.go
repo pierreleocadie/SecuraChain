@@ -8,10 +8,10 @@ import (
 // AddBlockToBlockchain adds a block to the blockchain db.
 func AddBlockToBlockchain(log *ipfsLog.ZapEventLogger, b *block.Block, db *BlockchainDB) bool {
 	// Compute the hash of the block to use as a key in the db
-	key := block.ComputeHash(b)
+	key := block.ComputeHash(log, b)
 
 	// Check if the block is the genesis block
-	if block.IsGenesisBlock(b) {
+	if block.IsGenesisBlock(log, b) {
 		err := db.SaveBlock(log, key, b)
 		if err != nil {
 			log.Errorf("Failed to add genesis block to the db: %s\n", err)
