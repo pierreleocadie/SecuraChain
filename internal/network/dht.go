@@ -42,6 +42,7 @@ func NewDHTDiscovery(bootstrapNode bool, rendezvousString string, bootstrapPeers
 // bootstrap peers if necessary, and sets up continuous discovery of new peers.
 func (d *DHT) Run(ctx context.Context, host host.Host, log *ipfsLog.ZapEventLogger) error {
 	if err := d.startDHT(ctx, host, log); err != nil {
+		log.Errorln("[Run] starting DHT failed")
 		return fmt.Errorf("[Run] starting DHT failed: %w", err)
 	}
 
@@ -78,6 +79,7 @@ func (d *DHT) Run(ctx context.Context, host host.Host, log *ipfsLog.ZapEventLogg
 // it initializes the DHT in server mode.
 func (d *DHT) startDHT(ctx context.Context, host host.Host, log *ipfsLog.ZapEventLogger) error {
 	if d.IpfsDHT != nil {
+		log.Warn("[startDHT] DHT already initialized")
 		return nil // DHT already initialized
 	}
 

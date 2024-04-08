@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
@@ -39,12 +40,13 @@ func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 
 // Run starts the mDNS discovery service with the configured parameters.
 // It initializes and starts an mDNS service for peer discovery within the local network.
-func (m *MDNS) Run(host host.Host) error {
+func (m *MDNS) Run(log *ipfsLog.ZapEventLogger, host host.Host) error {
 	n := &discoveryNotifee{host}
 
 	// Create a new mDNS service using the provided host and rendezvous string.
 	mdnsService := mdns.NewMdnsService(host, m.Rendezvous, n)
 	if err := mdnsService.Start(); err != nil {
+		log.Errorln("mDNS: error starting service")
 		return fmt.Errorf("mDNS: error starting service: %w", err)
 	}
 

@@ -23,7 +23,7 @@ func NewPeerSource(log *ipfsLog.ZapEventLogger, hostGetter func() host.Host) aut
 		for _, p := range host.Network().Peers() {
 			peerProtocols, err := host.Peerstore().GetProtocols(p)
 			if err != nil {
-				log.Debugln("Error getting peer protocols : ", err)
+				log.Errorln("Error getting peer protocols : ", err)
 				continue
 			}
 			for _, protocol := range peerProtocols {
