@@ -371,8 +371,12 @@ func main() { //nolint: funlen
 	* NETWORK VISUALISATION - WEBSOCKET SERVER
 	 */
 	http.HandleFunc("/ws", visualisation.CreateHandler(upgrader, &data, &clientsMutex, clients, log))
+	server := &http.Server{
+		Addr:              ":8080",
+		ReadHeaderTimeout: 3 * time.Second,
+	}
 	go func() {
-		err := http.ListenAndServe(":8080", nil)
+		err := server.ListenAndServe()
 		if err != nil {
 			log.Infoln("ListenAndServe: ", err)
 		}
