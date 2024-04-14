@@ -14,11 +14,12 @@ func TestValidateBlock(t *testing.T) {
 
 	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
 	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
+	stopMiningChan := make(chan bool)
 
 	// Create a previous block
 	prevBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
 
-	MineBlock(prevBlock)
+	MineBlock(prevBlock, stopMiningChan)
 
 	err := prevBlock.SignBlock(minerKeyPair)
 	if err != nil {
@@ -34,7 +35,7 @@ func TestValidateBlock(t *testing.T) {
 
 	validBlock := block.NewBlock(transactions, prevBlockHash, 2, minerKeyPair)
 
-	MineBlock(validBlock)
+	MineBlock(validBlock, stopMiningChan)
 
 	err = validBlock.SignBlock(minerKeyPair)
 	if err != nil {
@@ -48,7 +49,7 @@ func TestValidateBlock(t *testing.T) {
 	// Create an invalid block (wrong previous hash)
 	invalidBlock := block.NewBlock(transactions, []byte("wronghash"), 3, minerKeyPair)
 
-	MineBlock(invalidBlock)
+	MineBlock(invalidBlock, stopMiningChan)
 
 	err = invalidBlock.SignBlock(minerKeyPair)
 	if err != nil {
