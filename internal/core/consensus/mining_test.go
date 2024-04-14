@@ -18,9 +18,10 @@ func TestMineBlock(t *testing.T) {
 	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
 
 	newBlock := block.NewBlock(transactions, []byte("GenesisBlock"), 1, minerKeyPair)
+	stopMiningChan := make(chan bool)
 
 	// Mine the block
-	MineBlock(newBlock)
+	MineBlock(newBlock, stopMiningChan)
 
 	// Verify if the mined block's hash satisfies the target
 	target := big.NewInt(1)
