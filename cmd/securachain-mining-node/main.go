@@ -11,6 +11,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
+	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
@@ -22,11 +23,14 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 )
 
-var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
-var requiresSync = false
-var requiresPostSync = false
-var blockProcessingEnabled = true
-var pendingBlocks = []*block.Block{}
+var (
+	yamlConfigFilePath     = flag.String("config", "", "Path to the yaml config file")
+	requiresSync           = false
+	requiresPostSync       = false
+	blockProcessingEnabled = true
+	pendingBlocks          = []*block.Block{}
+	trxPool                = []transaction.Transaction{}
+)
 
 func main() {
 	log := ipfsLog.Logger("full-node")
@@ -160,6 +164,18 @@ func main() {
 	sendFilesTopic, err := ps.Join(cfg.SendFilesStringFlag)
 	if err != nil {
 		log.Panicf("Failed to join SendFiles topic : %s\n", err)
+	}
+
+	// Join the topic StorageNodeResponse to receive transactions
+	storageNodeResponseTopic, err := ps.Join(cfg.StorageNodeResponseStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join StorageNodeResponse topic : %s\n", err)
+	}
+
+	// Subscribe to the topic StorageNodeResponse to receive transactions
+	subStorageNodeResponse, err := storageNodeResponseTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to StorageNodeResponse topic : %s\n", err)
 	}
 
 	// Service 1 : Receiption of blocks
@@ -463,6 +479,15 @@ func main() {
 			ownerAddressStr := fmt.Sprintf("%x", msg.Data)
 			if !fullnode.SendOwnersFiles(log, ctx, cfg, ownerAddressStr, sendFilesTopic) {
 				log.Debugln("Error sending the files of the owner")
+				continue
+			}
+		}
+	}()
+
+	// Mining block
+	go func() {
+		for {
+			if !blockProcessingEnabled || requiresSync || requiresPostSync {
 				continue
 			}
 		}
