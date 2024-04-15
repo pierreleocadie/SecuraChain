@@ -10,13 +10,6 @@ import (
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
-// DeleteFileTransactionFactory implements the TransactionFactory interface
-type DeleteFileTransactionFactory struct{}
-
-func (f *DeleteFileTransactionFactory) CreateTransaction(data []byte) (Transaction, error) {
-	return DeserializeDeleteFileTransaction(data)
-}
-
 type DeleteFileTransaction struct {
 	TransactionID        uuid.UUID `json:"transactionID"`        // Transaction ID - UUID
 	OwnerAddress         []byte    `json:"ownerAddress"`         // Owner address - ECDSA public key

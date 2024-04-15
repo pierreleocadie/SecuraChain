@@ -11,13 +11,6 @@ import (
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
-// AddFileTransactionFactory implements the TransactionFactory interface
-type AddFileTransactionFactory struct{}
-
-func (f *AddFileTransactionFactory) CreateTransaction(data []byte) (Transaction, error) {
-	return DeserializeAddFileTransaction(data)
-}
-
 type AddFileTransaction struct {
 	AnnouncementID          uuid.UUID     `json:"announcementID"`          // Announcement ID - UUID
 	OwnerAddress            []byte        `json:"ownerAddress"`            // Owner address - ECDSA public key
