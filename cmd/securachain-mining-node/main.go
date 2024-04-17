@@ -4,11 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"os"
 	"slices"
 
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
-	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
@@ -25,11 +23,13 @@ import (
 
 var (
 	yamlConfigFilePath     = flag.String("config", "", "Path to the yaml config file")
+	generateKeys           = flag.Bool("genKeys", false, "Generate new ECDSA and AES keys to the paths specified in the config file")
 	requiresSync           = false
 	requiresPostSync       = false
 	blockProcessingEnabled = true
 	pendingBlocks          = []*block.Block{}
 	trxPool                = []transaction.Transaction{}
+	stopMiningChan         = make(chan bool)
 )
 
 func main() {
@@ -44,17 +44,13 @@ func main() {
 	flag.Parse()
 
 	// Load the config file
-	if *yamlConfigFilePath == "" {
-		log.Errorln("Please provide a path to the yaml config file")
-		flag.Usage()
-		os.Exit(1)
+	cfg := node.LoadConfig(yamlConfigFilePath, log)
+
+	if *generateKeys {
+		node.GenerateKeys(cfg, log)
 	}
 
-	cfg, err := config.LoadConfig(*yamlConfigFilePath)
-	if err != nil {
-		log.Errorln("Error loading config file : ", err)
-		os.Exit(1)
-	}
+	ecdsaKeyPair, _ := node.LoadKeys(cfg, log)
 
 	/*
 	* IPFS NODE
@@ -264,6 +260,8 @@ func main() {
 				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, bReceive) {
 					log.Debugln("Error publishing the block to IPFS")
 				}
+
+				// 6 . Send the block to the storage nodes
 			}
 		}
 	}()
@@ -484,10 +482,70 @@ func main() {
 		}
 	}()
 
-	// Mining block
+	// Handle the transactions received from the storage nodes
 	go func() {
 		for {
+			msg, err := subStorageNodeResponse.Next(ctx)
+			if err != nil {
+				log.Debugln("Error getting message from the network : ", err)
+				break
+			}
+			trx, err := transaction.DeserializeTransaction(msg.Data)
+			if err != nil {
+				log.Debugln("Error deserializing the transaction : ", err)
+				continue
+			}
+			if !consensus.ValidateTransaction(trx) {
+				log.Warn("Transaction is invalid")
+				continue
+			}
+			trxPool = append(trxPool, trx)
+			log.Debugf("Transaction pool size : %d", len(trxPool))
+		}
+	}()
+
+	// Mining block
+	go func() {
+		log.Info("Mining process started")
+		var previousBlock *block.Block = nil
+		currentBlock := block.NewBlock(trxPool, nil, 1, ecdsaKeyPair)
+		lastBlockStored := blockchain.GetLastBlock(log)
+		for {
 			if !blockProcessingEnabled || requiresSync || requiresPostSync {
+				continue
+			}
+			if lastBlockStored != nil {
+				previousBlock = lastBlockStored
+				previousBlockHash := block.ComputeHash(previousBlock)
+				log.Infof("Last block stored on chain : %s at height %d", previousBlockHash, previousBlock.Height)
+				currentBlock.PrevBlock = previousBlockHash
+				currentBlock.Height = previousBlock.Height + 1
+			} else {
+				log.Infof("No block stored on chain")
+			}
+			log.Debug("Mining a new block")
+			stoppedEarly := consensus.MineBlock(currentBlock, stopMiningChan)
+			if stoppedEarly {
+				log.Info("Mining stopped early because of a new block received")
+				lastBlockStored = blockchain.GetLastBlock(log)
+				continue
+			}
+			err = currentBlock.SignBlock(ecdsaKeyPair)
+			if err != nil {
+				log.Errorln("Error signing the block : ", err)
+				continue
+			}
+			if !consensus.ValidateBlock(currentBlock, previousBlock) {
+				log.Warn("Block is invalid")
+				continue
+			}
+			serializedBlock, err := currentBlock.Serialize()
+			if err != nil {
+				log.Errorln("Error serializing the block : ", err)
+				continue
+			}
+			if err = blockAnnouncementTopic.Publish(ctx, serializedBlock); err != nil {
+				log.Errorln("Error publishing the block : ", err)
 				continue
 			}
 		}

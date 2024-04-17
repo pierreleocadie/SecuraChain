@@ -12,17 +12,17 @@ const (
 )
 
 // MineBlock performs the mining operation for a new block
-func MineBlock(currentBlock *block.Block, stop chan bool) {
+func MineBlock(currentBlock *block.Block, stop chan bool) bool {
 	var maxNonce uint32 = math.MaxUint32
 
 	target := big.NewInt(1)
 	target.Lsh(target, uint(sha256bits-currentBlock.Header.TargetBits))
 
-MiningLoop:
 	for nonce := uint32(0); nonce < maxNonce; nonce++ {
 		select {
 		case <-stop:
-			break MiningLoop
+			// Stop early
+			return true
 		default:
 			currentBlock.Header.Nonce = nonce
 			hash := block.ComputeHash(currentBlock)
@@ -31,8 +31,12 @@ MiningLoop:
 
 			if hashInt.Cmp(target) == -1 {
 				currentBlock.Header.Nonce = nonce
-				break MiningLoop
+				// Not stopped early
+				return false
 			}
 		}
 	}
+
+	// Not stopped early
+	return false
 }
