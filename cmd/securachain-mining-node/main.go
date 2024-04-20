@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
@@ -51,6 +52,10 @@ func main() {
 	}
 
 	ecdsaKeyPair, _ := node.LoadKeys(cfg, log)
+
+	// For the mining process
+	var previousBlock *block.Block = nil
+	currentBlock := block.NewBlock(trxPool, nil, 1, ecdsaKeyPair)
 
 	/*
 	* IPFS NODE
@@ -261,7 +266,10 @@ func main() {
 					log.Debugln("Error publishing the block to IPFS")
 				}
 
-				// 6 . Send the block to the storage nodes
+				// 6 . Stop the mining process if a new block with the same height or higher is received
+				if bReceive.Height >= currentBlock.Height {
+					stopMiningChan <- true
+				}
 			}
 		}
 	}()
@@ -484,6 +492,8 @@ func main() {
 
 	// Handle the transactions received from the storage nodes
 	go func() {
+		log.Debug("Waiting for 10 seconds before starting the transaction processing")
+		time.Sleep(30 * time.Second)
 		for {
 			msg, err := subStorageNodeResponse.Next(ctx)
 			if err != nil {
@@ -506,39 +516,53 @@ func main() {
 
 	// Mining block
 	go func() {
+		log.Debug("Waiting for 10 seconds before starting the mining process")
+		time.Sleep(30 * time.Second)
 		log.Info("Mining process started")
-		var previousBlock *block.Block = nil
-		currentBlock := block.NewBlock(trxPool, nil, 1, ecdsaKeyPair)
 		lastBlockStored := blockchain.GetLastBlock(log)
 		for {
+			// The mining process requires the blockchain to be up to date
 			if !blockProcessingEnabled || requiresSync || requiresPostSync {
 				continue
 			}
 			if lastBlockStored != nil {
 				previousBlock = lastBlockStored
 				previousBlockHash := block.ComputeHash(previousBlock)
-				log.Infof("Last block stored on chain : %s at height %d", previousBlockHash, previousBlock.Height)
+				log.Infof("Last block stored on chain : %v at height %d", previousBlockHash, previousBlock.Height)
 				currentBlock.PrevBlock = previousBlockHash
 				currentBlock.Height = previousBlock.Height + 1
+				currentBlock.Transactions = trxPool
+				trxPool = []transaction.Transaction{}
 			} else {
 				log.Infof("No block stored on chain")
 			}
+
 			log.Debug("Mining a new block")
+
+			currentBlock.MerkleRoot = currentBlock.ComputeMerkleRoot()
+
 			stoppedEarly := consensus.MineBlock(currentBlock, stopMiningChan)
 			if stoppedEarly {
 				log.Info("Mining stopped early because of a new block received")
 				lastBlockStored = blockchain.GetLastBlock(log)
 				continue
 			}
+
 			err = currentBlock.SignBlock(ecdsaKeyPair)
 			if err != nil {
 				log.Errorln("Error signing the block : ", err)
 				continue
 			}
+
+			log.Infoln("Current block hash : ", block.ComputeHash(currentBlock))
+			if previousBlock != nil {
+				log.Infoln("Previous block hash : ", block.ComputeHash(previousBlock))
+			}
 			if !consensus.ValidateBlock(currentBlock, previousBlock) {
 				log.Warn("Block is invalid")
 				continue
 			}
+
 			serializedBlock, err := currentBlock.Serialize()
 			if err != nil {
 				log.Errorln("Error serializing the block : ", err)
@@ -548,6 +572,9 @@ func main() {
 				log.Errorln("Error publishing the block : ", err)
 				continue
 			}
+
+			log.Infof("Block mined and published with hash %v at height %d", block.ComputeHash(currentBlock), currentBlock.Height)
+			lastBlockStored = blockchain.GetLastBlock(log)
 		}
 	}()
 
