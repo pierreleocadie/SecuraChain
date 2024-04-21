@@ -541,9 +541,7 @@ func main() {
 				}
 				previousBlockHash := block.ComputeHash(previousBlock)
 				log.Infof("Last block stored on chain : %v at height %d", previousBlockHash, previousBlock.Height)
-				currentBlock.PrevBlock = previousBlockHash
-				currentBlock.Height = previousBlock.Height + 1
-				currentBlock.Transactions = trxPool
+				currentBlock = block.NewBlock(trxPool, previousBlockHash, previousBlock.Height+1, ecdsaKeyPair)
 				trxPool = []transaction.Transaction{}
 			} else {
 				log.Infof("No block stored on chain")
