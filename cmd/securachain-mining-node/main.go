@@ -7,6 +7,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/jinzhu/copier"
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
@@ -30,12 +31,12 @@ var (
 	blockProcessingEnabled = true
 	pendingBlocks          = []*block.Block{}
 	trxPool                = []transaction.Transaction{}
-	stopMiningChan         = make(chan bool)
+	stopMiningChan         = make(chan consensus.StopMiningSignal)
 )
 
 func main() {
-	log := ipfsLog.Logger("full-node")
-	if err := ipfsLog.SetLogLevel("full-node", "DEBUG"); err != nil {
+	log := ipfsLog.Logger("mining-node")
+	if err := ipfsLog.SetLogLevel("mining-node", "DEBUG"); err != nil {
 		log.Errorln("Failed to set log level : ", err)
 	}
 
@@ -268,7 +269,7 @@ func main() {
 
 				// 6 . Stop the mining process if a new block with the same height or higher is received
 				if bReceive.Height >= currentBlock.Height {
-					stopMiningChan <- true
+					stopMiningChan <- consensus.StopMiningSignal{Stop: true, BlockReceived: bReceive}
 				}
 			}
 		}
@@ -541,10 +542,14 @@ func main() {
 
 			currentBlock.MerkleRoot = currentBlock.ComputeMerkleRoot()
 
-			stoppedEarly := consensus.MineBlock(currentBlock, stopMiningChan)
+			stoppedEarly, blockReceivedEarly := consensus.MineBlock(currentBlock, stopMiningChan)
 			if stoppedEarly {
 				log.Info("Mining stopped early because of a new block received")
-				lastBlockStored = blockchain.GetLastBlock(log)
+				lastBlockStored = &block.Block{} // Reset the last block stored and be sure its not nil to avoid errors with copier
+				err := copier.Copy(lastBlockStored, blockReceivedEarly)
+				if err != nil {
+					log.Errorln("Error copying the block received early : ", err)
+				}
 				continue
 			}
 
@@ -560,6 +565,8 @@ func main() {
 			}
 			if !consensus.ValidateBlock(currentBlock, previousBlock) {
 				log.Warn("Block is invalid")
+				// Return transactions of the current block to the transaction pool
+				trxPool = append(trxPool, currentBlock.Transactions...)
 				continue
 			}
 
@@ -574,7 +581,14 @@ func main() {
 			}
 
 			log.Infof("Block mined and published with hash %v at height %d", block.ComputeHash(currentBlock), currentBlock.Height)
-			lastBlockStored = blockchain.GetLastBlock(log)
+
+			// To be sure we retrieve the last block stored
+			for {
+				lastBlockStored = blockchain.GetLastBlock(log)
+				if lastBlockStored != nil && lastBlockStored.Height >= currentBlock.Height {
+					break
+				}
+			}
 		}
 	}()
 
