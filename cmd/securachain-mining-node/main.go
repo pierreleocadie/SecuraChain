@@ -272,6 +272,8 @@ func main() {
 				log.Warnln("[NEW BLOCK MINED] Block at height ", bReceive.Height, " with hash ", bReceivedHash, " mined by ", bReceivedMinerAddress, " at ", bReceive.Timestamp, " with ", len(bReceive.Transactions), " transactions stored in the blockchain")
 
 				// 6 . Stop the mining process if a new block with the same height or higher is received
+				// Conflict is implicitely resolved here.
+				// For example : Two miners mine a block at the same height. The first block received will be stored in the blockchain
 				if bReceive.Height >= currentBlock.Height {
 					log.Warnln("[NEW BLOCK MINED] Block at the same height or higher than the current block so stopping the mining process")
 					stopMiningChan <- consensus.StopMiningSignal{Stop: true, BlockReceived: bReceive}
@@ -589,6 +591,7 @@ func main() {
 
 			// To be sure we retrieve the last block stored
 			for {
+				log.Debug("Waiting for the last block stored to be updated and retrieved")
 				lastBlockStored = blockchain.GetLastBlock(log)
 				if lastBlockStored != nil && lastBlockStored.Height >= currentBlock.Height {
 					break
