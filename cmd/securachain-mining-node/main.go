@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -524,7 +525,7 @@ func main() {
 
 	// Mining block
 	go func() {
-		log.Debug("Waiting for 10 seconds before starting the mining process")
+		log.Debug("Waiting for 30 seconds before starting the mining process")
 		time.Sleep(30 * time.Second)
 		log.Info("Mining process started")
 		lastBlockStored := blockchain.GetLastBlock(log)
@@ -558,6 +559,22 @@ func main() {
 				err := copier.Copy(lastBlockStored, blockReceivedEarly)
 				if err != nil {
 					log.Errorln("Error copying the block received early : ", err)
+				}
+
+				// If there are transactions that are in my current block but not in the received block
+				// I need to put them back in the transaction pool to be sure they are mined
+				// We can simply compare the merkle root of the two blocks to know if there are transactions that are not in the received block
+				if !bytes.Equal(currentBlock.MerkleRoot, blockReceivedEarly.MerkleRoot) {
+					log.Debug("Some transactions in the current block are not in the received block")
+					// We can simply use TransactionID to know which transactions are not in the received block
+					// We can then put them back in the transaction pool
+					currentBlockTransactionIDs := currentBlock.GetTransactionIDsMap()
+					blockReceivedEarlyTransactionIDs := blockReceivedEarly.GetTransactionIDsMap()
+					for trxID, trxData := range currentBlockTransactionIDs {
+						if _, ok := blockReceivedEarlyTransactionIDs[trxID]; !ok {
+							trxPool = append(trxPool, trxData)
+						}
+					}
 				}
 				continue
 			}
