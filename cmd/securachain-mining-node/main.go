@@ -534,7 +534,11 @@ func main() {
 				continue
 			}
 			if lastBlockStored != nil {
-				previousBlock = lastBlockStored
+				previousBlock = &block.Block{}
+				err := copier.Copy(previousBlock, lastBlockStored)
+				if err != nil {
+					log.Errorln("Error copying the last block stored : ", err)
+				}
 				previousBlockHash := block.ComputeHash(previousBlock)
 				log.Infof("Last block stored on chain : %v at height %d", previousBlockHash, previousBlock.Height)
 				currentBlock.PrevBlock = previousBlockHash
@@ -566,9 +570,11 @@ func main() {
 				continue
 			}
 
-			log.Infoln("Current block hash : ", block.ComputeHash(currentBlock))
+			currentBlockHashEncoded := fmt.Sprintf("%x", block.ComputeHash(currentBlock))
+			log.Infoln("Current block hash : ", currentBlockHashEncoded, " TIMESTAMP : ", currentBlock.Timestamp)
 			if previousBlock != nil {
-				log.Infoln("Previous block hash : ", block.ComputeHash(previousBlock))
+				previousBlockHashEncoded := fmt.Sprintf("%x", block.ComputeHash(previousBlock))
+				log.Infoln("Previous block hash : ", previousBlockHashEncoded, " TIMESTAMP : ", previousBlock.Timestamp)
 			}
 			if !consensus.ValidateBlock(currentBlock, previousBlock) {
 				log.Warn("Block is invalid")
@@ -596,6 +602,7 @@ func main() {
 				if lastBlockStored != nil && lastBlockStored.Height >= currentBlock.Height {
 					break
 				}
+				time.Sleep(5 * time.Second)
 			}
 		}
 	}()
