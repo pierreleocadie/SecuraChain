@@ -267,7 +267,9 @@ func main() {
 					log.Debugln("Error publishing the block to IPFS")
 				}
 
-				log.Warnln("[NEW BLOCK MINED] Block at height ", bReceive.Height, " with hash ", block.ComputeHash(bReceive), " mined by ", string(bReceive.MinerAddr), " at ", bReceive.Timestamp, " with ", len(bReceive.Transactions), " transactions stored in the blockchain")
+				bReceivedHash := fmt.Sprintf("%x", block.ComputeHash(bReceive))
+				bReceivedMinerAddress := fmt.Sprintf("%x", bReceive.MinerAddr)
+				log.Warnln("[NEW BLOCK MINED] Block at height ", bReceive.Height, " with hash ", bReceivedHash, " mined by ", bReceivedMinerAddress, " at ", bReceive.Timestamp, " with ", len(bReceive.Transactions), " transactions stored in the blockchain")
 
 				// 6 . Stop the mining process if a new block with the same height or higher is received
 				if bReceive.Height >= currentBlock.Height {
