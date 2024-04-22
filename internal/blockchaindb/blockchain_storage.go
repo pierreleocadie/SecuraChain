@@ -105,6 +105,12 @@ func (pdb *BlockchainDB) VerifyIntegrity(log *ipfsLog.ZapEventLogger) bool {
 
 // saveLastBlock updates the reference to the last block in the blockchain.
 func (pdb *BlockchainDB) saveLastBlock(log *ipfsLog.ZapEventLogger, lastBlock *block.Block) error {
+	// Delete the previous reference to the last block
+	if err := pdb.db.Delete([]byte("lastBlockKey"), pebble.Sync); err != nil {
+		log.Errorln("error deleting last block reference")
+		return fmt.Errorf("error deleting last block reference: %v", err)
+	}
+
 	serializedBlock, err := lastBlock.Serialize()
 	if err != nil {
 		log.Errorln("error serializing block")
