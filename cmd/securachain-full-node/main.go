@@ -4,11 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"os"
+	"path/filepath"
 	"slices"
 
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
-	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
@@ -40,16 +39,12 @@ func main() {
 	flag.Parse()
 
 	// Load the config file
-	if *yamlConfigFilePath == "" {
-		log.Errorln("Please provide a path to the yaml config file")
-		flag.Usage()
-		os.Exit(1)
-	}
+	cfg := node.LoadConfig(yamlConfigFilePath, log)
 
-	cfg, err := config.LoadConfig(*yamlConfigFilePath)
+	// Create the SecuraChain data directory
+	securaChainDataDirectory, err := node.CreateSecuraChainDataDirectory(log, cfg)
 	if err != nil {
-		log.Errorln("Error loading config file : ", err)
-		os.Exit(1)
+		log.Panicf("Error creating the SecuraChain data directory : %s\n", err)
 	}
 
 	/*
@@ -64,24 +59,28 @@ func main() {
 	if err != nil {
 		log.Warnf("Failed to change storage max: %s", err)
 	}
-	log.Debugf("Storage max changed: %v", storageMax)
+	if storageMax {
+		log.Infof("Storage max changed: %v", storageMax)
+	}
 
 	freeMemorySpace, err := ipfs.FreeMemoryAvailable(ctx, nodeIpfs)
 	if err != nil {
 		log.Warnf("Failed to get free memory available: %s", err)
 	}
-	log.Debugf("Free memory available: %v", freeMemorySpace)
+	log.Infof("Free memory available: %v", freeMemorySpace)
 
 	memoryUsedGB, err := ipfs.MemoryUsed(ctx, nodeIpfs)
 	if err != nil {
 		log.Warnf("Failed to get memory used: %s", err)
 	}
-	log.Debugf("Memory used: %v", memoryUsedGB)
+	log.Infof("Memory used: %v", memoryUsedGB)
 
 	/*
 	* BLOCKCHAIN DATABASE
 	 */
-	blockchain, err := blockchaindb.NewBlockchainDB(log, "blockchain")
+	// Create the blockchain directory
+	blockchainPath := filepath.Join(securaChainDataDirectory, "blockchain")
+	blockchain, err := blockchaindb.NewBlockchainDB(log, blockchainPath)
 	if err != nil {
 		log.Debugln("Error creating or opening a database : %s\n", err)
 	}
