@@ -14,7 +14,7 @@ func TestValidateBlock(t *testing.T) {
 
 	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
 	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
-	stopMiningChan := make(chan bool)
+	stopMiningChan := make(chan StopMiningSignal)
 
 	// Create a previous block
 	prevBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
