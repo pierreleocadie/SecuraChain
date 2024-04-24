@@ -21,11 +21,14 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 )
 
-var yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
-var requiresSync = false
-var requiresPostSync = false
-var blockProcessingEnabled = true
-var pendingBlocks = []*block.Block{}
+var (
+	yamlConfigFilePath     = flag.String("config", "", "Path to the yaml config file")
+	requiresSync           = false
+	requiresPostSync       = false
+	blockProcessingEnabled = true
+	pendingBlocks          = []*block.Block{}
+	blockReceieved         = make(chan *block.Block, 15)
+)
 
 func main() {
 	log := ipfsLog.Logger("full-node")
@@ -162,7 +165,6 @@ func main() {
 	}
 
 	// Service 1 : Receiption of blocks
-	blockReceieved := make(chan *block.Block, 15)
 	go func() {
 		for {
 			blockAnnounced, err := fullnode.ReceiveBlock(log, ctx, subBlockAnnouncement)
