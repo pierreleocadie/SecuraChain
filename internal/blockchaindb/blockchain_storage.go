@@ -25,7 +25,18 @@ type BlockchainDB struct {
 
 // BlockchainDB wraps a Pebble database instance to store blockchain data.
 func NewBlockchainDB(log *ipfsLog.ZapEventLogger, dbPath string) (*BlockchainDB, error) {
-	db, err := pebble.Open(dbPath, &pebble.Options{})
+	db, err := pebble.Open(dbPath,
+		&pebble.Options{
+			Logger: log,
+			// FS: vfs.NewSyncingFS(vfs.Default,
+			// 	vfs.SyncingFileOptions{
+			// 		NoSyncOnClose:   false,
+			// 		BytesPerSync:    1024 * 1024,
+			// 		PreallocateSize: 0,
+			// 	},
+			// ),
+		},
+	)
 	if err != nil {
 		log.Errorln("failed to open pebble database")
 		return nil, fmt.Errorf("failed to open pebble database : %v", err)
@@ -42,14 +53,31 @@ func (pdb *BlockchainDB) SaveBlock(log *ipfsLog.ZapEventLogger, key []byte, b *b
 		return fmt.Errorf("error serializing block: %v", err)
 	}
 
-	err = pdb.db.Set(key, blockBytes, pebble.Sync)
+	// Size of the serialized block
+	serializedBlockSize := float64(len(blockBytes)) / 1024
+
+	log.Infof("Block size: %.2f KB", serializedBlockSize)
+	err = pdb.db.Set(key, blockBytes, nil)
 	if err != nil {
 		log.Errorln("error saving block to the database")
 		return fmt.Errorf("error saving block to the database : %v", err)
 	}
 
+	key = []byte("lastBlockKey")
+
+	// Delete the previous reference to the last block
+	if err := pdb.db.Delete(key, nil); err != nil {
+		log.Errorln("error deleting last block reference")
+		return fmt.Errorf("error deleting last block reference: %v", err)
+	}
+
+	if err := pdb.db.Set(key, blockBytes, nil); err != nil {
+		log.Errorln("error updating last block reference")
+		return fmt.Errorf("error updating last block reference: %v", err)
+	}
+
 	log.Infoln("block saved successfully")
-	return pdb.saveLastBlock(log, b)
+	return nil
 }
 
 // GetBlock retrieves a block from the database using its key.
@@ -101,29 +129,6 @@ func (pdb *BlockchainDB) VerifyIntegrity(log *ipfsLog.ZapEventLogger) bool {
 
 	log.Infoln("Blockchain integrity verified")
 	return true
-}
-
-// saveLastBlock updates the reference to the last block in the blockchain.
-func (pdb *BlockchainDB) saveLastBlock(log *ipfsLog.ZapEventLogger, lastBlock *block.Block) error {
-	// Delete the previous reference to the last block
-	if err := pdb.db.Delete([]byte("lastBlockKey"), pebble.Sync); err != nil {
-		log.Errorln("error deleting last block reference")
-		return fmt.Errorf("error deleting last block reference: %v", err)
-	}
-
-	serializedBlock, err := lastBlock.Serialize()
-	if err != nil {
-		log.Errorln("error serializing block")
-		return fmt.Errorf("error serializing block: %v", err)
-	}
-
-	if err := pdb.db.Set([]byte("lastBlockKey"), serializedBlock, pebble.Sync); err != nil {
-		log.Errorln("error updating last block reference")
-		return fmt.Errorf("error updating last block reference: %v", err)
-	}
-
-	log.Debugln("last block reference updated successfully")
-	return nil
 }
 
 // GetLastBlock retrieves the most recently added block from the database.
