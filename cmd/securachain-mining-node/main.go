@@ -5,6 +5,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"time"
 
@@ -55,6 +56,12 @@ func main() {
 
 	ecdsaKeyPair, _ := node.LoadKeys(cfg, log)
 
+	// Create the SecuraChain data directory
+	securaChainDataDirectory, err := node.CreateSecuraChainDataDirectory(log, cfg)
+	if err != nil {
+		log.Panicf("Error creating the SecuraChain data directory : %s\n", err)
+	}
+
 	// For the mining process
 	var previousBlock *block.Block = nil
 	currentBlock := block.NewBlock(trxPool, nil, 1, ecdsaKeyPair)
@@ -71,24 +78,28 @@ func main() {
 	if err != nil {
 		log.Warnf("Failed to change storage max: %s", err)
 	}
-	log.Debugf("Storage max changed: %v", storageMax)
+	if storageMax {
+		log.Infof("Storage max changed: %v", storageMax)
+	}
 
 	freeMemorySpace, err := ipfs.FreeMemoryAvailable(ctx, nodeIpfs)
 	if err != nil {
 		log.Warnf("Failed to get free memory available: %s", err)
 	}
-	log.Debugf("Free memory available: %v", freeMemorySpace)
+	log.Infof("Free memory available: %v", freeMemorySpace)
 
 	memoryUsedGB, err := ipfs.MemoryUsed(ctx, nodeIpfs)
 	if err != nil {
 		log.Warnf("Failed to get memory used: %s", err)
 	}
-	log.Debugf("Memory used: %v", memoryUsedGB)
+	log.Infof("Memory used: %v", memoryUsedGB)
 
 	/*
 	* BLOCKCHAIN DATABASE
 	 */
-	blockchain, err := blockchaindb.NewBlockchainDB(log, "blockchain")
+	// Create the blockchain directory
+	blockchainPath := filepath.Join(securaChainDataDirectory, "blockchain")
+	blockchain, err := blockchaindb.NewBlockchainDB(log, blockchainPath)
 	if err != nil {
 		log.Debugln("Error creating or opening a database : %s\n", err)
 	}
