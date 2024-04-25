@@ -227,7 +227,7 @@ func main() {
 				// 1 . Validation of the block
 				if block.IsGenesisBlock(bReceive) {
 					log.Debugln("Genesis block")
-					if !consensus.ValidateBlock(bReceive, nil) {
+					if !consensus.ValidateBlock(log, bReceive, nil) {
 						log.Debugln("Genesis block is invalid")
 						continue
 					}
@@ -250,7 +250,7 @@ func main() {
 						log.Debugln("Error getting the previous block : %s\n", err)
 					}
 
-					if !consensus.ValidateBlock(bReceive, prevBlock) {
+					if !consensus.ValidateBlock(log, bReceive, prevBlock) {
 						log.Debugln("Block is invalid")
 						continue
 					}
@@ -338,7 +338,7 @@ func main() {
 			// 3 . Valid the downloaded blocks
 			for _, b := range listOfMissingBlocks {
 				if block.IsGenesisBlock(b) {
-					if !consensus.ValidateBlock(b, nil) {
+					if !consensus.ValidateBlock(log, b, nil) {
 						log.Debugln("Genesis block is invalid")
 						continue
 					}
@@ -348,7 +348,7 @@ func main() {
 					if err != nil {
 						log.Debugln("Error getting the previous block : %s\n", err)
 					}
-					if !consensus.ValidateBlock(b, prevBlock) {
+					if !consensus.ValidateBlock(log, b, prevBlock) {
 						log.Debugln("Block is invalid")
 						continue
 					}
@@ -417,7 +417,7 @@ func main() {
 
 				// 3 . Validation of the block
 				if block.IsGenesisBlock(b) {
-					if !consensus.ValidateBlock(b, nil) {
+					if !consensus.ValidateBlock(log, b, nil) {
 						log.Debugln("Genesis block is invalid")
 						break
 					}
@@ -428,7 +428,7 @@ func main() {
 						log.Debugln("Error getting the previous block : %s\n", err)
 					}
 
-					if !consensus.ValidateBlock(b, prevBlock) {
+					if !consensus.ValidateBlock(log, b, prevBlock) {
 						log.Debugln("Block is invalid")
 						break
 					}
@@ -602,7 +602,7 @@ func main() {
 				previousBlockHashEncoded := fmt.Sprintf("%x", block.ComputeHash(previousBlock))
 				log.Infoln("Previous block hash : ", previousBlockHashEncoded, " TIMESTAMP : ", previousBlock.Timestamp)
 			}
-			if !consensus.ValidateBlock(currentBlock, previousBlock) {
+			if !consensus.ValidateBlock(log, currentBlock, previousBlock) {
 				log.Warn("Block is invalid")
 				// Return transactions of the current block to the transaction pool
 				trxPool = append(trxPool, currentBlock.Transactions...)

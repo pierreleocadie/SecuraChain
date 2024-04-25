@@ -3,8 +3,9 @@ package transaction
 import (
 	"crypto/sha256"
 	"fmt"
-	"log"
 	"time"
+
+	ipfsLog "github.com/ipfs/go-log/v2"
 
 	merkledag "github.com/ipfs/boxo/ipld/merkledag"
 	unixfs "github.com/ipfs/boxo/ipld/unixfs"
@@ -14,7 +15,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
-func GenFakeAddTransaction() (*AddFileTransaction, error) {
+func GenFakeAddTransaction(log *ipfsLog.ZapEventLogger) (*AddFileTransaction, error) {
 	// Set up a valid AddFileTransaction
 	nodeECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
 	if err != nil {
@@ -63,7 +64,7 @@ func GenFakeAddTransaction() (*AddFileTransaction, error) {
 	time.Sleep(1 * time.Second)
 	addFileTransaction := NewAddFileTransaction(announcement, randomFileCid, false, nodeECDSAKeyPair, randomeNodeID, randomStorageAddrInfo)
 	bd, _ := addFileTransaction.Serialize()
-	log.Printf("Transaction: %s\n", string(bd))
+	log.Debugln("Transaction: %s", string(bd))
 
 	// if !ValidateTransaction(addFileTransaction) {
 	// 	return nil, fmt.Errorf("ValidateTransaction failed for a valid AddFileTransaction")

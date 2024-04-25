@@ -119,7 +119,7 @@ func (pdb *BlockchainDB) VerifyIntegrity(log *ipfsLog.ZapEventLogger) bool {
 			return false
 		}
 
-		if !consensus.ValidateBlock(currentBlock, prevBlock) {
+		if !consensus.ValidateBlock(log, currentBlock, prevBlock) {
 			log.Errorln("block validation failed")
 			return false
 		}

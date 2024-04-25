@@ -30,7 +30,7 @@ func SendFile(ctx context.Context, cfg *config.Config, selectedFile string, //no
 	}
 
 	// O. Get the original file name and extension
-	filename, extension, err := getSelectedFileInfo(selectedFile)
+	filename, extension, err := getSelectedFileInfo(log, selectedFile)
 	if err != nil {
 		log.Errorf("failed to get selected file info: %s", err)
 		return fmt.Errorf("failed to get selected file info: %s", err)
@@ -67,7 +67,7 @@ func SendFile(ctx context.Context, cfg *config.Config, selectedFile string, //no
 	fileSize := fileStat.Size()
 
 	// 5. Add the encrypted file to IPFS
-	encryptedFileCid, err := ipfs.AddFile(ctx, cfg, ipfsAPI, encryptedFilePath)
+	encryptedFileCid, err := ipfs.AddFile(log, ctx, cfg, ipfsAPI, encryptedFilePath)
 	if err != nil {
 		log.Errorf("failed to add file to IPFS: %s", err)
 		return fmt.Errorf("failed to add file to IPFS: %s", err)
@@ -98,12 +98,12 @@ func checkKeys(ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key) error {
 	return nil
 }
 
-func getSelectedFileInfo(selectedFile string) (string, string, error) {
+func getSelectedFileInfo(log *ipfsLog.ZapEventLogger, selectedFile string) (string, string, error) {
 	if selectedFile == "" {
 		return "", "", fmt.Errorf("please select a file")
 	}
 
-	filename, _, extension, err := utils.FileInfo(selectedFile)
+	filename, _, extension, err := utils.FileInfo(log, selectedFile)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get file info: %s", err)
 	}
