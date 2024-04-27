@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"reflect"
 	"runtime"
+	"slices"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -133,6 +135,66 @@ func main() { //nolint: funlen
 	subBlockAnnouncement, err := blockAnnouncementTopic.Subscribe()
 	if err != nil {
 		log.Panicf("Failed to subscribe to block announcement topic : %s\n", err)
+	}
+
+	// Join the topic to ask for the json file of the blockchain
+	askingBlockchainTopic, err := ps.Join(cfg.AskingBlockchainStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join AskingBlockchain topic : %s\n", err)
+	}
+	subAskingBlockchain, err := askingBlockchainTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to AskingBlockchain topic : %s\n", err)
+	}
+
+	// Join the topic to receive the json file of the blockchain
+	receiveBlockchainTopic, err := ps.Join(cfg.ReceiveBlockchainStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join ReceiveBlockchain topic : %s\n", err)
+	}
+	subReceiveBlockchain, err := receiveBlockchainTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to ReceiveBlockchain topic : %s\n", err)
+	}
+
+	// Join the topic to ask for my files
+	askMyFilesTopic, err := ps.Join(cfg.AskMyFilesStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join AskMyFiles topic : %s\n", err)
+	}
+	subAskMyFiles, err := askMyFilesTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to AskMyFiles topic : %s\n", err)
+	}
+
+	// Join the topic to send the files of the owner
+	sendFilesTopic, err := ps.Join(cfg.SendFilesStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join SendFiles topic : %s\n", err)
+	}
+	subSendFiles, err := sendFilesTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to SendFiles topic : %s\n", err)
+	}
+
+	// Join the topic clientAnnouncementStringFlag
+	clientAnnouncementTopic, err := ps.Join(cfg.ClientAnnouncementStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join clientAnnouncementStringFlag topic: %s", err)
+	}
+	subClientAnnouncement, err := clientAnnouncementTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to clientAnnouncementStringFlag topic: %s", err)
+	}
+
+	// Join the topic StorageNodeResponseStringFlag
+	storageNodeResponseTopic, err := ps.Join(cfg.StorageNodeResponseStringFlag)
+	if err != nil {
+		log.Errorf("Failed to join StorageNodeResponse topic: %s", err)
+	}
+	subStorageNodeResponse, err := storageNodeResponseTopic.Subscribe()
+	if err != nil {
+		log.Errorf("Failed to subscribe to StorageNodeResponse topic: %s", err)
 	}
 
 	// Before starting we need to add each bootstrap peers data to the mapData
@@ -359,19 +421,42 @@ func main() { //nolint: funlen
 				} else {
 					oldData = append(oldData, data...)
 					newData := make([]visualisation.Data, 0, len(mapData))
+
 					// Transform the map into a slice
 					for _, value := range mapData {
 						newData = append(newData, value)
 					}
-					for key, value := range mapData {
-						if len(value.ConnectedPeers) == 0 {
-							delete(mapData, key)
+
+					// Process data to detect deconnected peers and delete them from the data
+					for _, peer := range newData {
+						for _, connectedPeer := range peer.ConnectedPeers {
+							if !slices.Contains(mapData[connectedPeer].ConnectedPeers, peer.PeerID) {
+								// Remove the peer from the connected peers list
+								for i := 0; i < len(peer.ConnectedPeers); i++ {
+									if peer.ConnectedPeers[i] == connectedPeer {
+										// Shift elements left
+										peer.ConnectedPeers = append(peer.ConnectedPeers[:i], peer.ConnectedPeers[i+1:]...)
+									}
+								}
+							}
 						}
 					}
+
+					for _, value := range newData {
+						if len(value.ConnectedPeers) == 0 {
+							delete(mapData, value.PeerID)
+						}
+					}
+
+					newData2 := make([]visualisation.Data, 0, len(mapData))
+					for _, value := range mapData {
+						newData2 = append(newData2, value)
+					}
+
 					// Delete data
 					data = nil
 					// Add the new data
-					data = append(data, newData...)
+					data = append(data, newData2...)
 					diffData := visualisation.NewDiffData(oldData, data)
 					visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "dataUpdate", Data: diffData}, log)
 				}
@@ -386,6 +471,16 @@ func main() { //nolint: funlen
 			if err != nil {
 				log.Warnf("Failed to get next message from BlockAnnouncement topic: %s", err)
 			}
+
+			pubsubSignal := visualisation.PubsubMessageSignal{
+				ID:           uuid.New().String(),
+				From:         msg.GetFrom().String(),
+				Topic:        "BlockAnnouncement",
+				VisitedNodes: []string{},
+			}
+			pubsubSignal.Subscribers, pubsubSignal.Connections = visualisation.GetPeersSubscribedToTopic("BlockAnnouncement", data)
+			visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "pubsubMessageSignal", Data: pubsubSignal}, log)
+
 			bReceive, err := block.DeserializeBlock(msg.Data)
 			if err != nil {
 				log.Warnf("Failed to deserialize block: %s", err)
@@ -398,6 +493,120 @@ func main() { //nolint: funlen
 			log.Infof("Visulisation block received: %s", string(visualisationBlockBytes))
 			blockchain = append(blockchain, visualisationBlock)
 			visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "newBlock", Data: visualisationBlock}, log)
+		}
+	}()
+
+	// Handle incoming AskingBlockchain messages
+	go func() {
+		for {
+			msg, err := subAskingBlockchain.Next(ctx)
+			if err != nil {
+				log.Warnf("Failed to get next message from AskingBlockchain topic: %s", err)
+			}
+
+			pubsubSignal := visualisation.PubsubMessageSignal{
+				ID:           uuid.New().String(),
+				From:         msg.GetFrom().String(),
+				Topic:        "AskingBlockchain",
+				VisitedNodes: []string{},
+			}
+			pubsubSignal.Subscribers, pubsubSignal.Connections = visualisation.GetPeersSubscribedToTopic("AskingBlockchain", data)
+			visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "pubsubMessageSignal", Data: pubsubSignal}, log)
+		}
+	}()
+
+	// Handle incoming ReceiveBlockchain messages
+	go func() {
+		for {
+			msg, err := subReceiveBlockchain.Next(ctx)
+			if err != nil {
+				log.Warnf("Failed to get next message from ReceiveBlockchain topic: %s", err)
+			}
+
+			pubsubSignal := visualisation.PubsubMessageSignal{
+				ID:           uuid.New().String(),
+				From:         msg.GetFrom().String(),
+				Topic:        "ReceiveBlockchain",
+				VisitedNodes: []string{},
+			}
+			pubsubSignal.Subscribers, pubsubSignal.Connections = visualisation.GetPeersSubscribedToTopic("ReceiveBlockchain", data)
+			visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "pubsubMessageSignal", Data: pubsubSignal}, log)
+		}
+	}()
+
+	// Handle incoming AskMyFiles messages
+	go func() {
+		for {
+			msg, err := subAskMyFiles.Next(ctx)
+			if err != nil {
+				log.Warnf("Failed to get next message from AskMyFiles topic: %s", err)
+			}
+
+			pubsubSignal := visualisation.PubsubMessageSignal{
+				ID:           uuid.New().String(),
+				From:         msg.GetFrom().String(),
+				Topic:        "AskMyFilesList",
+				VisitedNodes: []string{},
+			}
+			pubsubSignal.Subscribers, pubsubSignal.Connections = visualisation.GetPeersSubscribedToTopic("AskMyFilesList", data)
+			visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "pubsubMessageSignal", Data: pubsubSignal}, log)
+		}
+	}()
+
+	// Handle incoming SendFiles messages
+	go func() {
+		for {
+			msg, err := subSendFiles.Next(ctx)
+			if err != nil {
+				log.Warnf("Failed to get next message from SendFiles topic: %s", err)
+			}
+
+			pubsubSignal := visualisation.PubsubMessageSignal{
+				ID:           uuid.New().String(),
+				From:         msg.GetFrom().String(),
+				Topic:        "SendFiles",
+				VisitedNodes: []string{},
+			}
+			pubsubSignal.Subscribers, pubsubSignal.Connections = visualisation.GetPeersSubscribedToTopic("SendFiles", data)
+			visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "pubsubMessageSignal", Data: pubsubSignal}, log)
+		}
+	}()
+
+	// Handle incoming ClientAnnouncement messages
+	go func() {
+		for {
+			msg, err := subClientAnnouncement.Next(ctx)
+			if err != nil {
+				log.Warnf("Failed to get next message from ClientAnnouncement topic: %s", err)
+			}
+
+			pubsubSignal := visualisation.PubsubMessageSignal{
+				ID:           uuid.New().String(),
+				From:         msg.GetFrom().String(),
+				Topic:        "ClientAnnouncement",
+				VisitedNodes: []string{},
+			}
+			pubsubSignal.Subscribers, pubsubSignal.Connections = visualisation.GetPeersSubscribedToTopic("ClientAnnouncement", data)
+			visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "pubsubMessageSignal", Data: pubsubSignal}, log)
+		}
+	}()
+
+	// Handle incoming StorageNodeResponse messages
+	go func() {
+		for {
+			msg, err := subStorageNodeResponse.Next(ctx)
+			if err != nil {
+				log.Warnf("Failed to get next message from StorageNodeResponse topic: %s", err)
+			}
+
+			pubsubSignal := visualisation.PubsubMessageSignal{
+				ID:           uuid.New().String(),
+				From:         msg.GetFrom().String(),
+				Topic:        "StorageNodeResponse",
+				VisitedNodes: []string{},
+			}
+			pubsubSignal.Subscribers, pubsubSignal.Connections = visualisation.GetPeersSubscribedToTopic("StorageNodeResponse", data)
+			visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "pubsubMessageSignal", Data: pubsubSignal}, log)
 		}
 	}()
 
