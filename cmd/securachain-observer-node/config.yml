@@ -7,50 +7,42 @@ aesKeyPath: ""
 lowWater: 160
 highWater: 192
 bootstrapPeers: [
-        "/ip6/2600:3c08::f03c:94ff:fe42:366c/tcp/1211/p2p/12D3KooWQVT9vX1GFX4GYRjdo1qj69BjZ3GCyUWEpefo3kXK3TVq",
-        "/ip6/2600:3c08::f03c:94ff:fe42:366c/udp/1211/quic-v1/p2p/12D3KooWQVT9vX1GFX4GYRjdo1qj69BjZ3GCyUWEpefo3kXK3TVq",
-        "/ip4/172.235.4.254/tcp/1211/p2p/12D3KooWQVT9vX1GFX4GYRjdo1qj69BjZ3GCyUWEpefo3kXK3TVq",
-        "/ip4/172.235.4.254/udp/1211/quic-v1/p2p/12D3KooWQVT9vX1GFX4GYRjdo1qj69BjZ3GCyUWEpefo3kXK3TVq",
-
-        "/ip6/2400:8901::f03c:94ff:fe42:36ac/udp/1211/quic-v1/p2p/12D3KooWRTs37G1UhXH3eSCTNu73fJ5t8VerwEci1NSFJuGDdsRU",
-        "/ip4/170.187.225.196/tcp/1211/p2p/12D3KooWRTs37G1UhXH3eSCTNu73fJ5t8VerwEci1NSFJuGDdsRU",
-        "/ip4/170.187.225.196/udp/1211/quic-v1/p2p/12D3KooWRTs37G1UhXH3eSCTNu73fJ5t8VerwEci1NSFJuGDdsRU",
-        "/ip6/2400:8901::f03c:94ff:fe42:36ac/tcp/1211/p2p/12D3KooWRTs37G1UhXH3eSCTNu73fJ5t8VerwEci1NSFJuGDdsRU",
-
-        "/ip4/172.105.0.222/tcp/1211/p2p/12D3KooWMQCYd8s5rikn2fh26QQcuph4zarJhfW3UsLuU4qj2sq9",
-        "/ip4/172.105.0.222/udp/1211/quic-v1/p2p/12D3KooWMQCYd8s5rikn2fh26QQcuph4zarJhfW3UsLuU4qj2sq9",
-        "/ip6/2600:3c04::f03c:94ff:fe42:3638/tcp/1211/p2p/12D3KooWMQCYd8s5rikn2fh26QQcuph4zarJhfW3UsLuU4qj2sq9",
-        "/ip6/2600:3c04::f03c:94ff:fe42:3638/udp/1211/quic-v1/p2p/12D3KooWMQCYd8s5rikn2fh26QQcuph4zarJhfW3UsLuU4qj2sq9",
-
-        "/ip4/172.105.23.237/tcp/1211/p2p/12D3KooWFJCSZgNabhSy8Rc49xDExJkUpq4sgPpheNcYG18u4TxC",
-        "/ip4/172.105.23.237/udp/1211/quic-v1/p2p/12D3KooWFJCSZgNabhSy8Rc49xDExJkUpq4sgPpheNcYG18u4TxC",
-        "/ip6/2600:3c04::f03c:94ff:fe42:362e/tcp/1211/p2p/12D3KooWFJCSZgNabhSy8Rc49xDExJkUpq4sgPpheNcYG18u4TxC",
-        "/ip6/2600:3c04::f03c:94ff:fe42:362e/udp/1211/quic-v1/p2p/12D3KooWFJCSZgNabhSy8Rc49xDExJkUpq4sgPpheNcYG18u4TxC",
-
-        "/ip4/172.233.40.174/tcp/1211/p2p/12D3KooWSptKw4gnXXExGWBMjsbcHsfc2LzaEacLV2aVTPEWQwVq",
-        "/ip4/172.233.40.174/udp/1211/quic-v1/p2p/12D3KooWSptKw4gnXXExGWBMjsbcHsfc2LzaEacLV2aVTPEWQwVq",
-        "/ip6/2600:3c0e::f03c:94ff:fe42:36fa/tcp/1211/p2p/12D3KooWSptKw4gnXXExGWBMjsbcHsfc2LzaEacLV2aVTPEWQwVq",
-        "/ip6/2600:3c0e::f03c:94ff:fe42:36fa/udp/1211/quic-v1/p2p/12D3KooWSptKw4gnXXExGWBMjsbcHsfc2LzaEacLV2aVTPEWQwVq",
-
-        "/ip4/172.233.107.251/udp/1211/quic-v1/p2p/12D3KooWQFcxaYXe65qEUciLbxrnwAFDM6hBv2tyghUkHkkT9p6N",
-        "/ip6/2a01:7e02::f03c:94ff:fe42:363c/tcp/1211/p2p/12D3KooWQFcxaYXe65qEUciLbxrnwAFDM6hBv2tyghUkHkkT9p6N",
-        "/ip6/2a01:7e02::f03c:94ff:fe42:363c/udp/1211/quic-v1/p2p/12D3KooWQFcxaYXe65qEUciLbxrnwAFDM6hBv2tyghUkHkkT9p6N",
-        "/ip4/172.233.107.251/tcp/1211/p2p/12D3KooWQFcxaYXe65qEUciLbxrnwAFDM6hBv2tyghUkHkkT9p6N",
-
-        "/ip4/172.105.186.149/tcp/1211/p2p/12D3KooWSKe3gAatCdPLfytWcv5Tuz1mT86GaPw4Fx4ut4yEJ2Mh",
-        "/ip4/172.105.186.149/udp/1211/quic-v1/p2p/12D3KooWSKe3gAatCdPLfytWcv5Tuz1mT86GaPw4Fx4ut4yEJ2Mh",
-        "/ip6/2400:8907::f03c:94ff:fe42:3678/tcp/1211/p2p/12D3KooWSKe3gAatCdPLfytWcv5Tuz1mT86GaPw4Fx4ut4yEJ2Mh",
-        "/ip6/2400:8907::f03c:94ff:fe42:3678/udp/1211/quic-v1/p2p/12D3KooWSKe3gAatCdPLfytWcv5Tuz1mT86GaPw4Fx4ut4yEJ2Mh",
-
-        "/ip4/97.107.135.216/udp/1211/quic-v1/p2p/12D3KooWJvHnBY2zJ52BsGPqTtt82QaqHFnpmuFvzDTdad1xgPn9",
-        "/ip6/2600:3c03::f03c:94ff:fe42:36f9/tcp/1211/p2p/12D3KooWJvHnBY2zJ52BsGPqTtt82QaqHFnpmuFvzDTdad1xgPn9",
-        "/ip6/2600:3c03::f03c:94ff:fe42:36f9/udp/1211/quic-v1/p2p/12D3KooWJvHnBY2zJ52BsGPqTtt82QaqHFnpmuFvzDTdad1xgPn9",
-        "/ip4/97.107.135.216/tcp/1211/p2p/12D3KooWJvHnBY2zJ52BsGPqTtt82QaqHFnpmuFvzDTdad1xgPn9",
-        
-        "/ip4/172.233.1.87/udp/1211/quic-v1/p2p/12D3KooWFRuKjMsPB1SSkPbYETa2G3YxYRzo1A8RqGpskmTEMpE7",
-        "/ip6/2600:3c0d::f03c:94ff:fe42:36f5/tcp/1211/p2p/12D3KooWFRuKjMsPB1SSkPbYETa2G3YxYRzo1A8RqGpskmTEMpE7",
-        "/ip6/2600:3c0d::f03c:94ff:fe42:36f5/udp/1211/quic-v1/p2p/12D3KooWFRuKjMsPB1SSkPbYETa2G3YxYRzo1A8RqGpskmTEMpE7",
-        "/ip4/172.233.1.87/tcp/1211/p2p/12D3KooWFRuKjMsPB1SSkPbYETa2G3YxYRzo1A8RqGpskmTEMpE7",
+        "/ip4/172.233.59.219/tcp/1211/p2p/12D3KooWAuu2R5HB5fLxmenhqxDSdKDv1GqzML3RGsVhszR6qu3L",
+        "/ip4/172.233.59.219/udp/1211/quic-v1/p2p/12D3KooWAuu2R5HB5fLxmenhqxDSdKDv1GqzML3RGsVhszR6qu3L",
+        "/ip6/2600:3c0e::f03c:94ff:fe7d:6029/tcp/1211/p2p/12D3KooWAuu2R5HB5fLxmenhqxDSdKDv1GqzML3RGsVhszR6qu3L",
+        "/ip6/2600:3c0e::f03c:94ff:fe7d:6029/udp/1211/quic-v1/p2p/12D3KooWAuu2R5HB5fLxmenhqxDSdKDv1GqzML3RGsVhszR6qu3L",
+        "/ip4/192.53.121.124/tcp/1211/p2p/12D3KooWAV6uSjUWgVSaKhZ3g7oNL2iYcrqZY33Jh5mg1ASYWLkt",
+        "/ip4/192.53.121.124/udp/1211/quic-v1/p2p/12D3KooWAV6uSjUWgVSaKhZ3g7oNL2iYcrqZY33Jh5mg1ASYWLkt",
+        "/ip6/2600:3c04::f03c:94ff:fe7d:60db/tcp/1211/p2p/12D3KooWAV6uSjUWgVSaKhZ3g7oNL2iYcrqZY33Jh5mg1ASYWLkt",
+        "/ip6/2600:3c04::f03c:94ff:fe7d:60db/udp/1211/quic-v1/p2p/12D3KooWAV6uSjUWgVSaKhZ3g7oNL2iYcrqZY33Jh5mg1ASYWLkt",
+        "/ip6/2600:3c0d::f03c:94ff:fe7d:6074/udp/1211/quic-v1/p2p/12D3KooWHCwpHvH4cbHcQJSrcnVvcNQYKFUommSLwgQvyNKkh4zC",
+        "/ip4/172.233.14.75/tcp/1211/p2p/12D3KooWHCwpHvH4cbHcQJSrcnVvcNQYKFUommSLwgQvyNKkh4zC",
+        "/ip4/172.233.14.75/udp/1211/quic-v1/p2p/12D3KooWHCwpHvH4cbHcQJSrcnVvcNQYKFUommSLwgQvyNKkh4zC",
+        "/ip6/2600:3c0d::f03c:94ff:fe7d:6074/tcp/1211/p2p/12D3KooWHCwpHvH4cbHcQJSrcnVvcNQYKFUommSLwgQvyNKkh4zC",
+        "/ip6/2400:8907::f03c:94ff:fe7d:606e/udp/1211/quic-v1/p2p/12D3KooWQN4nm95h6S2yBor8MRMN4Lh8nxzbZdCZd7PZjCGoUEx6",
+        "/ip4/194.195.248.34/tcp/1211/p2p/12D3KooWQN4nm95h6S2yBor8MRMN4Lh8nxzbZdCZd7PZjCGoUEx6",
+        "/ip4/194.195.248.34/udp/1211/quic-v1/p2p/12D3KooWQN4nm95h6S2yBor8MRMN4Lh8nxzbZdCZd7PZjCGoUEx6",
+        "/ip6/2400:8907::f03c:94ff:fe7d:606e/tcp/1211/p2p/12D3KooWQN4nm95h6S2yBor8MRMN4Lh8nxzbZdCZd7PZjCGoUEx6",
+        "/ip4/176.58.113.16/tcp/1211/p2p/12D3KooWGf6CcF7WvRJxoDdDwEgnEbyyhDRLcxtosHZ3PMwuza6Y",
+        "/ip4/176.58.113.16/udp/1211/quic-v1/p2p/12D3KooWGf6CcF7WvRJxoDdDwEgnEbyyhDRLcxtosHZ3PMwuza6Y",
+        "/ip6/2a01:7e00::f03c:94ff:fe7d:60a4/tcp/1211/p2p/12D3KooWGf6CcF7WvRJxoDdDwEgnEbyyhDRLcxtosHZ3PMwuza6Y",
+        "/ip6/2a01:7e00::f03c:94ff:fe7d:60a4/udp/1211/quic-v1/p2p/12D3KooWGf6CcF7WvRJxoDdDwEgnEbyyhDRLcxtosHZ3PMwuza6Y",
+        "/ip4/45.79.137.197/tcp/1211/p2p/12D3KooWPNjy83Yi4eerqVhRbmv32856cTbUxd6r2N1hzsY6cCeW",
+        "/ip4/45.79.137.197/udp/1211/quic-v1/p2p/12D3KooWPNjy83Yi4eerqVhRbmv32856cTbUxd6r2N1hzsY6cCeW",
+        "/ip6/2600:3c03::f03c:94ff:fe7d:60c1/tcp/1211/p2p/12D3KooWPNjy83Yi4eerqVhRbmv32856cTbUxd6r2N1hzsY6cCeW",
+        "/ip6/2600:3c03::f03c:94ff:fe7d:60c1/udp/1211/quic-v1/p2p/12D3KooWPNjy83Yi4eerqVhRbmv32856cTbUxd6r2N1hzsY6cCeW",
+        "/ip4/192.53.115.228/tcp/1211/p2p/12D3KooWNUDY828t1pNoMAQkrWWicX8QvJTmWYophSX9xfHcvBs1",
+        "/ip4/192.53.115.228/udp/1211/quic-v1/p2p/12D3KooWNUDY828t1pNoMAQkrWWicX8QvJTmWYophSX9xfHcvBs1",
+        "/ip6/2400:8901::f03c:94ff:fe7d:605e/tcp/1211/p2p/12D3KooWNUDY828t1pNoMAQkrWWicX8QvJTmWYophSX9xfHcvBs1",
+        "/ip6/2400:8901::f03c:94ff:fe7d:605e/udp/1211/quic-v1/p2p/12D3KooWNUDY828t1pNoMAQkrWWicX8QvJTmWYophSX9xfHcvBs1",
+        "/ip4/172.236.64.61/tcp/1211/p2p/12D3KooWMN4NrFhYSGRrXhZx3KFpdFZr2NDAU67rteRSK9QS1656",
+        "/ip4/172.236.64.61/udp/1211/quic-v1/p2p/12D3KooWMN4NrFhYSGRrXhZx3KFpdFZr2NDAU67rteRSK9QS1656",
+        "/ip6/2600:3c08::f03c:94ff:fe7d:6085/tcp/1211/p2p/12D3KooWMN4NrFhYSGRrXhZx3KFpdFZr2NDAU67rteRSK9QS1656",
+        "/ip6/2600:3c08::f03c:94ff:fe7d:6085/udp/1211/quic-v1/p2p/12D3KooWMN4NrFhYSGRrXhZx3KFpdFZr2NDAU67rteRSK9QS1656",
+        "/ip4/192.53.121.104/tcp/1211/p2p/12D3KooWGkjynXAsBLSA5MUFfTjZGEY3V1exj7NdsD7YsWhBnMji",
+        "/ip4/192.53.121.104/udp/1211/quic-v1/p2p/12D3KooWGkjynXAsBLSA5MUFfTjZGEY3V1exj7NdsD7YsWhBnMji",
+        "/ip6/2600:3c04::f03c:94ff:fe7d:6052/tcp/1211/p2p/12D3KooWGkjynXAsBLSA5MUFfTjZGEY3V1exj7NdsD7YsWhBnMji",
+        "/ip6/2600:3c04::f03c:94ff:fe7d:6052/udp/1211/quic-v1/p2p/12D3KooWGkjynXAsBLSA5MUFfTjZGEY3V1exj7NdsD7YsWhBnMji",
     ]
 listeningPort: 0
 discoveryRefreshInterval: 10s
@@ -75,6 +67,7 @@ rendezvousStringFlag: "SecuraChainNetwork"
 clientAnnouncementStringFlag: "ClientAnnouncement"
 storageNodeResponseStringFlag: "StorageNodeResponse"
 keepRelayConnectionAliveStringFlag: "KeepRelayConnectionAlive"
+blockAnnouncementStringFlag: "BlockAnnouncement"
 askingBlockchainStringFlag: "AskingBlockchain"  
 receiveBlockchainStringFlag: "ReceiveBlockchain"
 askMyFilesStringFlag: "AskMyFiles"
@@ -82,6 +75,8 @@ sendFilesStringFlag: "SendFiles"
 networkVisualisationStringFlag: "NetworkVisualisation"
 fileRights: 0700
 fileMetadataRegistryJson: "fileMetadataRegistry.json"
+securaChainDataPath: ".securachainData/"
 blockRegistryPath: "blocksRegistry.json"
 indexingRegistryPath: "indexingRegistry.json"
 memorySpace: 10 # in GB
+fileSizeLimit: 2097152 # 2MB
