@@ -48,7 +48,7 @@ function BlockchainData() {
             setBlockchainData(currentData => {
                 return {
                     blocks: { ...currentData.blocks, [block.hash]: block },
-                    chains: [...currentData.chains, { currentHash: block.hash, previousHash: block.previous }]
+                    chains: [...currentData.chains, { currentHash: block.hash, previousHash: block.prev_block }]
                 };
             });
         }
@@ -60,7 +60,7 @@ function BlockchainData() {
         setBlockchainData(currentData => {
             return {
                 blocks: { ...currentData.blocks, [data.hash]: data },
-                chains: [...currentData.chains, { currentHash: data.hash, previousHash: data.previous }]
+                chains: [...currentData.chains, { currentHash: data.hash, previousHash: data.prev_block }]
             };
         });
     }
