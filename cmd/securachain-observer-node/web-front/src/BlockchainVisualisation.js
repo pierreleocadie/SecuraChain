@@ -150,8 +150,14 @@ const BlockchainVisualisation = ({ blocks, chains }) => {
                     <p><b>Miner Address:</b> {selectedBlock.miner_addr}</p>
                     <p><b>Signature:</b> {selectedBlock.signature}</p>
                     <p><b>Number of transactions:</b> {selectedBlock.transactions ? selectedBlock.transactions.length : 0}</p>
-                    {/* <h3>Transactions</h3>
-                    <p>{JSON.stringify(selectedBlock.transactions, _, "\n")}</p> */}
+                    <h3>Transactions</h3>
+                    {selectedBlock.transactions && (
+                        <ul>
+                            {selectedBlock.transactions.map((tx, index) => (
+                                <li key={index}>{tx.transactionID}</li>
+                            ))}
+                        </ul>
+                    )}
                     <button onClick={closeModal}>Close</button>
                 </div>
             )}
