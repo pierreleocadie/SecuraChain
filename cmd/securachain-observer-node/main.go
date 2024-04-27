@@ -18,6 +18,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
+	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	netwrk "github.com/pierreleocadie/SecuraChain/internal/network"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/internal/visualisation"
@@ -39,6 +40,7 @@ var (
 	oldData       []visualisation.Data = []visualisation.Data{}
 	mapData                            = make(map[string]visualisation.Data)
 	peersDataChan                      = make(chan []byte, 200)
+	blockchain                         = []visualisation.Block{}
 )
 
 func main() { //nolint: funlen
@@ -121,6 +123,16 @@ func main() { //nolint: funlen
 	subNetworkVisualisation, err := networkVisualisationTopic.Subscribe(pubsub.WithBufferSize(1000))
 	if err != nil {
 		log.Warnf("Failed to subscribe to NetworkVisualisation topic: %s", err)
+	}
+
+	// Join the topic BlockAnnouncementStringFlag
+	blockAnnouncementTopic, err := ps.Join(cfg.BlockAnnouncementStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join block announcement topic : %s\n", err)
+	}
+	subBlockAnnouncement, err := blockAnnouncementTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to block announcement topic : %s\n", err)
 	}
 
 	// Before starting we need to add each bootstrap peers data to the mapData
@@ -367,10 +379,32 @@ func main() { //nolint: funlen
 		}
 	}()
 
+	// Handle incoming BlockAnnouncement messages
+	go func() {
+		for {
+			msg, err := subBlockAnnouncement.Next(ctx)
+			if err != nil {
+				log.Warnf("Failed to get next message from BlockAnnouncement topic: %s", err)
+			}
+			bReceive, err := block.DeserializeBlock(msg.Data)
+			if err != nil {
+				log.Warnf("Failed to deserialize block: %s", err)
+			}
+			visualisationBlock := visualisation.NewBlock(*bReceive)
+			visualisationBlockBytes, err := json.Marshal(visualisationBlock)
+			if err != nil {
+				log.Warnf("Failed to marshal visualisation block: %s", err)
+			}
+			log.Infof("Visulisation block received: %s", string(visualisationBlockBytes))
+			blockchain = append(blockchain, visualisationBlock)
+			visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "newBlock", Data: visualisationBlock}, log)
+		}
+	}()
+
 	/*
 	* NETWORK VISUALISATION - WEBSOCKET SERVER
 	 */
-	http.HandleFunc("/ws", visualisation.CreateHandler(upgrader, &data, &clientsMutex, clients, log))
+	http.HandleFunc("/ws", visualisation.CreateHandler(upgrader, &data, &blockchain, &clientsMutex, clients, log))
 	server := &http.Server{
 		Addr:              ":8080",
 		ReadHeaderTimeout: 3 * time.Second,
