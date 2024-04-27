@@ -5,11 +5,17 @@ import (
 	"context"
 	"encoding/base64"
 	"flag"
+	"fmt"
+	"slices"
 
 	"os"
 	"path/filepath"
 
+	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
+	"github.com/pierreleocadie/SecuraChain/internal/core/block"
+	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
+	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
@@ -23,8 +29,13 @@ import (
 )
 
 var (
-	yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
-	generateKeys       = flag.Bool("genKeys", false, "Generate new ECDSA and AES keys to the paths specified in the config file")
+	yamlConfigFilePath     = flag.String("config", "", "Path to the yaml config file")
+	generateKeys           = flag.Bool("genKeys", false, "Generate new ECDSA and AES keys to the paths specified in the config file")
+	requiresSync           = false
+	requiresPostSync       = false
+	blockProcessingEnabled = true
+	pendingBlocks          = []*block.Block{}
+	blockReceieved         = make(chan *block.Block, 15)
 )
 
 func main() { //nolint: funlen, gocyclo
@@ -47,11 +58,16 @@ func main() { //nolint: funlen, gocyclo
 
 	ecdsaKeyPair, _ := node.LoadKeys(cfg, log)
 
+	// Create the SecuraChain data directory
+	securaChainDataDirectory, err := node.CreateSecuraChainDataDirectory(log, cfg)
+	if err != nil {
+		log.Panicf("Error creating the SecuraChain data directory : %s\n", err)
+	}
+
 	/*
 	* IPFS NODE
 	 */
 	ipfsAPI, nodeIpfs := node.InitializeIPFSNode(ctx, cfg, log)
-	// dhtAPI := ipfsAPI.Dht()
 
 	/*
 	* IPFS MEMORY MANAGEMENT
@@ -60,19 +76,31 @@ func main() { //nolint: funlen, gocyclo
 	if err != nil {
 		log.Warnf("Failed to change storage max: %s", err)
 	}
-	log.Debugf("Storage max changed: %v", storageMax)
+	if storageMax {
+		log.Infof("Storage max changed: %v", storageMax)
+	}
 
 	freeMemorySpace, err := ipfs.FreeMemoryAvailable(ctx, nodeIpfs)
 	if err != nil {
 		log.Warnf("Failed to get free memory available: %s", err)
 	}
-	log.Debugf("Free memory available: %v", freeMemorySpace)
+	log.Infof("Free memory available: %v", freeMemorySpace)
 
 	memoryUsedGB, err := ipfs.MemoryUsed(ctx, nodeIpfs)
 	if err != nil {
 		log.Warnf("Failed to get memory used: %s", err)
 	}
-	log.Debugf("Memory used: %v", memoryUsedGB)
+	log.Infof("Memory used: %v", memoryUsedGB)
+
+	/*
+	* BLOCKCHAIN DATABASE
+	 */
+	// Create the blockchain directory
+	blockchainPath := filepath.Join(securaChainDataDirectory, "blockchain")
+	blockchain, err := blockchaindb.NewBlockchainDB(log, blockchainPath)
+	if err != nil {
+		log.Debugln("Error creating or opening a database : %s\n", err)
+	}
 
 	/*
 	* NODE LIBP2P
@@ -110,6 +138,70 @@ func main() { //nolint: funlen, gocyclo
 	subClientAnnouncement, err := clientAnnouncementTopic.Subscribe()
 	if err != nil {
 		log.Panicf("Failed to subscribe to clientAnnouncementStringFlag topic: %s", err)
+	}
+
+	// Join the topic StorageNodeResponseStringFlag
+	storageNodeResponseTopic, err := ps.Join(cfg.StorageNodeResponseStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join StorageNodeResponseStringFlag topic: %s", err)
+	}
+
+	// Subscribe to StorageNodeResponseStringFlag topic
+	// subStorageNodeResponse, err := storageNodeResponseTopic.Subscribe()
+	// if err != nil {
+	// 	log.Panicf("Failed to subscribe to StorageNodeResponseStringFlag topic: %s", err)
+	// }
+
+	// Join the topic BlockAnnouncementStringFlag
+	blockAnnouncementTopic, err := ps.Join(cfg.BlockAnnouncementStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join block announcement topic : %s\n", err)
+	}
+	subBlockAnnouncement, err := blockAnnouncementTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to block announcement topic : %s\n", err)
+	}
+
+	// Join the topic to ask for the json file of the blockchain
+	askingBlockchainTopic, err := ps.Join(cfg.AskingBlockchainStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join AskingBlockchain topic : %s\n", err)
+	}
+
+	// Subscribe to the topic to ask for the json file of the blockchain
+	subAskingBlockchain, err := askingBlockchainTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to AskingBlockchain topic : %s\n", err)
+	}
+
+	// Join the topic to receive the json file of the blockchain
+	receiveBlockchainTopic, err := ps.Join(cfg.ReceiveBlockchainStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join ReceiveBlockchain topic : %s\n", err)
+	}
+
+	// Subscribe to the topic to receive the json file of the blockchain
+	subReceiveBlockchain, err := receiveBlockchainTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to ReceiveBlockchain topic : %s\n", err)
+	}
+
+	// Join the topic to ask for my files
+	askMyFilesTopic, err := ps.Join(cfg.AskMyFilesStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join AskMyFiles topic : %s\n", err)
+	}
+
+	// Subscribe to the topic to ask for my files
+	subAskMyFiles, err := askMyFilesTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to AskMyFiles topic : %s\n", err)
+	}
+
+	// Join the topic to send the files of the owner
+	sendFilesTopic, err := ps.Join(cfg.SendFilesStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join SendFiles topic : %s\n", err)
 	}
 
 	// Handle incoming ClientAnnouncement messages
@@ -238,18 +330,6 @@ func main() { //nolint: funlen, gocyclo
 		}
 	}()
 
-	// Join the topic StorageNodeResponseStringFlag
-	storageNodeResponseTopic, err := ps.Join(cfg.StorageNodeResponseStringFlag)
-	if err != nil {
-		log.Panicf("Failed to join StorageNodeResponseStringFlag topic: %s", err)
-	}
-
-	// Subscribe to StorageNodeResponseStringFlag topic
-	// subStorageNodeResponse, err := storageNodeResponseTopic.Subscribe()
-	// if err != nil {
-	// 	log.Panicf("Failed to subscribe to StorageNodeResponseStringFlag topic: %s", err)
-	// }
-
 	// Handle outgoing StorageNodeResponse messages
 	go func() {
 		for {
@@ -280,26 +360,310 @@ func main() { //nolint: funlen, gocyclo
 		}
 	}()
 
-	protocolUpdatedSub, err := host.EventBus().Subscribe(new(event.EvtPeerProtocolsUpdated))
-	if err != nil {
-		log.Errorf("Failed to subscribe to EvtPeerProtocolsUpdated: %s", err)
-	}
-	go func(sub event.Subscription) {
-		for e := range sub.Out() {
-			var updated bool
-			for _, proto := range e.(event.EvtPeerProtocolsUpdated).Added {
-				if proto == pubsub.GossipSubID_v11 || proto == pubsub.GossipSubID_v10 {
-					updated = true
-					break
-				}
+	// Service 1 : Receiption of blocks
+	go func() {
+		for {
+			blockAnnounced, err := fullnode.ReceiveBlock(log, ctx, subBlockAnnouncement)
+			if err != nil {
+				log.Debugln("Error waiting for the next block : %s\n", err)
+				continue
 			}
-			if updated {
-				for _, c := range host.Network().ConnsToPeer(e.(event.EvtPeerProtocolsUpdated).Peer) {
-					(*pubsub.PubSubNotif)(ps).Connected(host.Network(), c)
+
+			// If the node is synchronizing with the network
+			if requiresSync {
+				pendingBlocks = append(pendingBlocks, blockAnnounced)
+			} else {
+				blockReceieved <- blockAnnounced
+			}
+		}
+	}()
+
+	// Service 2: Handle the block received
+	go func() {
+		for {
+			if !blockProcessingEnabled {
+				continue
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case bReceive := <-blockReceieved:
+				log.Debugln("Normal block processing")
+				log.Debugln("State : block processing enabled ", blockProcessingEnabled)
+
+				// 1 . Validation of the block
+				if block.IsGenesisBlock(bReceive) {
+					log.Debugln("Genesis block")
+					if !consensus.ValidateBlock(bReceive, nil) {
+						log.Debugln("Genesis block is invalid")
+						continue
+					}
+					log.Debugln("Genesis block is valid")
+				} else {
+					isPrevBlockStored, err := fullnode.PrevBlockStored(log, bReceive, blockchain)
+					if err != nil {
+						log.Debugln("error checking if previous block is stored : %s", err)
+					}
+
+					if !isPrevBlockStored {
+						pendingBlocks = append(pendingBlocks, bReceive)
+						blockProcessingEnabled = false
+						requiresSync = true // This will call the process of synchronizing the blockchain with the network
+						continue
+					}
+
+					prevBlock, err := blockchain.GetBlock(log, bReceive.PrevBlock)
+					if err != nil {
+						log.Debugln("Error getting the previous block : %s\n", err)
+					}
+
+					if !consensus.ValidateBlock(bReceive, prevBlock) {
+						log.Debugln("Block is invalid")
+						continue
+					}
+				}
+
+				// 2 . Add the block to the blockchain
+				added := blockchaindb.AddBlockToBlockchain(log, bReceive, blockchain)
+				if !added {
+					continue
+				}
+
+				// 3 . Verify the integrity of the blockchain
+				if !blockchain.VerifyIntegrity(log) {
+					blockProcessingEnabled = false
+					requiresSync = true // This will call the process of synchronizing the blockchain with the network
+					continue
+				}
+
+				// 4 . Add the block transaction to the registry
+				if !fullnode.AddBlockTransactionToRegistry(log, cfg, bReceive) {
+					log.Debugln("Error adding the block transactions to the registry")
+				}
+
+				// 5 . Send the block to IPFS
+				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, bReceive) {
+					log.Debugln("Error publishing the block to IPFS")
 				}
 			}
 		}
-	}(protocolUpdatedSub)
+	}()
+
+	// Service 3 : Syncronization
+	go func() {
+		// create a list of blacklisted nodes
+		blackListNode := []string{}
+		for {
+			if !requiresSync {
+				continue
+			}
+			log.Debugln("Synchronizing the blockchain with the network")
+			log.Debugln("State : requires sync ", requiresSync)
+
+			//1 . Ask for a registry of the blockchain
+			registryBytes, senderID, err := fullnode.AskForBlockchainRegistry(log, ctx, askingBlockchainTopic, subReceiveBlockchain)
+			if err != nil {
+				log.Debugln("Error asking the blockchain registry : %s\n", err)
+				continue
+			}
+
+			// 1.1 Check if the sender is blacklisted
+			if slices.Contains(blackListNode, senderID) {
+				log.Debugln("Node blacklisted")
+				continue
+			}
+
+			log.Debugln("Node not blacklisted")
+
+			// 1.2 black list the sender
+			blackListNode = append(blackListNode, senderID)
+			log.Debugln("Node added to the black list")
+
+			// 2 . Dowlnoad the missing blocks
+			downloaded, listOfMissingBlocks, err := fullnode.DownloadMissingBlocks(log, ctx, ipfsAPI, registryBytes, blockchain)
+			if err != nil {
+				log.Debugln("Error downloading missing blocks : %s\n", err)
+			}
+
+			if !downloaded {
+				log.Debugln("Blocks not downloaded")
+				continue
+			}
+
+			// 3 . Valid the downloaded blocks
+			for _, b := range listOfMissingBlocks {
+				if block.IsGenesisBlock(b) {
+					if !consensus.ValidateBlock(b, nil) {
+						log.Debugln("Genesis block is invalid")
+						continue
+					}
+					log.Debugln("Genesis block is valid")
+				} else {
+					prevBlock, err := blockchain.GetBlock(log, b.PrevBlock)
+					if err != nil {
+						log.Debugln("Error getting the previous block : %s\n", err)
+					}
+					if !consensus.ValidateBlock(b, prevBlock) {
+						log.Debugln("Block is invalid")
+						continue
+					}
+					log.Debugln(b.Height, " is valid")
+				}
+
+				// 4 . Add the block to the blockchain
+				added := blockchaindb.AddBlockToBlockchain(log, b, blockchain)
+				if !added {
+					continue
+				}
+
+				// 5 . Verify the integrity of the blockchain
+				if !blockchain.VerifyIntegrity(log) {
+					log.Debugln("Blockchain is not verified")
+					continue
+				}
+
+				// 6 . Add the block transaction to the registry
+				if !fullnode.AddBlockTransactionToRegistry(log, cfg, b) {
+					log.Debugln("Error adding the block transactions to the registry")
+				}
+
+				// 7 . Send the block to IPFS
+				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, b) {
+					log.Debugln("Error publishing the block to IPFS")
+				}
+			}
+
+			// 7 . Clear the pending blocks
+			blackListNode = []string{}
+
+			// 8 . Change the state of the node
+			requiresSync = false
+			requiresPostSync = true
+			log.Debugln("Blockchain synchronized with the network")
+		}
+	}()
+
+	// Service 4 : Post-syncronization
+	go func() {
+		for {
+			if !requiresPostSync {
+				continue
+			}
+
+			log.Debugln("Post-syncronization of the blockchain with the network")
+			log.Debugln("State : Post-syncronization ", requiresPostSync)
+
+			// 1. Sort the waiting list by height of the block
+			sortedList := fullnode.SortBlockByHeight(log, pendingBlocks)
+
+			for _, b := range sortedList {
+				// 2 . Verify if the previous block is stored in the database
+				isPrevBlockStored, err := fullnode.PrevBlockStored(log, b, blockchain)
+				if err != nil {
+					log.Debugln("Error checking if previous block is stored : %s", err)
+				}
+
+				if !isPrevBlockStored {
+					pendingBlocks = []*block.Block{}
+					requiresPostSync = false
+					requiresSync = true // This will call the process of synchronizing the blockchain with the network
+					continue
+				}
+
+				// 3 . Validation of the block
+				if block.IsGenesisBlock(b) {
+					if !consensus.ValidateBlock(b, nil) {
+						log.Debugln("Genesis block is invalid")
+						break
+					}
+					log.Debugln("Genesis block is valid")
+				} else {
+					prevBlock, err := blockchain.GetBlock(log, b.PrevBlock)
+					if err != nil {
+						log.Debugln("Error getting the previous block : %s\n", err)
+					}
+
+					if !consensus.ValidateBlock(b, prevBlock) {
+						log.Debugln("Block is invalid")
+						break
+					}
+					log.Debugln(b.Height, " is valid")
+				}
+
+				// 4 . Add the block to the blockchain
+				added := blockchaindb.AddBlockToBlockchain(log, b, blockchain)
+				if !added {
+					continue
+				}
+
+				if !blockchain.VerifyIntegrity(log) {
+					pendingBlocks = []*block.Block{}
+					requiresPostSync = false
+					requiresSync = true // This will call the process of synchronizing the blockchain with the network
+					continue
+				}
+
+				// 5 . Add the block transaction to the registry
+				if !fullnode.AddBlockTransactionToRegistry(log, cfg, b) {
+					log.Debugln("Error adding the block transactions to the registry")
+				}
+
+				// 6 . Send the block to IPFS
+				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, b) {
+					log.Debugln("Error publishing the block to IPFS")
+				}
+			}
+			// 6 . Change the state of the node
+			requiresPostSync = false
+			blockProcessingEnabled = true
+			log.Debugln("Post-syncronization done")
+		}
+	}()
+
+	// Service 5 : Sending registry of the blockchain
+	go func() {
+		for {
+			msg, err := subAskingBlockchain.Next(ctx)
+			if err != nil {
+				log.Debugln("Error getting message from the network : ", err)
+				break
+			}
+
+			if msg.GetFrom().String() == host.ID().String() {
+				continue
+			}
+			log.Debugln("Blockchain asked by a peer ", msg.GetFrom().String())
+
+			// Send the registry of the blockchain
+			if !fullnode.SendBlocksRegistryToNetwork(log, ctx, cfg, receiveBlockchainTopic) {
+				log.Debugln("Error sending the registry of the blockchain")
+				continue
+			}
+		}
+	}()
+
+	// Service 6 : Sending the files of the address given
+	go func() {
+		for {
+			msg, err := subAskMyFiles.Next(ctx)
+			if err != nil {
+				log.Debugln("Error getting message from the network : ", err)
+				break
+			}
+
+			if msg.GetFrom().String() == host.ID().String() {
+				continue
+			}
+			log.Debugln("Files asked by a peer ", msg.GetFrom().String())
+
+			// Send the files of the owner
+			ownerAddressStr := fmt.Sprintf("%x", msg.Data)
+			if !fullnode.SendOwnersFiles(log, ctx, cfg, ownerAddressStr, sendFilesTopic) {
+				log.Debugln("Error sending the files of the owner")
+				continue
+			}
+		}
+	}()
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES

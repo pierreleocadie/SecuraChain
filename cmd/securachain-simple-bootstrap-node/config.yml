@@ -30,12 +30,16 @@ rendezvousStringFlag: "SecuraChainNetwork"
 clientAnnouncementStringFlag: "ClientAnnouncement"
 storageNodeResponseStringFlag: "StorageNodeResponse"
 keepRelayConnectionAliveStringFlag: "KeepRelayConnectionAlive"
+blockAnnouncementStringFlag: "BlockAnnouncement"
 askingBlockchainStringFlag: "AskingBlockchain"  
 receiveBlockchainStringFlag: "ReceiveBlockchain"
 askMyFilesStringFlag: "AskMyFiles"
 sendFilesStringFlag: "SendFiles"
+networkVisualisationStringFlag: "NetworkVisualisation"
 fileRights: 0700
 fileMetadataRegistryJson: "fileMetadataRegistry.json"
+securaChainDataPath: ".securachainData/"
 blockRegistryPath: "blocksRegistry.json"
 indexingRegistryPath: "indexingRegistry.json"
 memorySpace: 10 # in GB
+fileSizeLimit: 2097152 # 2MB

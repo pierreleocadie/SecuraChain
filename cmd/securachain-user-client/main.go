@@ -138,7 +138,7 @@ func main() { //nolint: funlen, gocyclo
 			}
 			log.Debugln("Received StorageNodeResponse message from ", msg.GetFrom().String())
 			log.Debugln("StorageNodeResponse: ", string(msg.Data))
-			addFileTransaction, err := transaction.DeserializeAddFileTransaction(msg.Data)
+			addFileTransaction, err := transaction.DeserializeTransaction(msg.Data)
 			if err != nil {
 				log.Errorln("Error deserializing AddFileTransaction : ", err)
 				continue
@@ -148,14 +148,14 @@ func main() { //nolint: funlen, gocyclo
 				log.Errorln("Error getting public key : ", err)
 				continue
 			}
-			if bytes.Equal(addFileTransaction.OwnerAddress, ecdsaPubKeyByte) {
+			if bytes.Equal(addFileTransaction.(*transaction.AddFileTransaction).OwnerAddress, ecdsaPubKeyByte) {
 				log.Debugln("Owner of the file is the current user")
-				filename, err := aesKey.DecryptData(addFileTransaction.Filename)
+				filename, err := aesKey.DecryptData(addFileTransaction.(*transaction.AddFileTransaction).Filename)
 				if err != nil {
 					log.Errorln("Error decrypting filename : ", err)
 					continue
 				}
-				fileExtension, err := aesKey.DecryptData(addFileTransaction.Extension)
+				fileExtension, err := aesKey.DecryptData(addFileTransaction.(*transaction.AddFileTransaction).Extension)
 				if err != nil {
 					log.Errorln("Error decrypting file extension : ", err)
 					continue

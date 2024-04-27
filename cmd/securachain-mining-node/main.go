@@ -1,15 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
 	"path/filepath"
 	"slices"
+	"time"
 
+	"github.com/jinzhu/copier"
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
+	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
@@ -23,16 +27,18 @@ import (
 
 var (
 	yamlConfigFilePath     = flag.String("config", "", "Path to the yaml config file")
+	generateKeys           = flag.Bool("genKeys", false, "Generate new ECDSA and AES keys to the paths specified in the config file")
 	requiresSync           = false
 	requiresPostSync       = false
 	blockProcessingEnabled = true
 	pendingBlocks          = []*block.Block{}
-	blockReceieved         = make(chan *block.Block, 15)
+	trxPool                = []transaction.Transaction{}
+	stopMiningChan         = make(chan consensus.StopMiningSignal)
 )
 
 func main() {
-	log := ipfsLog.Logger("full-node")
-	if err := ipfsLog.SetLogLevel("full-node", "DEBUG"); err != nil {
+	log := ipfsLog.Logger("mining-node")
+	if err := ipfsLog.SetLogLevel("mining-node", "DEBUG"); err != nil {
 		log.Errorln("Failed to set log level : ", err)
 	}
 
@@ -44,11 +50,21 @@ func main() {
 	// Load the config file
 	cfg := node.LoadConfig(yamlConfigFilePath, log)
 
+	if *generateKeys {
+		node.GenerateKeys(cfg, log)
+	}
+
+	ecdsaKeyPair, _ := node.LoadKeys(cfg, log)
+
 	// Create the SecuraChain data directory
 	securaChainDataDirectory, err := node.CreateSecuraChainDataDirectory(log, cfg)
 	if err != nil {
 		log.Panicf("Error creating the SecuraChain data directory : %s\n", err)
 	}
+
+	// For the mining process
+	var previousBlock *block.Block = nil
+	currentBlock := block.NewBlock(trxPool, nil, 1, ecdsaKeyPair)
 
 	/*
 	* IPFS NODE
@@ -164,7 +180,20 @@ func main() {
 		log.Panicf("Failed to join SendFiles topic : %s\n", err)
 	}
 
+	// Join the topic StorageNodeResponse to receive transactions
+	storageNodeResponseTopic, err := ps.Join(cfg.StorageNodeResponseStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join StorageNodeResponse topic : %s\n", err)
+	}
+
+	// Subscribe to the topic StorageNodeResponse to receive transactions
+	subStorageNodeResponse, err := storageNodeResponseTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to StorageNodeResponse topic : %s\n", err)
+	}
+
 	// Service 1 : Receiption of blocks
+	blockReceieved := make(chan *block.Block, 15)
 	go func() {
 		for {
 			blockAnnounced, err := fullnode.ReceiveBlock(log, ctx, subBlockAnnouncement)
@@ -248,6 +277,18 @@ func main() {
 				// 5 . Send the block to IPFS
 				if !ipfs.PublishBlock(log, ctx, cfg, nodeIpfs, ipfsAPI, bReceive) {
 					log.Debugln("Error publishing the block to IPFS")
+				}
+
+				bReceivedHash := fmt.Sprintf("%x", block.ComputeHash(bReceive))
+				bReceivedMinerAddress := fmt.Sprintf("%x", bReceive.MinerAddr)
+				log.Warnln("[NEW BLOCK MINED] Block at height ", bReceive.Height, " with hash ", bReceivedHash, " mined by ", bReceivedMinerAddress, " at ", bReceive.Timestamp, " with ", len(bReceive.Transactions), " transactions stored in the blockchain")
+
+				// 6 . Stop the mining process if a new block with the same height or higher is received
+				// Conflict is implicitely resolved here.
+				// For example : Two miners mine a block at the same height. The first block received will be stored in the blockchain
+				if bReceive.Height >= currentBlock.Height {
+					log.Warnln("[NEW BLOCK MINED] Block at the same height or higher than the current block so stopping the mining process")
+					stopMiningChan <- consensus.StopMiningSignal{Stop: true, BlockReceived: bReceive}
 				}
 			}
 		}
@@ -465,6 +506,129 @@ func main() {
 			if !fullnode.SendOwnersFiles(log, ctx, cfg, ownerAddressStr, sendFilesTopic) {
 				log.Debugln("Error sending the files of the owner")
 				continue
+			}
+		}
+	}()
+
+	// Handle the transactions received from the storage nodes
+	go func() {
+		log.Debug("Waiting for 10 seconds before starting the transaction processing")
+		time.Sleep(30 * time.Second)
+		for {
+			msg, err := subStorageNodeResponse.Next(ctx)
+			if err != nil {
+				log.Debugln("Error getting message from the network : ", err)
+				break
+			}
+			trx, err := transaction.DeserializeTransaction(msg.Data)
+			if err != nil {
+				log.Debugln("Error deserializing the transaction : ", err)
+				continue
+			}
+			if !consensus.ValidateTransaction(trx) {
+				log.Warn("Transaction is invalid")
+				continue
+			}
+			trxPool = append(trxPool, trx)
+			log.Debugf("Transaction pool size : %d", len(trxPool))
+		}
+	}()
+
+	// Mining block
+	go func() {
+		log.Debug("Waiting for 30 seconds before starting the mining process")
+		time.Sleep(30 * time.Second)
+		log.Info("Mining process started")
+		lastBlockStored := blockchain.GetLastBlock(log)
+		for {
+			// The mining process requires the blockchain to be up to date
+			if !blockProcessingEnabled || requiresSync || requiresPostSync {
+				continue
+			}
+			if lastBlockStored != nil {
+				previousBlock = &block.Block{}
+				err := copier.Copy(previousBlock, lastBlockStored)
+				if err != nil {
+					log.Errorln("Error copying the last block stored : ", err)
+				}
+				previousBlockHash := block.ComputeHash(previousBlock)
+				log.Infof("Last block stored on chain : %v at height %d", previousBlockHash, previousBlock.Height)
+				currentBlock = block.NewBlock(trxPool, previousBlockHash, previousBlock.Height+1, ecdsaKeyPair)
+				trxPool = []transaction.Transaction{}
+			} else {
+				log.Infof("No block stored on chain")
+			}
+
+			log.Debug("Mining a new block")
+
+			currentBlock.MerkleRoot = currentBlock.ComputeMerkleRoot()
+
+			stoppedEarly, blockReceivedEarly := consensus.MineBlock(currentBlock, stopMiningChan)
+			if stoppedEarly {
+				log.Info("Mining stopped early because of a new block received")
+				lastBlockStored = &block.Block{} // Reset the last block stored and be sure its not nil to avoid errors with copier
+				err := copier.Copy(lastBlockStored, blockReceivedEarly)
+				if err != nil {
+					log.Errorln("Error copying the block received early : ", err)
+				}
+
+				// If there are transactions that are in my current block but not in the received block
+				// I need to put them back in the transaction pool to be sure they are mined
+				// We can simply compare the merkle root of the two blocks to know if there are transactions that are not in the received block
+				if !bytes.Equal(currentBlock.MerkleRoot, blockReceivedEarly.MerkleRoot) {
+					log.Debug("Some transactions in the current block are not in the received block")
+					// We can simply use TransactionID to know which transactions are not in the received block
+					// We can then put them back in the transaction pool
+					currentBlockTransactionIDs := currentBlock.GetTransactionIDsMap()
+					blockReceivedEarlyTransactionIDs := blockReceivedEarly.GetTransactionIDsMap()
+					for trxID, trxData := range currentBlockTransactionIDs {
+						if _, ok := blockReceivedEarlyTransactionIDs[trxID]; !ok {
+							trxPool = append(trxPool, trxData)
+						}
+					}
+				}
+				continue
+			}
+
+			err = currentBlock.SignBlock(ecdsaKeyPair)
+			if err != nil {
+				log.Errorln("Error signing the block : ", err)
+				continue
+			}
+
+			currentBlockHashEncoded := fmt.Sprintf("%x", block.ComputeHash(currentBlock))
+			log.Infoln("Current block hash : ", currentBlockHashEncoded, " TIMESTAMP : ", currentBlock.Timestamp)
+			if previousBlock != nil {
+				previousBlockHashEncoded := fmt.Sprintf("%x", block.ComputeHash(previousBlock))
+				log.Infoln("Previous block hash : ", previousBlockHashEncoded, " TIMESTAMP : ", previousBlock.Timestamp)
+			}
+			if !consensus.ValidateBlock(currentBlock, previousBlock) {
+				log.Warn("Block is invalid")
+				// Return transactions of the current block to the transaction pool
+				trxPool = append(trxPool, currentBlock.Transactions...)
+				continue
+			}
+
+			serializedBlock, err := currentBlock.Serialize()
+			if err != nil {
+				log.Errorln("Error serializing the block : ", err)
+				continue
+			}
+			if err = blockAnnouncementTopic.Publish(ctx, serializedBlock); err != nil {
+				log.Errorln("Error publishing the block : ", err)
+				continue
+			}
+
+			log.Infof("Block mined and published with hash %v at height %d", block.ComputeHash(currentBlock), currentBlock.Height)
+
+			// To be sure we retrieve the last block stored
+			for {
+				log.Debug("Waiting for the last block stored to be updated and retrieved")
+				lastBlockStored = blockchain.GetLastBlock(log)
+				if lastBlockStored != nil && lastBlockStored.Height >= currentBlock.Height {
+					break
+				}
+				time.Sleep(5 * time.Second)
 			}
 		}
 	}()

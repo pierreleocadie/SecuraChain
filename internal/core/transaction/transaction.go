@@ -3,6 +3,8 @@ package transaction
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"fmt"
+	"reflect"
 
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
@@ -41,11 +43,39 @@ type TransactionWrapper struct {
 	Data json.RawMessage `json:"data"`
 }
 
-// TransactionFactory is the interface for creating transactions
-type Factory interface {
-	CreateTransaction(data []byte) (Transaction, error)
+func SerializeTransaction(tx Transaction) ([]byte, error) {
+	data, err := tx.Serialize()
+	if err != nil {
+		return nil, err
+	}
+
+	wrapper := TransactionWrapper{
+		Type: reflect.TypeOf(tx).Elem().Name(),
+		Data: data,
+	}
+
+	return json.Marshal(wrapper)
 }
 
-func DeserializeTransaction(data []byte, factory Factory) (Transaction, error) {
-	return factory.CreateTransaction(data)
+func DeserializeTransaction(data []byte) (Transaction, error) {
+	var wrapper TransactionWrapper
+	if err := json.Unmarshal(data, &wrapper); err != nil {
+		return nil, err
+	}
+
+	var tx Transaction
+	switch wrapper.Type {
+	case "AddFileTransaction":
+		tx = &AddFileTransaction{}
+	case "DeleteFileTransaction":
+		tx = &DeleteFileTransaction{}
+	default:
+		return nil, fmt.Errorf("unknown transaction type: %s", wrapper.Type)
+	}
+
+	if err := json.Unmarshal(wrapper.Data, tx); err != nil {
+		return nil, err
+	}
+
+	return tx, nil
 }

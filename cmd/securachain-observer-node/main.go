@@ -67,14 +67,6 @@ func main() { //nolint: funlen
 		log.Panicln("Error loading config file : ", err)
 	}
 
-	// pubsub.GossipSubD = 8
-	// pubsub.GossipSubDlo = 5
-	// pubsub.GossipSubDhi = 10
-	// pubsub.GossipSubDscore = 8
-	// pubsub.GossipSubDout = 8
-	// pubsub.GossipSubDlazy = 8
-	// pubsub.GossipSubGossipRetransmission = 12
-
 	/*
 	* NODE LIBP2P
 	 */
