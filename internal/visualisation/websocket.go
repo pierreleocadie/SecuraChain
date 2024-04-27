@@ -46,11 +46,11 @@ func SendDataToClients(clientsMutex *sync.Mutex, clients map[*websocket.Conn]boo
 //
 // The returned http.HandlerFunc upgrades the connection to a WebSocket connection and calls the `handleConnections`
 // function to handle incoming WebSocket connections.
-func CreateHandler(upgrader websocket.Upgrader, data *[]Data, clientsMutex *sync.Mutex,
+func CreateHandler(upgrader websocket.Upgrader, data *[]Data, blockchain *[]Block, clientsMutex *sync.Mutex,
 	clients map[*websocket.Conn]bool, log *ipfsLog.ZapEventLogger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Vous pouvez maintenant utiliser someParam dans votre gestionnaire
-		handleConnections(w, r, upgrader, *data, clientsMutex, clients, log)
+		handleConnections(w, r, upgrader, *data, *blockchain, clientsMutex, clients, log)
 	}
 }
 
@@ -70,7 +70,7 @@ func CreateHandler(upgrader websocket.Upgrader, data *[]Data, clientsMutex *sync
 //
 // Returns: None
 func handleConnections(w http.ResponseWriter, r *http.Request,
-	upgrader websocket.Upgrader, data []Data, clientsMutex *sync.Mutex,
+	upgrader websocket.Upgrader, data []Data, blockchain []Block, clientsMutex *sync.Mutex,
 	clients map[*websocket.Conn]bool, log *ipfsLog.ZapEventLogger) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -93,6 +93,12 @@ func handleConnections(w http.ResponseWriter, r *http.Request,
 		Data: data,
 	}
 	SendDataToClients(clientsMutex, clients, initDataMessage, log)
+
+	initBlockchainDataMessage := WebSocketMessage{
+		Type: "initBlockchainData",
+		Data: blockchain,
+	}
+	SendDataToClients(clientsMutex, clients, initBlockchainDataMessage, log)
 
 	for {
 		_, _, err := ws.ReadMessage()
