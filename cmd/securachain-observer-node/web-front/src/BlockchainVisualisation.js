@@ -139,9 +139,19 @@ const BlockchainVisualisation = ({ blocks, chains }) => {
                     zIndex: 1000
                 }}>
                     <h2>Block Details</h2>
-                    <p>Hash: {selectedBlock.hash}</p>
-                    <p>Height: {selectedBlock.height}</p>
-                    <p>Previous: {selectedBlock.previous}</p>
+                    <p><b>Hash:</b> {selectedBlock.hash}</p>
+                    <p><b>Version:</b> {selectedBlock.version}</p>
+                    <p><b>Previous:</b> {selectedBlock.prev_block}</p>
+                    <p><b>Merkle root:</b> {selectedBlock.merkle_root}</p>
+                    <p><b>Target bits:</b> {selectedBlock.target_bits}</p>
+                    <p><b>Timestamp:</b> {selectedBlock.timestamp}</p>
+                    <p><b>Height:</b> {selectedBlock.height}</p>
+                    <p><b>Nonce:</b> {selectedBlock.nonce}</p>
+                    <p><b>Miner Address:</b> {selectedBlock.miner_addr}</p>
+                    <p><b>Signature:</b> {selectedBlock.signature}</p>
+                    <p><b>Number of transactions:</b> {selectedBlock.transactions ? selectedBlock.transactions.length : 0}</p>
+                    {/* <h3>Transactions</h3>
+                    <p>{JSON.stringify(selectedBlock.transactions, _, "\n")}</p> */}
                     <button onClick={closeModal}>Close</button>
                 </div>
             )}
