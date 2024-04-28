@@ -36,6 +36,25 @@ var (
 	pendingBlocks          = []*block.Block{}
 	trxPool                = []transaction.Transaction{}
 	stopMiningChan         = make(chan consensus.StopMiningSignal)
+
+	// A map to store the conflicts and help to move transactions that are not in the block of the main branch to be moved from orphaned blocks to the transaction pool
+	// to be mined again and be sure those transactions are in the main branch and not lost
+	// The key is block hash and the value is a list of block hashes that are in conflict between them
+	// For example :
+	// - Block 1 - prevBlock : Genesis block - hash : 0x1234
+	// - Block 2 - prevBlock : Block 1 - hash : 0x5678
+	// - Block 3 - prevBlock : Block 2 - hash : 0x9abc
+	// - Block 4.0 - prevBlock : Block 3 - hash : 0xdef0
+	// - Block 4.1 - prevBlock : Block 3 - hash : 0xdef1
+	// - Block 4.2 - prevBlock : Block 3 - hash : 0xdef2
+	// - Block 5 - prevBlock : Block 4.0 - hash : 0x1edf
+	// In this case, there is a conflict between block 4 with hash 0xdef0, 0xdef1 and 0xdef2
+	// So conflictsMem will look like this :
+	// conflictsMem = {
+	//	0x9abc : [0xdef0, 0xdef1, 0xdef2]
+	//	0xdef0 : [0x1edf]
+	// }
+	conflictMem = make(map[string][]string)
 )
 
 func main() {
@@ -201,7 +220,7 @@ func main() {
 	}
 
 	// Service 1 : Receiption of blocks
-	blockReceieved := make(chan *block.Block, 15)
+	blockReceieved := make(chan *block.Block, 100)
 	go func() {
 		for {
 			blockAnnounced, err := fullnode.ReceiveBlock(log, ctx, subBlockAnnouncement)
@@ -290,6 +309,31 @@ func main() {
 				bReceivedHash := fmt.Sprintf("%x", block.ComputeHash(bReceive))
 				bReceivedMinerAddress := fmt.Sprintf("%x", bReceive.MinerAddr)
 				log.Warnln("[NEW BLOCK MINED] Block at height ", bReceive.Height, " with hash ", bReceivedHash, " mined by ", bReceivedMinerAddress, " at ", bReceive.Timestamp, " with ", len(bReceive.Transactions), " transactions stored in the blockchain")
+
+				// To handle conflicts - transactions
+				if bReceive.Height == currentBlock.Height-1 {
+					currentPrevBlock, err := blockchain.GetBlock(log, currentBlock.PrevBlock)
+					if err != nil {
+						log.Errorln("Error getting the previous block : ", err)
+					}
+					if bytes.Equal(currentPrevBlock.PrevBlock, bReceive.PrevBlock) {
+						// The block received have the same parent as the previous block of the current block
+						parentHash := fmt.Sprintf("%x", bReceive.PrevBlock)
+						childHash := fmt.Sprintf("%x", block.ComputeHash(bReceive))
+						currentPrevBlockHash := fmt.Sprintf("%x", block.ComputeHash(currentPrevBlock))
+
+						if _, exist := conflictMem[parentHash]; !exist {
+							conflictMem[parentHash] = []string{childHash, currentPrevBlockHash}
+							log.Info("Conflict detected between ", childHash, " and ", currentPrevBlockHash)
+						} else {
+							conflictMem[parentHash] = append(conflictMem[parentHash], childHash)
+							if !slices.Contains(conflictMem[parentHash], currentPrevBlockHash) {
+								conflictMem[parentHash] = append(conflictMem[parentHash], currentPrevBlockHash)
+							}
+							log.Info("Conflict detected between ", childHash, " and ", currentPrevBlockHash)
+						}
+					}
+				}
 
 				// 6 . Stop the mining process if a new block with the same height or higher is received
 				// Conflict is implicitely resolved here.
@@ -560,6 +604,44 @@ func main() {
 					log.Errorln("Error copying the last block stored : ", err)
 				}
 				previousBlockHash := block.ComputeHash(previousBlock)
+
+				tmpConflictMemTrxPool := make(map[string]transaction.Transaction)
+				for parentHash, childrenHashes := range conflictMem {
+					parentBlock, err := blockchain.GetBlock(log, []byte(parentHash))
+					if err != nil {
+						log.Errorln("Error getting the parent block : ", err)
+					}
+					if len(childrenHashes) == 1 && parentBlock.Height == previousBlock.Height-1 {
+						// Delete the parent block from the conflictMem
+						delete(conflictMem, parentHash)
+					} else if len(childrenHashes) > 1 && parentBlock.Height == previousBlock.Height-1 {
+						for _, childHash := range childrenHashes {
+							previousBlockHashStr := fmt.Sprintf("%x", previousBlockHash)
+							if childHash == previousBlockHashStr {
+								continue
+							}
+							childBlock, err := blockchain.GetBlock(log, []byte(childHash))
+							if err != nil {
+								log.Errorln("Error getting the child block : ", err)
+								continue
+							}
+							childBlockTransactionIDs := childBlock.GetTransactionIDsMap()
+							for trxID, trxData := range childBlockTransactionIDs {
+								if _, ok := previousBlock.GetTransactionIDsMap()[trxID]; !ok {
+									tmpConflictMemTrxPool[trxID] = trxData
+								}
+							}
+						}
+						// Delete the parent block from the conflictMem
+						delete(conflictMem, parentHash)
+					}
+				}
+
+				// Add the transactions of the conflictMem to the transaction pool
+				for _, trxData := range tmpConflictMemTrxPool {
+					trxPool = append(trxPool, trxData)
+				}
+
 				log.Infof("Last block stored on chain : %v at height %d", previousBlockHash, previousBlock.Height)
 				currentBlock = block.NewBlock(trxPool, previousBlockHash, previousBlock.Height+1, ecdsaKeyPair)
 				trxPool = []transaction.Transaction{}
