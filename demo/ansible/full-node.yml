@@ -1,0 +1,20 @@
+- name: Configure the full node servers
+  hosts: full_node_servers
+  become: yes
+  vars:
+    repo_server_ip: "{{ hostvars[groups['repo_server'][0]]['ansible_host'] }}"
+  tasks:
+    - name: Download the full node script
+      ansible.builtin.shell: |
+        curl -o ~/securachain-full-node http://{{ repo_server_ip }}:3000/uploads/securachain-full-node && chmod +x ~/securachain-full-node
+    
+    - name: Download the configuration file
+      ansible.builtin.shell: |
+        curl -o ~/config-full.yml http://{{ repo_server_ip }}:3000/uploads/config-full.yml
+    
+    - name: Run the full node script in the background
+      ansible.builtin.shell: |
+        nohup ~/securachain-full-node -config ~/config-full.yml > ~/full_node.log 2>&1 &
+      args:
+        executable: /bin/bash
+        chdir: ~/
