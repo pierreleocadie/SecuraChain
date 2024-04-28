@@ -2,16 +2,16 @@ package network
 
 import (
 	"context"
-	"log"
 	"time"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 )
 
 // FIXME: This function does not work as intended. It should remove peers from the peerstore if they are unreachable.
-func CleanUpPeers(ctx context.Context, host host.Host, cfg *config.Config) {
+func CleanUpPeers(log *ipfsLog.ZapEventLogger, ctx context.Context, host host.Host, cfg *config.Config) {
 	ticker := time.NewTicker(cfg.DiscoveryRefreshInterval) // adjust interval to your needs
 	defer ticker.Stop()
 
@@ -32,14 +32,14 @@ func CleanUpPeers(ctx context.Context, host host.Host, cfg *config.Config) {
 				s, err := host.NewStream(ctx, p, ping.ID)
 				if err != nil {
 					// remove or mark the peer as inactive in the peerstore
-					log.Printf("Peer %s is unreachable: %v", p, err)
+					log.Errorln("Peer %s is unreachable: %v", p, err)
 					host.Peerstore().RemovePeer(p)
-					log.Printf("Peer %s removed from peerstore", p)
+					log.Errorln("Peer %s removed from peerstore", p)
 					continue
 				}
 				err = s.Close()
 				if err != nil {
-					log.Printf("Error closing stream: %v", err)
+					log.Errorln("Error closing stream: %v", err)
 				}
 			}
 		case <-ctx.Done():

@@ -2,16 +2,16 @@ package ipfs
 
 import (
 	"context"
-	"log"
 	"sync"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	icore "github.com/ipfs/kubo/core/coreiface"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
 // This function allows a node to connect to other peers given in an IPFS network
-func ConnectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) error {
+func ConnectToPeers(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfs icore.CoreAPI, peers []string) error {
 	var wg sync.WaitGroup
 	peerInfos := make(map[peer.ID]*peer.AddrInfo, len(peers))
 	for _, addrStr := range peers {
@@ -36,7 +36,7 @@ func ConnectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) err
 			defer wg.Done()
 			err := ipfs.Swarm().Connect(ctx, *peerInfo)
 			if err != nil {
-				log.Printf("failed to connect to %s: %s", peerInfo.ID, err)
+				log.Warnln("failed to connect to %s: %s", peerInfo.ID, err)
 			}
 		}(peerInfo)
 	}

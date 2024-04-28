@@ -4,6 +4,7 @@ package consensus
 import (
 	"testing"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
@@ -11,6 +12,8 @@ import (
 
 func TestValidateBlock(t *testing.T) {
 	t.Parallel()
+
+	log := ipfsLog.Logger("test")
 
 	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
 	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
@@ -26,7 +29,7 @@ func TestValidateBlock(t *testing.T) {
 		t.Errorf("Failed to sign block: %s", err)
 	}
 
-	if !ValidateBlock(prevBlock, nil) {
+	if !ValidateBlock(log, prevBlock, nil) {
 		t.Errorf("ValidateBlock failed for the genesis block")
 	}
 
@@ -42,7 +45,7 @@ func TestValidateBlock(t *testing.T) {
 		t.Errorf("Failed to sign block: %s", err)
 	}
 
-	if !ValidateBlock(validBlock, prevBlock) {
+	if !ValidateBlock(log, validBlock, prevBlock) {
 		t.Errorf("ValidateBlock failed for a valid block")
 	}
 
@@ -56,7 +59,7 @@ func TestValidateBlock(t *testing.T) {
 		t.Errorf("Failed to sign block: %s", err)
 	}
 
-	if ValidateBlock(invalidBlock, validBlock) {
+	if ValidateBlock(log, invalidBlock, validBlock) {
 		t.Errorf("ValidateBlock succeeded for an invalid block with incorrect previous hash")
 	}
 }
