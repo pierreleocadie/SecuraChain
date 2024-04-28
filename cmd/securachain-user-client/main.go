@@ -203,39 +203,54 @@ func main() { //nolint: funlen, gocyclo
 				log.Errorf("Failed to get next message from SendFiles topic: %s", err)
 				continue
 			}
+
 			log.Debugln("Received SendFiles message from ", msg.GetFrom().String())
 			log.Debugln("SendFiles: ", string(msg.Data))
+
 			filesRegistry, err := registry.DeserializeRegistry[registry.RegistryMessage](log, msg.Data)
 			if err != nil {
 				log.Errorln("Error deserializing RegistryMessage : ", err)
 				continue
 			}
+
 			ownerECDSAPubKeyBytes, err := ecdsaKeyPair.PublicKeyToBytes()
 			if err != nil {
 				log.Errorln("Error getting public key : ", err)
 				continue
 			}
+
 			ownerECDSAPubKeyStr := fmt.Sprintf("%x", ownerECDSAPubKeyBytes)
 			if filesRegistry.OwnerPublicKey == ownerECDSAPubKeyStr {
 				log.Debugln("Owner of the files is the current user")
-				filesListStr := ""
+
+				fileListContainer := container.NewVBox()
+
 				for _, fileRegistry := range filesRegistry.Registry {
 					filename, err := aesKey.DecryptData(fileRegistry.Filename)
 					if err != nil {
 						log.Errorln("Error decrypting filename : ", err)
 						continue
 					}
+
 					fileExtension, err := aesKey.DecryptData(fileRegistry.Extension)
 					if err != nil {
 						log.Errorln("Error decrypting file extension : ", err)
 						continue
 					}
-					fileCid := fileRegistry.FileCid.String()
-					filesListStr += fmt.Sprintf("Filename: %s%s, CID: %s\n", filename, fileExtension, fileCid)
+
+					label := widget.NewLabel(string(filename) + string(fileExtension) + " - " + fileRegistry.FileCid.String())
+					downloadButton := client.DownloadButtonWidget(log, ctx, cfg, ipfsAPI, fileRegistry.FileCid, string(filename), string(fileExtension), w)
+
+					// Add the label and the button to a horizontal container, then to the vertical container
+					fileEntry := container.NewHBox(label, downloadButton)
+					fileListContainer.Add(fileEntry)
 				}
-				dialog.ShowInformation("Files List", filesListStr, w)
+
+				fileDialog := dialog.NewCustom("My files", "Close", fileListContainer, w)
+				fileDialog.Show()
 			}
 		}
+
 	}()
 
 	/*
@@ -305,7 +320,7 @@ func main() { //nolint: funlen, gocyclo
 	}(protocolUpdatedSub)
 
 	/*
-	* DISPLAY PEER CONNECTEDNESS CHANGES
+	 * DISPLAY PEER CONNECTEDNESS CHANGES
 	 */
 	// Subscribe to EvtPeerConnectednessChanged events
 	subNet, err := host.EventBus().Subscribe(new(event.EvtPeerConnectednessChanged))

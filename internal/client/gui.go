@@ -5,13 +5,15 @@ import (
 	"errors"
 	"net/url"
 
+	"github.com/ipfs/go-cid"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/ipfs/kubo/core"
-	iface "github.com/ipfs/kubo/core/coreiface"
+	icore "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
+	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -198,7 +200,7 @@ func AskFilesListButton(w fyne.Window, cfg *config.Config, ecdsaKeyPair *ecdsa.K
 }
 
 func SendFileButton(ctx context.Context, cfg *config.Config, w fyne.Window, selectedFile *widget.Label,
-	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, nodeIpfs *core.IpfsNode, ipfsAPI iface.CoreAPI,
+	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, nodeIpfs *core.IpfsNode, ipfsAPI icore.CoreAPI,
 	clientAnnouncementChan chan *transaction.ClientAnnouncement,
 	log *ipfsLog.ZapEventLogger) *widget.Button {
 	return widget.NewButton("Send File", func() {
@@ -223,4 +225,25 @@ func SendFileButton(ctx context.Context, cfg *config.Config, w fyne.Window, sele
 
 		dialog.ShowInformation("Announcement Sent", "Announcement sent successfully. Please wait for some storage nodes to download your file.", w)
 	})
+}
+
+func DownloadButtonWidget(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, ipfsAPI icore.CoreAPI,
+	fileCid cid.Cid, filename string, extension string, w fyne.Window) *widget.Button {
+
+	downloadButton := widget.NewButton("Download", func() {
+
+		err := DownloadFile(log, ctx, config, ipfsAPI, fileCid, filename, extension)
+		if err != nil {
+			fyne.CurrentApp().SendNotification(fyne.NewNotification("Download Error", err.Error()))
+			log.Errorln("Error downloading file: ", err)
+		} else {
+			downloadPath := utils.GetDownloadPath(log)
+			dialog.ShowInformation("Download Complete", "File downloaded to: "+downloadPath+filename+extension, w)
+			log.Debugln("File downloaded to: ", downloadPath+filename+extension)
+		}
+
+	})
+
+	log.Debugln("Download button created for file: ", filename+extension)
+	return downloadButton
 }
