@@ -1,0 +1,42 @@
+- name: Configure the storage node servers
+  hosts: storage_node_servers
+  become: yes
+  vars:
+    repo_server_ip: "{{ hostvars[groups['repo_server'][0]]['ansible_host'] }}"
+    file_size_limit_choices: [
+      "fileSizeLimit: 2097152", 
+      "fileSizeLimit: 4194304", 
+      "fileSizeLimit: 8388608", 
+      "fileSizeLimit: 16777216", 
+      "fileSizeLimit: 33554432", 
+      "fileSizeLimit: 67108864", 
+      "fileSizeLimit: 134217728", 
+      "fileSizeLimit: 268435456", 
+      "fileSizeLimit: 536870912", 
+      "fileSizeLimit: 1073741824"
+    ]
+  tasks:
+    - name: Download the storage node script
+      ansible.builtin.shell: |
+        curl -o ~/securachain-storage-node http://{{ repo_server_ip }}:3000/uploads/securachain-storage-node && chmod +x ~/securachain-storage-node
+    
+    - name: Download the configuration file
+      ansible.builtin.shell: |
+        curl -o ~/config-storage.yml http://{{ repo_server_ip }}:3000/uploads/config-storage.yml
+    
+    - name: Set a random file size limit
+      set_fact:
+        file_size_limit: "{{ file_size_limit_choices | random }}"
+
+    - name: Update the configuration file with the random file size limit - add at the of config-storage.yml
+      ansible.builtin.lineinfile:
+        path: ~/config-storage.yml
+        line: "{{ file_size_limit }}"
+        insertafter: EOF
+
+    - name: Run the storage node script in the background
+      ansible.builtin.shell: |
+        nohup ~/securachain-storage-node -config ~/config-storage.yml > ~/storage_node.log 2>&1 &
+      args:
+        executable: /bin/bash
+        chdir: ~/
