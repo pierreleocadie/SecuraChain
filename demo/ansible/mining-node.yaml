@@ -1,0 +1,20 @@
+- name: Configure the mining node servers
+  hosts: mining_node_servers
+  become: yes
+  vars:
+    repo_server_ip: "{{ hostvars[groups['repo_server'][0]]['ansible_host'] }}"
+  tasks:
+    - name: Download the mining node script
+      ansible.builtin.shell: |
+        curl -o ~/securachain-mining-node http://{{ repo_server_ip }}:3000/uploads/securachain-mining-node && chmod +x ~/securachain-mining-node
+    
+    - name: Download the configuration file
+      ansible.builtin.shell: |
+        curl -o ~/config.yml http://{{ repo_server_ip }}:3000/uploads/config-mining.yml
+    
+    - name: Run the mining node script in the background
+      ansible.builtin.shell: |
+        nohup ~/securachain-mining-node -config ~/config-mining.yml -genKeys true > ~/mining_node.log 2>&1 &
+      args:
+        executable: /bin/bash
+        chdir: ~/
