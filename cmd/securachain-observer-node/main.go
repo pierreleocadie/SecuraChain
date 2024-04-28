@@ -6,7 +6,6 @@ import (
 	"flag"
 	"net/http"
 	"reflect"
-	"runtime"
 	"slices"
 	"sync"
 	"time"
@@ -96,10 +95,10 @@ func main() { //nolint: funlen
 	* PUBSUB
 	 */
 	ps, err := pubsub.NewGossipSub(ctx, host,
-		pubsub.WithValidateQueueSize(1000),
-		pubsub.WithPeerOutboundQueueSize(1000),
-		pubsub.WithValidateWorkers(runtime.NumCPU()*2),
-		pubsub.WithValidateThrottle(8192*2),
+		// pubsub.WithValidateQueueSize(1000),
+		// pubsub.WithPeerOutboundQueueSize(1000),
+		// pubsub.WithValidateWorkers(runtime.NumCPU()*2),
+		// pubsub.WithValidateThrottle(8192*2),
 	)
 	if err != nil {
 		log.Panicf("Failed to create GossipSub: %s", err)
@@ -114,7 +113,7 @@ func main() { //nolint: funlen
 		log.Warnf("Failed to join NetworkVisualisation topic: %s", err)
 	}
 
-	subNetworkVisualisation, err := networkVisualisationTopic.Subscribe(pubsub.WithBufferSize(1000))
+	subNetworkVisualisation, err := networkVisualisationTopic.Subscribe(/*pubsub.WithBufferSize(1000)*/)
 	if err != nil {
 		log.Warnf("Failed to subscribe to NetworkVisualisation topic: %s", err)
 	}
