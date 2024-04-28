@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/jinzhu/copier"
@@ -54,7 +55,8 @@ var (
 	//	0x9abc : [0xdef0, 0xdef1, 0xdef2]
 	//	0xdef0 : [0x1edf]
 	// }
-	conflictMem = make(map[string][]string)
+	conflictMem     = make(map[string][]string)
+	conflictMemLock sync.Mutex
 )
 
 func main() {
@@ -322,6 +324,7 @@ func main() {
 						childHash := fmt.Sprintf("%x", block.ComputeHash(bReceive))
 						currentPrevBlockHash := fmt.Sprintf("%x", currentBlock.PrevBlock)
 
+						conflictMemLock.Lock()
 						if _, exist := conflictMem[parentHash]; !exist {
 							conflictMem[parentHash] = []string{childHash, currentPrevBlockHash}
 							log.Info("Conflict detected between ", childHash, " and ", currentPrevBlockHash)
@@ -332,6 +335,7 @@ func main() {
 							}
 							log.Info("Conflict detected between ", childHash, " and ", currentPrevBlockHash)
 						}
+						conflictMemLock.Unlock()
 					}
 				}
 
@@ -606,6 +610,7 @@ func main() {
 				previousBlockHash := block.ComputeHash(previousBlock)
 
 				tmpConflictMemTrxPool := make(map[string]transaction.Transaction)
+				conflictMemLock.Lock()
 				for parentHash, childrenHashes := range conflictMem {
 					parentBlock, err := blockchain.GetBlock(log, []byte(parentHash))
 					if err != nil {
@@ -636,6 +641,7 @@ func main() {
 						delete(conflictMem, parentHash)
 					}
 				}
+				conflictMemLock.Unlock()
 
 				// Add the transactions of the conflictMem to the transaction pool
 				for _, trxData := range tmpConflictMemTrxPool {
