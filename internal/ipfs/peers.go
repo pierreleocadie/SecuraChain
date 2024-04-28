@@ -36,7 +36,7 @@ func ConnectToPeers(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfs icore
 			defer wg.Done()
 			err := ipfs.Swarm().Connect(ctx, *peerInfo)
 			if err != nil {
-				log.Errorln("failed to connect to %s: %s", peerInfo.ID, err)
+				log.Warnln("failed to connect to %s: %s", peerInfo.ID, err)
 			}
 		}(peerInfo)
 	}
