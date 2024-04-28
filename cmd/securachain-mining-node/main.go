@@ -320,7 +320,7 @@ func main() {
 						// The block received have the same parent as the previous block of the current block
 						parentHash := fmt.Sprintf("%x", bReceive.PrevBlock)
 						childHash := fmt.Sprintf("%x", block.ComputeHash(bReceive))
-						currentPrevBlockHash := fmt.Sprintf("%x", block.ComputeHash(currentPrevBlock))
+						currentPrevBlockHash := fmt.Sprintf("%x", currentBlock.PrevBlock)
 
 						if _, exist := conflictMem[parentHash]; !exist {
 							conflictMem[parentHash] = []string{childHash, currentPrevBlockHash}
@@ -616,7 +616,7 @@ func main() {
 						delete(conflictMem, parentHash)
 					} else if len(childrenHashes) > 1 && parentBlock.Height == previousBlock.Height-1 {
 						for _, childHash := range childrenHashes {
-							previousBlockHashStr := fmt.Sprintf("%x", previousBlockHash)
+							previousBlockHashStr := fmt.Sprintf("%x", previousBlock.PrevBlock)
 							if childHash == previousBlockHashStr {
 								continue
 							}
