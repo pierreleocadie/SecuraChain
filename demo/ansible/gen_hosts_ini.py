@@ -20,7 +20,7 @@ repo_server = {repo_server_key: instance_details[repo_server_key]}
 del instance_details[repo_server_key]
 
 # Liste des rôles à attribuer aux serveurs restants
-roles = ["bootstrap_node_servers", "mining_node_servers"]
+roles = ["bootstrap_node_servers", "storage_node_servers", "mining_node_servers", "full_node_servers"]
 
 # Initialiser le dictionnaire pour stocker les serveurs sélectionnés par rôle
 selected_servers = {role: [] for role in roles}
