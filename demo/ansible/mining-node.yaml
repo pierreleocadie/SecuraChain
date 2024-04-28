@@ -10,7 +10,7 @@
     
     - name: Download the configuration file
       ansible.builtin.shell: |
-        curl -o ~/config.yml http://{{ repo_server_ip }}:3000/uploads/config-mining.yml
+        curl -o ~/config-mining.yml http://{{ repo_server_ip }}:3000/uploads/config-mining.yml
     
     - name: Run the mining node script in the background
       ansible.builtin.shell: |
