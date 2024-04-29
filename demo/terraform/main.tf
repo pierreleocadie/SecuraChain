@@ -27,7 +27,22 @@ provider "linode" {
 }
 
 locals {
-    regions =  ["ca-central", "us-east", "us-central", "us-ord", "us-sea", "us-mia", "ap-south", "jp-osa", "jp-northeast", "id-cgk", "in-maa", "ap-west", "eu-west", "eu-central", "nl-ams", "es-mad", "it-mil", "fr-par", "ap-southeast", "br-gru"]
+    regions =  [
+        "ca-central", 
+        "us-east",
+        "us-central", 
+        "us-mia", 
+        "ap-south", 
+        "jp-osa", 
+        "in-maa", 
+        "ap-west", 
+        "eu-west", 
+        "eu-central", 
+        "nl-ams",  
+        "it-mil",  
+        "ap-southeast", 
+        "br-gru"
+    ]
 }
 
 resource "linode_instance" "nanode" {
