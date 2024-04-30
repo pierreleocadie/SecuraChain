@@ -353,7 +353,7 @@ func main() { //nolint: funlen, gocyclo
 			)
 
 			// Send the transaction to the storage node response topic
-			transactionBytes, err := trx.Serialize()
+			transactionBytes, err := transaction.SerializeTransaction(trx)
 			if err != nil {
 				log.Errorf("Failed to serialize transaction: %s", err)
 				continue
