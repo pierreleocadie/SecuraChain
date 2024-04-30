@@ -1,0 +1,10 @@
+- name: Reboot the network
+  hosts: all
+  become: yes
+  tasks:
+    - name: Reboot the network
+      ansible.builtin.shell: |
+        sudo reboot
+      args:
+        executable: /bin/bash
+        chdir: ~/
