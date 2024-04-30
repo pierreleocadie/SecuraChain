@@ -36,7 +36,7 @@
 
     - name: Run the storage node script in the background
       ansible.builtin.shell: |
-        nohup ~/securachain-storage-node -config ~/config-storage.yml > ~/storage_node.log 2>&1 &
+        nohup ~/securachain-storage-node -config ~/config-storage.yml -genKeys true > ~/storage_node.log 2>&1 &
       args:
         executable: /bin/bash
         chdir: ~/
