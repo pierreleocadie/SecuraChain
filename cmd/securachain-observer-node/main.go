@@ -6,7 +6,6 @@ import (
 	"flag"
 	"net/http"
 	"reflect"
-	"slices"
 	"sync"
 	"time"
 
@@ -94,12 +93,11 @@ func main() { //nolint: funlen
 	/*
 	* PUBSUB
 	 */
-	ps, err := pubsub.NewGossipSub(ctx, host,
-		// pubsub.WithValidateQueueSize(1000),
-		// pubsub.WithPeerOutboundQueueSize(1000),
-		// pubsub.WithValidateWorkers(runtime.NumCPU()*2),
-		// pubsub.WithValidateThrottle(8192*2),
-	)
+	ps, err := pubsub.NewGossipSub(ctx, host) // pubsub.WithValidateQueueSize(1000),
+	// pubsub.WithPeerOutboundQueueSize(1000),
+	// pubsub.WithValidateWorkers(runtime.NumCPU()*2),
+	// pubsub.WithValidateThrottle(8192*2),
+
 	if err != nil {
 		log.Panicf("Failed to create GossipSub: %s", err)
 	}
@@ -113,7 +111,7 @@ func main() { //nolint: funlen
 		log.Warnf("Failed to join NetworkVisualisation topic: %s", err)
 	}
 
-	subNetworkVisualisation, err := networkVisualisationTopic.Subscribe(/*pubsub.WithBufferSize(1000)*/)
+	subNetworkVisualisation, err := networkVisualisationTopic.Subscribe( /*pubsub.WithBufferSize(1000)*/ )
 	if err != nil {
 		log.Warnf("Failed to subscribe to NetworkVisualisation topic: %s", err)
 	}
@@ -419,35 +417,35 @@ func main() { //nolint: funlen
 					}
 
 					// Process data to detect deconnected peers and delete them from the data
-					for _, peer := range newData {
-						for _, connectedPeer := range peer.ConnectedPeers {
-							if !slices.Contains(mapData[connectedPeer].ConnectedPeers, peer.PeerID) {
-								// Remove the peer from the connected peers list
-								for i := 0; i < len(peer.ConnectedPeers); i++ {
-									if peer.ConnectedPeers[i] == connectedPeer {
-										// Shift elements left
-										peer.ConnectedPeers = append(peer.ConnectedPeers[:i], peer.ConnectedPeers[i+1:]...)
-									}
-								}
-							}
-						}
-					}
+					// for _, peer := range newData {
+					// 	for _, connectedPeer := range peer.ConnectedPeers {
+					// 		if !slices.Contains(mapData[connectedPeer].ConnectedPeers, peer.PeerID) {
+					// 			// Remove the peer from the connected peers list
+					// 			for i := 0; i < len(peer.ConnectedPeers); i++ {
+					// 				if peer.ConnectedPeers[i] == connectedPeer {
+					// 					// Shift elements left
+					// 					peer.ConnectedPeers = append(peer.ConnectedPeers[:i], peer.ConnectedPeers[i+1:]...)
+					// 				}
+					// 			}
+					// 		}
+					// 	}
+					// }
 
-					for _, value := range newData {
-						if len(value.ConnectedPeers) == 0 {
-							delete(mapData, value.PeerID)
-						}
-					}
+					// for _, value := range newData {
+					// 	if len(value.ConnectedPeers) == 0 {
+					// 		delete(mapData, value.PeerID)
+					// 	}
+					// }
 
-					newData2 := make([]visualisation.Data, 0, len(mapData))
-					for _, value := range mapData {
-						newData2 = append(newData2, value)
-					}
+					// newData2 := make([]visualisation.Data, 0, len(mapData))
+					// for _, value := range mapData {
+					// 	newData2 = append(newData2, value)
+					// }
 
 					// Delete data
 					data = nil
 					// Add the new data
-					data = append(data, newData2...)
+					data = append(data, newData...)
 					diffData := visualisation.NewDiffData(oldData, data)
 					visualisation.SendDataToClients(&clientsMutex, clients, visualisation.WebSocketMessage{Type: "dataUpdate", Data: diffData}, log)
 				}
