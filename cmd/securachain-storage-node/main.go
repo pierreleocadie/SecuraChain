@@ -679,7 +679,7 @@ func main() { //nolint: funlen, gocyclo
 			time.Sleep(5 * time.Second)
 			data := &visualisation.Data{
 				PeerID:   host.ID().String(),
-				NodeType: "MiningNode",
+				NodeType: "StorageNode",
 				ConnectedPeers: func() []string {
 					peers := make([]string, 0)
 					for _, peer := range host.Network().Peers() {
