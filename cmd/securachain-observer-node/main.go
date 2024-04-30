@@ -35,11 +35,11 @@ var (
 			return true // Ne faites pas cela dans une application de production
 		},
 	}
-	data          []visualisation.Data = []visualisation.Data{}
-	oldData       []visualisation.Data = []visualisation.Data{}
-	mapData                            = make(map[string]visualisation.Data)
-	peersDataChan                      = make(chan []byte, 200)
-	blockchain                         = []visualisation.Block{}
+	data []visualisation.Data = []visualisation.Data{}
+	// oldData       []visualisation.Data = []visualisation.Data{}
+	mapData = make(map[string]visualisation.Data)
+	// peersDataChan                      = make(chan []byte, 200)
+	blockchain = []visualisation.Block{}
 )
 
 func main() { //nolint: funlen
