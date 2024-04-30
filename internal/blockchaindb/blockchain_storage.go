@@ -86,7 +86,7 @@ func (pdb *BlockchainDB) GetBlock(log *ipfsLog.ZapEventLogger, key []byte) (*blo
 	if err != nil {
 		if err == pebble.ErrNotFound {
 			log.Warn("block not exists in the database")
-			return nil, nil
+			return nil, pebble.ErrNotFound
 		}
 		log.Errorln("error retrieving block")
 		return nil, fmt.Errorf("error retrieving block : %v", err)
