@@ -615,6 +615,8 @@ func main() {
 					parentBlock, err := blockchain.GetBlock(log, []byte(parentHash))
 					if err != nil {
 						log.Errorln("Error getting the parent block : ", err)
+						delete(conflictMem, parentHash)
+						continue
 					}
 					if len(childrenHashes) == 1 && parentBlock.Height == previousBlock.Height-1 {
 						// Delete the parent block from the conflictMem
