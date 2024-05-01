@@ -269,6 +269,7 @@ func main() {
 						pendingBlocks = append(pendingBlocks, bReceive)
 						blockProcessingEnabled = false
 						requiresSync = true // This will call the process of synchronizing the blockchain with the network
+						stopMiningChan <- consensus.StopMiningSignal{Stop: true, BlockReceived: nil}
 						continue
 					}
 
@@ -293,6 +294,7 @@ func main() {
 				if !blockchain.VerifyIntegrity(log) {
 					blockProcessingEnabled = false
 					requiresSync = true // This will call the process of synchronizing the blockchain with the network
+					stopMiningChan <- consensus.StopMiningSignal{Stop: true, BlockReceived: nil}
 					continue
 				}
 
@@ -593,6 +595,7 @@ func main() {
 				continue
 			}
 			if lastBlockStored != nil {
+				lastBlockStored = blockchain.GetLastBlock(log)
 				previousBlock = &block.Block{}
 				err := copier.Copy(previousBlock, lastBlockStored)
 				if err != nil {
@@ -654,6 +657,13 @@ func main() {
 
 			stoppedEarly, blockReceivedEarly := consensus.MineBlock(currentBlock, stopMiningChan)
 			if stoppedEarly {
+				if blockReceivedEarly == nil {
+					log.Info("Mining stopped early because synchronization is required")
+					log.Info("Waiting for the blockchain to be synchronized with the network")
+					log.Info("Putting the transactions back in the transaction pool")
+					trxPool = append(trxPool, currentBlock.Transactions...)
+					continue
+				}
 				log.Info("Mining stopped early because of a new block received")
 				lastBlockStored = &block.Block{} // Reset the last block stored and be sure its not nil to avoid errors with copier
 				err := copier.Copy(lastBlockStored, blockReceivedEarly)
