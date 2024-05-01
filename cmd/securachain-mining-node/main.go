@@ -311,7 +311,7 @@ func main() {
 				log.Warnln("[NEW BLOCK MINED] Block at height ", bReceive.Height, " with hash ", bReceivedHash, " mined by ", bReceivedMinerAddress, " at ", bReceive.Timestamp, " with ", len(bReceive.Transactions), " transactions stored in the blockchain")
 
 				// To handle conflicts - transactions
-				if bReceive.Height == previousBlock.Height && bytes.Equal(bReceive.PrevBlock, previousBlock.PrevBlock) {
+				if bReceive.Height == previousBlock.Height && bytes.Equal(bReceive.PrevBlock, previousBlock.PrevBlock) && !bytes.Equal(bReceive.MerkleRoot, previousBlock.MerkleRoot) {
 					// The block received have the same parent as the previous block
 					parentHash := fmt.Sprintf("%x", bReceive.PrevBlock)
 					bReceiveHash := fmt.Sprintf("%x", block.ComputeHash(bReceive))
