@@ -311,30 +311,23 @@ func main() {
 				log.Warnln("[NEW BLOCK MINED] Block at height ", bReceive.Height, " with hash ", bReceivedHash, " mined by ", bReceivedMinerAddress, " at ", bReceive.Timestamp, " with ", len(bReceive.Transactions), " transactions stored in the blockchain")
 
 				// To handle conflicts - transactions
-				if bReceive.Height == currentBlock.Height-1 {
-					currentPrevBlock, err := blockchain.GetBlock(log, currentBlock.PrevBlock)
-					if err != nil {
-						log.Errorln("Error getting the previous block : ", err)
-					}
-					if bytes.Equal(currentPrevBlock.PrevBlock, bReceive.PrevBlock) {
-						// The block received have the same parent as the previous block of the current block
-						parentHash := fmt.Sprintf("%x", bReceive.PrevBlock)
-						childHash := fmt.Sprintf("%x", block.ComputeHash(bReceive))
-						currentPrevBlockHash := fmt.Sprintf("%x", currentBlock.PrevBlock)
+				if bReceive.Height == previousBlock.Height && bytes.Equal(bReceive.PrevBlock, previousBlock.PrevBlock) {
+					// The block received have the same parent as the previous block
+					parentHash := fmt.Sprintf("%x", bReceive.PrevBlock)
+					bReceiveHash := fmt.Sprintf("%x", block.ComputeHash(bReceive))
+					previousBlockHash := fmt.Sprintf("%x", currentBlock.PrevBlock)
 
-						conflictMemLock.Lock()
-						if _, exist := conflictMem[parentHash]; !exist {
-							conflictMem[parentHash] = []string{childHash, currentPrevBlockHash}
-							log.Info("Conflict detected between ", childHash, " and ", currentPrevBlockHash)
-						} else {
-							conflictMem[parentHash] = append(conflictMem[parentHash], childHash)
-							if !slices.Contains(conflictMem[parentHash], currentPrevBlockHash) {
-								conflictMem[parentHash] = append(conflictMem[parentHash], currentPrevBlockHash)
-							}
-							log.Info("Conflict detected between ", childHash, " and ", currentPrevBlockHash)
-						}
-						conflictMemLock.Unlock()
+					conflictMemLock.Lock()
+					if !slices.Contains(conflictMem[parentHash], previousBlockHash) {
+						conflictMem[parentHash] = append(conflictMem[parentHash], previousBlockHash)
 					}
+
+					if !slices.Contains(conflictMem[parentHash], bReceiveHash) {
+						conflictMem[parentHash] = append(conflictMem[parentHash], bReceiveHash)
+					}
+					conflictMemLock.Unlock()
+
+					log.Info("Conflict detected between ", bReceiveHash, " and ", previousBlockHash)
 				}
 
 				// 6 . Stop the mining process if a new block with the same height or higher is received
