@@ -568,8 +568,8 @@ func main() {
 
 	// Handle the transactions received from the storage nodes
 	go func() {
-		log.Debug("Waiting for 10 seconds before starting the transaction processing")
-		time.Sleep(30 * time.Second)
+		log.Debug("Waiting for 300 seconds before starting the transaction processing")
+		time.Sleep(300 * time.Second)
 		for {
 			msg, err := subStorageNodeResponse.Next(ctx)
 			if err != nil {
@@ -592,8 +592,8 @@ func main() {
 
 	// Mining block
 	go func() {
-		log.Debug("Waiting for 30 seconds before starting the mining process")
-		time.Sleep(30 * time.Second)
+		log.Debug("Waiting for 300 seconds before starting the mining process")
+		time.Sleep(300 * time.Second)
 		log.Info("Mining process started")
 		lastBlockStored := blockchain.GetLastBlock(log)
 		for {
@@ -721,7 +721,6 @@ func main() {
 
 			// To be sure we retrieve the last block stored
 			for {
-				log.Debug("Waiting for the last block stored to be updated and retrieved")
 				lastBlockStored = blockchain.GetLastBlock(log)
 				if lastBlockStored != nil && lastBlockStored.Height >= currentBlock.Height {
 					break
