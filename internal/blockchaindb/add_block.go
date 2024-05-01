@@ -1,6 +1,7 @@
 package blockchaindb
 
 import (
+	"github.com/cockroachdb/pebble"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 )
@@ -22,20 +23,25 @@ func AddBlockToBlockchain(log *ipfsLog.ZapEventLogger, b *block.Block, db *Block
 	}
 
 	// Check if the block already exists in the db
-	retrievedBlock, err := db.GetBlock(log, key)
+	_, err := db.GetBlock(log, key)
 	if err != nil {
-		log.Errorf("Failed to check for block existence in the db: %s\n", err)
-		return false
-	} else if retrievedBlock != nil {
-		log.Warnln("Block already exists in the blockchain")
-		return false
-	}
+		if err == pebble.ErrNotFound {
+			log.Errorf("Block not found in the db: %s\n", err)
 
-	if err := db.SaveBlock(log, key, b); err != nil {
-		log.Errorf("Failed to add block to the db: %s\n", err)
-		return false
-	}
+			if err := db.SaveBlock(log, key, b); err != nil {
+				log.Errorf("Failed to add block to the db: %s\n", err)
+				return false
+			}
 
-	log.Debugln("Block successfully added to the blockchain")
-	return true
+			log.Debugln("Block successfully added to the blockchain")
+			return true
+		}
+
+		log.Errorf("Failed to retrieve block from the db: %s\n", err)
+		return false
+
+	}
+	log.Warnln("Block already exists in the blockchain")
+	return false
+
 }
