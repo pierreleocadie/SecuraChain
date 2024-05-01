@@ -70,7 +70,7 @@ func NewAddFileTransaction(announcement *ClientAnnouncement, fileCid cid.Cid,
 		IPFSStorageNodeAddrInfo: storageNodeAddrInfo,
 		NodeID:                  nodeID,
 		UserReliabilityIssue:    userReliabilityIssue,
-		TransactionTimestamp:    time.Now().Unix(),
+		TransactionTimestamp:    time.Now().UTC().Unix(),
 	}
 
 	transactionBytes, err := json.Marshal(transaction)

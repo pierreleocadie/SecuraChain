@@ -45,7 +45,7 @@ func NewBlock(transactions []transaction.Transaction, prevBlockHash []byte, heig
 			Version:    version,
 			PrevBlock:  prevBlockHash,
 			TargetBits: targetBits,
-			Timestamp:  time.Now().Unix(),
+			Timestamp:  time.Now().UTC().Unix(),
 			Height:     height,
 			MinerAddr:  minerAddrBytes,
 		},

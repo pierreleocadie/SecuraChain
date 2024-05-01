@@ -18,7 +18,7 @@ func GeneratePacket(hostID peer.ID) []byte {
 	trx := &Packet{
 		ID:        uuid.New(),
 		EmittedBy: hostID,
-		Timestamp: time.Now().Unix(),
+		Timestamp: time.Now().UTC().Unix(),
 	}
 	b, _ := json.Marshal(trx)
 	return b

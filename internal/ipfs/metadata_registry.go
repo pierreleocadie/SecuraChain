@@ -59,7 +59,7 @@ func AddFileMetadataToRegistry(config *config.Config, fileCid path.ImmutablePath
 
 	fileMetadata := FileMetadata{
 		Cid:       fileCid.String(),
-		Timestamp: time.Now(),
+		Timestamp: time.Now().UTC(),
 		Size:      fileSize,
 		Extension: fileType,
 		Name:      fileName,

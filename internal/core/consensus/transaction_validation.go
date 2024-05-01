@@ -183,7 +183,7 @@ func (v *DeleteFileTransactionValidator) Validate(tx transaction.Transaction) bo
 		return false
 	}
 
-	if deleteFileTransaction.TransactionTimestamp >= time.Now().Unix() {
+	if deleteFileTransaction.TransactionTimestamp >= time.Now().UTC().Unix() {
 		return false
 	}
 

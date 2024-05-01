@@ -35,7 +35,7 @@ func ValidateBlock(currentBlock *block.Block, prevBlock *block.Block) bool {
 	}
 
 	// Verify the block's timestamp is not too far in the future
-	if currentBlock.Header.Timestamp > time.Now().Unix()+10 {
+	if currentBlock.Header.Timestamp > time.Now().UTC().Unix()+10 {
 		log.Printf("Block validation failed: Timestamp is too far in the future")
 		return false
 	}
@@ -86,7 +86,7 @@ func validateGenesisBlock(genesisBlock *block.Block) bool {
 	}
 
 	// Verify the block's timestamp is not too far in the future
-	if genesisBlock.Header.Timestamp > time.Now().Unix()+10 {
+	if genesisBlock.Header.Timestamp > time.Now().UTC().Unix()+10 {
 		log.Printf("Block validation failed: Timestamp is too far in the future")
 		return false
 	}

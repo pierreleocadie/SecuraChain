@@ -44,7 +44,7 @@ func NewDeleteFileTransaction(keyPair ecdsa.KeyPair, fileCid cid.Cid) *DeleteFil
 		TransactionID:        uuid.New(),
 		OwnerAddress:         ownerAddressBytes,
 		FileCid:              fileCid,
-		TransactionTimestamp: time.Now().Unix(),
+		TransactionTimestamp: time.Now().UTC().Unix(),
 	}
 
 	transactionBytes, err := json.Marshal(transaction)

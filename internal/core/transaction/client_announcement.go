@@ -61,7 +61,7 @@ func NewClientAnnouncement(keyPair ecdsa.KeyPair, clientNodeAddrInfo peer.AddrIn
 		Extension:              extension,
 		FileSize:               fileSize,
 		Checksum:               checksum,
-		AnnouncementTimestamp:  time.Now().Unix(),
+		AnnouncementTimestamp:  time.Now().UTC().Unix(),
 	}
 
 	announcementBytes, err := json.Marshal(announcement)
