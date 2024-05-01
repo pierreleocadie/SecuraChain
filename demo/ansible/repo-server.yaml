@@ -2,6 +2,28 @@
   hosts: repo_server
   become: yes
   tasks:
+    - name: Install Git
+      ansible.builtin.package:
+        name: git
+        state: present
+    
+    - name: Clone the repository server application
+      ansible.builtin.git:
+        repo: https://github.com/pierreleocadie/SecuraChain.git
+        dest: ~/SecuraChain
+    
+    - name: Install Docker
+      ansible.builtin.apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+
+    - name: Install Docker Compose
+      ansible.builtin.apt:
+        name: docker-compose
+        state: present
+        update_cache: yes
+    
     - name: Install Node.js
       ansible.builtin.shell: |
         curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
