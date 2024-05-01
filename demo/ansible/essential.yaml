@@ -1,33 +1,12 @@
 - name: Install the essential tools
   hosts: all
   become: yes
-  vars:
-    go_version: "1.22.0"  # Mettez à jour avec la version de Go souhaitée
-    go_install_dir: "/usr/local"  # Chemin d'installation souhaité pour Go
   tasks:
-    - name: Install Docker
-      ansible.builtin.apt:
-        name: docker.io
-        state: present
-        update_cache: yes
-
-    - name: Install Docker Compose
-      ansible.builtin.apt:
-        name: docker-compose
-        state: present
-        update_cache: yes
-
     - name: Install curl
       ansible.builtin.apt:
         name: curl
         state: present
         update_cache: yes
-    
-    - name: Clone SecuraChain repository
-      ansible.builtin.git:
-        repo: "https://github.com/pierreleocadie/SecuraChain.git"
-        dest: "~/SecuraChain"
-        version: "main"  # Directement cloner la branche souhaitée
     
     - name: QUIC UDP Buffer size
       ansible.builtin.sysctl:
