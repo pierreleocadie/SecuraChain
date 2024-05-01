@@ -723,6 +723,7 @@ func main() {
 				if lastBlockStored != nil && lastBlockStored.Height >= currentBlock.Height {
 					break
 				}
+				time.Sleep(5 * time.Second)
 			}
 		}
 	}()
