@@ -2,12 +2,10 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"path/filepath"
 	"slices"
-	"time"
 
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
@@ -15,7 +13,6 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
-	"github.com/pierreleocadie/SecuraChain/internal/visualisation"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -116,10 +113,10 @@ func main() {
 	node.PubsubKeepRelayConnectionAlive(ctx, ps, host, cfg, log)
 
 	// NetworkVisualisation
-	networkVisualisationTopic, err := ps.Join(cfg.NetworkVisualisationStringFlag)
-	if err != nil {
-		log.Warnf("Failed to join NetworkVisualisation topic: %s", err)
-	}
+	// networkVisualisationTopic, err := ps.Join(cfg.NetworkVisualisationStringFlag)
+	// if err != nil {
+	// 	log.Warnf("Failed to join NetworkVisualisation topic: %s", err)
+	// }
 
 	// Join the topic BlockAnnouncementStringFlag
 	blockAnnouncementTopic, err := ps.Join(cfg.BlockAnnouncementStringFlag)
@@ -478,137 +475,137 @@ func main() {
 		}
 	}()
 
-	go func() {
-		for {
-			time.Sleep(5 * time.Second)
-			data := &visualisation.Data{
-				PeerID:   host.ID().String(),
-				NodeType: "FullNode",
-				ConnectedPeers: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range host.Network().Peers() {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				TopicsList: ps.GetTopics(),
-				KeepRelayConnectionAlive: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("KeepRelayConnectionAlive") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				BlockAnnouncement: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("BlockAnnouncement") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				AskingBlockchain: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("AskingBlockchain") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				ReceiveBlockchain: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("ReceiveBlockchain") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				ClientAnnouncement: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("ClientAnnouncement") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				StorageNodeResponse: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("StorageNodeResponse") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				FullNodeAnnouncement: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("FullNodeAnnouncement") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				AskMyFilesList: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("AskMyFilesList") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				ReceiveMyFilesList: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("ReceiveMyFilesList") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-			}
-			dataBytes, err := json.Marshal(data)
-			if err != nil {
-				log.Errorf("Failed to marshal NetworkVisualisation message: %s", err)
-				continue
-			}
-			err = networkVisualisationTopic.Publish(ctx, dataBytes)
-			if err != nil {
-				log.Errorf("Failed to publish NetworkVisualisation message: %s", err)
-				continue
-			}
-			log.Debugf("NetworkVisualisation message sent successfully")
-		}
-	}()
+	// go func() {
+	// 	for {
+	// 		time.Sleep(5 * time.Second)
+	// 		data := &visualisation.Data{
+	// 			PeerID:   host.ID().String(),
+	// 			NodeType: "FullNode",
+	// 			ConnectedPeers: func() []string {
+	// 				peers := make([]string, 0)
+	// 				for _, peer := range host.Network().Peers() {
+	// 					// check the connectedness of the peer
+	// 					if host.Network().Connectedness(peer) != network.Connected {
+	// 						continue
+	// 					}
+	// 					peers = append(peers, peer.String())
+	// 				}
+	// 				return peers
+	// 			}(),
+	// 			TopicsList: ps.GetTopics(),
+	// 			KeepRelayConnectionAlive: func() []string {
+	// 				peers := make([]string, 0)
+	// 				for _, peer := range ps.ListPeers("KeepRelayConnectionAlive") {
+	// 					// check the connectedness of the peer
+	// 					if host.Network().Connectedness(peer) != network.Connected {
+	// 						continue
+	// 					}
+	// 					peers = append(peers, peer.String())
+	// 				}
+	// 				return peers
+	// 			}(),
+	// 			BlockAnnouncement: func() []string {
+	// 				peers := make([]string, 0)
+	// 				for _, peer := range ps.ListPeers("BlockAnnouncement") {
+	// 					// check the connectedness of the peer
+	// 					if host.Network().Connectedness(peer) != network.Connected {
+	// 						continue
+	// 					}
+	// 					peers = append(peers, peer.String())
+	// 				}
+	// 				return peers
+	// 			}(),
+	// 			AskingBlockchain: func() []string {
+	// 				peers := make([]string, 0)
+	// 				for _, peer := range ps.ListPeers("AskingBlockchain") {
+	// 					// check the connectedness of the peer
+	// 					if host.Network().Connectedness(peer) != network.Connected {
+	// 						continue
+	// 					}
+	// 					peers = append(peers, peer.String())
+	// 				}
+	// 				return peers
+	// 			}(),
+	// 			ReceiveBlockchain: func() []string {
+	// 				peers := make([]string, 0)
+	// 				for _, peer := range ps.ListPeers("ReceiveBlockchain") {
+	// 					// check the connectedness of the peer
+	// 					if host.Network().Connectedness(peer) != network.Connected {
+	// 						continue
+	// 					}
+	// 					peers = append(peers, peer.String())
+	// 				}
+	// 				return peers
+	// 			}(),
+	// 			ClientAnnouncement: func() []string {
+	// 				peers := make([]string, 0)
+	// 				for _, peer := range ps.ListPeers("ClientAnnouncement") {
+	// 					// check the connectedness of the peer
+	// 					if host.Network().Connectedness(peer) != network.Connected {
+	// 						continue
+	// 					}
+	// 					peers = append(peers, peer.String())
+	// 				}
+	// 				return peers
+	// 			}(),
+	// 			StorageNodeResponse: func() []string {
+	// 				peers := make([]string, 0)
+	// 				for _, peer := range ps.ListPeers("StorageNodeResponse") {
+	// 					// check the connectedness of the peer
+	// 					if host.Network().Connectedness(peer) != network.Connected {
+	// 						continue
+	// 					}
+	// 					peers = append(peers, peer.String())
+	// 				}
+	// 				return peers
+	// 			}(),
+	// 			FullNodeAnnouncement: func() []string {
+	// 				peers := make([]string, 0)
+	// 				for _, peer := range ps.ListPeers("FullNodeAnnouncement") {
+	// 					// check the connectedness of the peer
+	// 					if host.Network().Connectedness(peer) != network.Connected {
+	// 						continue
+	// 					}
+	// 					peers = append(peers, peer.String())
+	// 				}
+	// 				return peers
+	// 			}(),
+	// 			AskMyFilesList: func() []string {
+	// 				peers := make([]string, 0)
+	// 				for _, peer := range ps.ListPeers("AskMyFilesList") {
+	// 					// check the connectedness of the peer
+	// 					if host.Network().Connectedness(peer) != network.Connected {
+	// 						continue
+	// 					}
+	// 					peers = append(peers, peer.String())
+	// 				}
+	// 				return peers
+	// 			}(),
+	// 			ReceiveMyFilesList: func() []string {
+	// 				peers := make([]string, 0)
+	// 				for _, peer := range ps.ListPeers("ReceiveMyFilesList") {
+	// 					// check the connectedness of the peer
+	// 					if host.Network().Connectedness(peer) != network.Connected {
+	// 						continue
+	// 					}
+	// 					peers = append(peers, peer.String())
+	// 				}
+	// 				return peers
+	// 			}(),
+	// 		}
+	// 		dataBytes, err := json.Marshal(data)
+	// 		if err != nil {
+	// 			log.Errorf("Failed to marshal NetworkVisualisation message: %s", err)
+	// 			continue
+	// 		}
+	// 		err = networkVisualisationTopic.Publish(ctx, dataBytes)
+	// 		if err != nil {
+	// 			log.Errorf("Failed to publish NetworkVisualisation message: %s", err)
+	// 			continue
+	// 		}
+	// 		log.Debugf("NetworkVisualisation message sent successfully")
+	// 	}
+	// }()
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES
