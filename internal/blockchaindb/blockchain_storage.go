@@ -105,12 +105,21 @@ func (pdb *BlockchainDB) GetBlock(log *ipfsLog.ZapEventLogger, key []byte) (*blo
 
 // VerifyIntegrity verifies the integrity of the blockchain stored in the BlockchainDB based on the last block.
 func (pdb *BlockchainDB) VerifyIntegrity(log *ipfsLog.ZapEventLogger) bool {
+	log.Infoln("Verifying blockchain integrity")
 
 	for blockKey := pdb.GetLastBlock(log).PrevBlock; blockKey != nil; {
 		currentBlock, err := pdb.GetBlock(log, blockKey)
 		if err != nil {
 			log.Errorln("error retrieving block")
 			return false
+		}
+
+		if block.IsGenesisBlock(currentBlock) {
+			if !consensus.ValidateBlock(currentBlock, nil) {
+				log.Errorln("block validation failed")
+				return false
+			}
+			break
 		}
 
 		prevBlock, err := pdb.GetBlock(log, currentBlock.PrevBlock)
