@@ -1,7 +1,17 @@
 - name: Reboot the network
-  hosts: all
+  hosts: 
+    - mining_node_servers
+    - storage_node_servers
+    - full_node_servers
   become: yes
   tasks:
+    - name: Delete ~/.securachainData
+      ansible.builtin.shell: |
+        rm -rf ~/.securachainData
+        rm -rf ~/.ipfs-shell
+        rm -rf ~/.IPFS_Local_Storage
+        rm -rf ~/.IPFS_Downloads
+        rm -rf ~/*
     - name: Reboot the network
       ansible.builtin.shell: |
         sudo reboot
