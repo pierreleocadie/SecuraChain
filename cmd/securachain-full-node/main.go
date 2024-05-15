@@ -384,7 +384,7 @@ func main() {
 				if block.IsGenesisBlock(b) {
 					if !consensus.ValidateBlock(b, nil) {
 						log.Debugln("Genesis block is invalid")
-						break
+						continue
 					}
 					log.Debugln("Genesis block is valid")
 				} else {
@@ -395,7 +395,7 @@ func main() {
 
 					if !consensus.ValidateBlock(b, prevBlock) {
 						log.Debugln("Block is invalid")
-						break
+						continue
 					}
 					log.Debugln(b.Height, " is valid")
 				}
