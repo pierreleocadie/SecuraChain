@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"math/rand"
 	"path/filepath"
 	"slices"
 	"sync"
@@ -738,7 +739,9 @@ func main() {
 
 	go func() {
 		for {
-			time.Sleep(5 * time.Second)
+			// Sleep for random time between 10 seconds and 1min
+			randomInt := rand.Intn(60-10+1) + 10
+			time.Sleep(time.Duration(randomInt) * time.Second)
 			data := &visualisation.Data{
 				PeerID:   host.ID().String(),
 				NodeType: "MiningNode",

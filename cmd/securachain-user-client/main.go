@@ -3,8 +3,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"math/rand"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -22,6 +25,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/internal/registry"
+	"github.com/pierreleocadie/SecuraChain/internal/visualisation"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
@@ -91,10 +95,45 @@ func main() { //nolint: funlen, gocyclo
 	// KeepRelayConnectionAlive
 	node.PubsubKeepRelayConnectionAlive(ctx, ps, host, cfg, log)
 
+	// NetworkVisualisation
+	networkVisualisationTopic, err := ps.Join(cfg.NetworkVisualisationStringFlag)
+	if err != nil {
+		log.Warnf("Failed to join NetworkVisualisation topic: %s", err)
+	}
+
+	// Join the topic StorageNodeResponseStringFlag
+	storageNodeResponseTopic, err := ps.Join(cfg.StorageNodeResponseStringFlag)
+	if err != nil {
+		log.Errorf("Failed to join StorageNodeResponse topic: %s", err)
+	}
+
+	// Subscribe to StorageNodeResponseStringFlag topic
+	subStorageNodeResponse, err := storageNodeResponseTopic.Subscribe()
+	if err != nil {
+		log.Errorf("Failed to subscribe to StorageNodeResponse topic: %s", err)
+	}
+
 	// Join the topic clientAnnouncementStringFlag
 	clientAnnouncementTopic, err := ps.Join(cfg.ClientAnnouncementStringFlag)
 	if err != nil {
 		log.Warnf("Failed to join clientAnnouncement topic: %s", err)
+	}
+
+	// Join the topic AskMyFilesStringFlag
+	askMyFilesTopic, err := ps.Join(cfg.AskMyFilesStringFlag)
+	if err != nil {
+		panic(err)
+	}
+
+	// Join the topic SendFilesStringFlag
+	sendFilesTopic, err := ps.Join(cfg.SendFilesStringFlag)
+	if err != nil {
+		log.Panicf("Failed to join SendFiles topic : %s\n", err)
+	}
+
+	subSendFiles, err := sendFilesTopic.Subscribe()
+	if err != nil {
+		log.Panicf("Failed to subscribe to SendFiles topic : %s\n", err)
 	}
 
 	// Handle publishing ClientAnnouncement messages
@@ -116,18 +155,6 @@ func main() { //nolint: funlen, gocyclo
 			}
 		}
 	}()
-
-	// Join the topic StorageNodeResponseStringFlag
-	storageNodeResponseTopic, err := ps.Join(cfg.StorageNodeResponseStringFlag)
-	if err != nil {
-		log.Errorf("Failed to join StorageNodeResponse topic: %s", err)
-	}
-
-	// Subscribe to StorageNodeResponseStringFlag topic
-	subStorageNodeResponse, err := storageNodeResponseTopic.Subscribe()
-	if err != nil {
-		log.Errorf("Failed to subscribe to StorageNodeResponse topic: %s", err)
-	}
 
 	// Handle incoming NodeResponse messages
 	go func() {
@@ -167,12 +194,6 @@ func main() { //nolint: funlen, gocyclo
 		}
 	}()
 
-	// Join the topic AskMyFilesStringFlag
-	askMyFilesTopic, err := ps.Join(cfg.AskMyFilesStringFlag)
-	if err != nil {
-		panic(err)
-	}
-
 	// Handle publishing AskMyFiles messages
 	go func() {
 		for {
@@ -184,17 +205,6 @@ func main() { //nolint: funlen, gocyclo
 			}
 		}
 	}()
-
-	// Join the topic SendFilesStringFlag
-	sendFilesTopic, err := ps.Join(cfg.SendFilesStringFlag)
-	if err != nil {
-		log.Panicf("Failed to join SendFiles topic : %s\n", err)
-	}
-
-	subSendFiles, err := sendFilesTopic.Subscribe()
-	if err != nil {
-		log.Panicf("Failed to subscribe to SendFiles topic : %s\n", err)
-	}
 
 	// Handle incoming SendFiles messages
 	go func() {
@@ -251,7 +261,140 @@ func main() { //nolint: funlen, gocyclo
 				fileDialog.Show()
 			}
 		}
+	}()
 
+	go func() {
+		for {
+			// Sleep for random time between 10 seconds and 1min
+			randomInt := rand.Intn(60-10+1) + 10
+			time.Sleep(time.Duration(randomInt) * time.Second)
+			data := &visualisation.Data{
+				PeerID:   host.ID().String(),
+				NodeType: "ClientNode",
+				ConnectedPeers: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range host.Network().Peers() {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				TopicsList: ps.GetTopics(),
+				KeepRelayConnectionAlive: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("KeepRelayConnectionAlive") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				BlockAnnouncement: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("BlockAnnouncement") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				AskingBlockchain: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("AskingBlockchain") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				ReceiveBlockchain: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("ReceiveBlockchain") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				ClientAnnouncement: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("ClientAnnouncement") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				StorageNodeResponse: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("StorageNodeResponse") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				FullNodeAnnouncement: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("FullNodeAnnouncement") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				AskMyFilesList: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("AskMyFilesList") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+				ReceiveMyFilesList: func() []string {
+					peers := make([]string, 0)
+					for _, peer := range ps.ListPeers("ReceiveMyFilesList") {
+						// check the connectedness of the peer
+						if host.Network().Connectedness(peer) != network.Connected {
+							continue
+						}
+						peers = append(peers, peer.String())
+					}
+					return peers
+				}(),
+			}
+			dataBytes, err := json.Marshal(data)
+			if err != nil {
+				log.Errorf("Failed to marshal NetworkVisualisation message: %s", err)
+				continue
+			}
+			err = networkVisualisationTopic.Publish(ctx, dataBytes)
+			if err != nil {
+				log.Errorf("Failed to publish NetworkVisualisation message: %s", err)
+				continue
+			}
+			log.Debugf("NetworkVisualisation message sent successfully")
+		}
 	}()
 
 	/*
