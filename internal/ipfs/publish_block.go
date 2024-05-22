@@ -24,7 +24,7 @@ func PublishBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, config *conf
 	}
 
 	// Pin the file on IPFS
-	_, err = PinFile(ctx, ipfsApi, cidFile)
+	_, err = PinFile(log, ctx, ipfsApi, cidFile)
 	if err != nil {
 		log.Errorln("Error pinning the block to IPFS")
 		return false

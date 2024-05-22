@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
@@ -11,11 +12,13 @@ import (
 func TestBlock_Serialize(t *testing.T) {
 	t.Parallel()
 
+	log := ipfsLog.Logger("test")
+
 	minerKeyPair, _ := ecdsa.NewECDSAKeyPair() // Replace with actual key pair generation
 	transactions := []transaction.Transaction{}
 
 	for i := 0; i < 3; i++ {
-		fakeAddTransaction, err := transaction.GenFakeAddTransaction()
+		fakeAddTransaction, err := transaction.GenFakeAddTransaction(log)
 		if err != nil {
 			t.Errorf("Failed to generate fake transaction: %s", err)
 		}

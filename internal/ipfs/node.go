@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
 
+	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/ipfs/kubo/config"
 	"github.com/ipfs/kubo/core"
 	"github.com/ipfs/kubo/core/coreapi"
@@ -43,7 +43,7 @@ func setupPlugins(externalPluginsPath string) error {
 }
 
 // Create a repo ipfs-shell/ in the home directory
-func createRepo(cfgg *inconfig.Config) (string, error) {
+func createRepo(log *ipfsLog.ZapEventLogger, cfgg *inconfig.Config) (string, error) {
 	var key = 2048
 
 	homeDir, err := os.UserHomeDir()
@@ -93,7 +93,7 @@ func createNode(ctx context.Context, repoPath string) (*core.IpfsNode, error) {
 }
 
 // Spawns a node
-func SpawnNode(ctx context.Context, cfgg *inconfig.Config) (icore.CoreAPI, *core.IpfsNode, error) {
+func SpawnNode(log *ipfsLog.ZapEventLogger, ctx context.Context, cfgg *inconfig.Config) (icore.CoreAPI, *core.IpfsNode, error) {
 	// Load the plugins once
 	var onceErr error
 
@@ -106,7 +106,7 @@ func SpawnNode(ctx context.Context, cfgg *inconfig.Config) (icore.CoreAPI, *core
 	}
 
 	// Create a Repo IPFS
-	repoPath, err := createRepo(cfgg)
+	repoPath, err := createRepo(log, cfgg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create the repo ./ipfs-shell: %s", err)
 	}

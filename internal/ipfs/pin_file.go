@@ -2,24 +2,24 @@ package ipfs
 
 import (
 	"context"
-	"log"
 
 	"github.com/ipfs/boxo/path"
+	ipfsLog "github.com/ipfs/go-log/v2"
 	icore "github.com/ipfs/kubo/core/coreiface"
 )
 
-func PinFile(ctx context.Context, ipfsAPI icore.CoreAPI, fileCid path.ImmutablePath) (bool, error) {
+func PinFile(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, fileCid path.ImmutablePath) (bool, error) {
 	if err := ipfsAPI.Pin().Add(ctx, fileCid); err != nil {
-		log.Printf("Could not pin file %v", err)
+		log.Errorln("Could not pin file %v", err)
 		return false, err
 	}
 
 	_, IsPinned, err := ipfsAPI.Pin().IsPinned(ctx, fileCid)
 	if err != nil {
-		log.Printf("Could not check if file is pinned %v", err)
+		log.Errorln("Could not check if file is pinned %v", err)
 		return IsPinned, err
 	}
 
-	log.Printf("File pinned: %v", IsPinned)
+	log.Infoln("File pinned: %v", IsPinned)
 	return IsPinned, nil
 }

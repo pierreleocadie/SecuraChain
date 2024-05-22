@@ -66,7 +66,7 @@ func main() { //nolint: funlen, gocyclo
 	* IPFS NODE
 	 */
 	// Spawn an IPFS node
-	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx, cfg)
+	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(log, ctx, cfg)
 	if err != nil {
 		log.Panicf("Failed to spawn IPFS node: %s", err)
 	}
@@ -250,6 +250,7 @@ func main() { //nolint: funlen, gocyclo
 					}
 
 					label := widget.NewLabel(string(filename) + string(fileExtension) + " - " + fileRegistry.FileCid.String())
+
 					downloadButton := client.DownloadButtonWidget(log, ctx, cfg, ipfsAPI, fileRegistry.FileCid, string(filename), string(fileExtension), aesKey, w)
 
 					// Add the label and the button to a horizontal container, then to the vertical container
@@ -395,6 +396,7 @@ func main() { //nolint: funlen, gocyclo
 			}
 			log.Debugf("NetworkVisualisation message sent successfully")
 		}
+
 	}()
 
 	/*

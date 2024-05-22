@@ -263,7 +263,7 @@ func main() { //nolint: funlen, gocyclo
 			}
 
 			log.Debugf("Downloading file %s", fileImmutablePath)
-			err = ipfs.GetFile(ctx, cfg, ipfsAPI, fileImmutablePath)
+			err = ipfs.GetFile(log, ctx, cfg, ipfsAPI, fileImmutablePath)
 			if err != nil {
 				log.Errorf("Failed to download file: %s", err)
 				continue
@@ -310,14 +310,14 @@ func main() { //nolint: funlen, gocyclo
 			}
 
 			// Add the file to IPFS
-			fileImmutablePathCid, err := ipfs.AddFile(ctx, cfg, ipfsAPI, downloadedFilePath)
+			fileImmutablePathCid, err := ipfs.AddFile(log, ctx, cfg, ipfsAPI, downloadedFilePath)
 			if err != nil {
 				log.Errorf("Failed to add file to IPFS: %s", err)
 				continue
 			}
 
 			// Pin the file
-			pinned, err := ipfs.PinFile(ctx, ipfsAPI, fileImmutablePathCid)
+			pinned, err := ipfs.PinFile(log, ctx, ipfsAPI, fileImmutablePathCid)
 			if err != nil {
 				log.Errorf("Failed to pin file: %s", err)
 			}
@@ -404,7 +404,7 @@ func main() { //nolint: funlen, gocyclo
 				// 1 . Validation of the block
 				if block.IsGenesisBlock(bReceive) {
 					log.Debugln("Genesis block")
-					if !consensus.ValidateBlock(bReceive, nil) {
+					if !consensus.ValidateBlock(log, bReceive, nil) {
 						log.Debugln("Genesis block is invalid")
 						continue
 					}
@@ -427,7 +427,7 @@ func main() { //nolint: funlen, gocyclo
 						log.Debugln("Error getting the previous block : %s\n", err)
 					}
 
-					if !consensus.ValidateBlock(bReceive, prevBlock) {
+					if !consensus.ValidateBlock(log, bReceive, prevBlock) {
 						log.Debugln("Block is invalid")
 						continue
 					}
@@ -503,7 +503,7 @@ func main() { //nolint: funlen, gocyclo
 			// 3 . Valid the downloaded blocks
 			for _, b := range listOfMissingBlocks {
 				if block.IsGenesisBlock(b) {
-					if !consensus.ValidateBlock(b, nil) {
+					if !consensus.ValidateBlock(log, b, nil) {
 						log.Debugln("Genesis block is invalid")
 						continue
 					}
@@ -513,7 +513,7 @@ func main() { //nolint: funlen, gocyclo
 					if err != nil {
 						log.Debugln("Error getting the previous block : %s\n", err)
 					}
-					if !consensus.ValidateBlock(b, prevBlock) {
+					if !consensus.ValidateBlock(log, b, prevBlock) {
 						log.Debugln("Block is invalid")
 						continue
 					}
@@ -582,7 +582,7 @@ func main() { //nolint: funlen, gocyclo
 
 				// 3 . Validation of the block
 				if block.IsGenesisBlock(b) {
-					if !consensus.ValidateBlock(b, nil) {
+					if !consensus.ValidateBlock(log, b, nil) {
 						log.Debugln("Genesis block is invalid")
 						continue
 					}
@@ -593,7 +593,7 @@ func main() { //nolint: funlen, gocyclo
 						log.Debugln("Error getting the previous block : %s\n", err)
 					}
 
-					if !consensus.ValidateBlock(b, prevBlock) {
+					if !consensus.ValidateBlock(log, b, prevBlock) {
 						log.Debugln("Block is invalid")
 						continue
 					}
