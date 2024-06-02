@@ -321,9 +321,21 @@ func main() { //nolint: funlen, gocyclo
 			}
 
 			// Move the file to the local storage
-			if err := ipfs.MoveFileToLocalStorage(cfg, downloadedFilePath); err != nil {
+			localStoragePath := filepath.Join(home, ".IPFS_Local_Storage/")
+			if err := os.MkdirAll(localStoragePath, os.FileMode(cfg.FileRights)); err != nil {
+				log.Error("error creating output directory : %v", err)
+			}
+
+			outputFilePath := filepath.Join(localStoragePath, filepath.Base(downloadedFilePath))
+
+			if err := ipfs.MoveFile(downloadedFilePath, outputFilePath); err != nil {
 				log.Errorf("Failed to move file to local storage: %s", err)
 				continue
+			}
+
+			// restore file permissions
+			if err := os.Chmod(outputFilePath, os.FileMode(cfg.FileRights)); err != nil {
+				log.Error("error restoring file permissions: %v", err)
 			}
 
 			// Pin the file

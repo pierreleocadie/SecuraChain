@@ -5,8 +5,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 
 	"github.com/ipfs/boxo/path"
 	icore "github.com/ipfs/kubo/core/coreiface"
@@ -29,31 +27,4 @@ func AddFile(ctx context.Context, config *config.Config, ipfsAPI icore.CoreAPI, 
 
 	log.Printf("File added to IPFS with CID: %s", fileCid.String())
 	return fileCid, nil
-}
-
-// MoveFileToLocalStorage moves a file from the source path to the local storage path.
-func MoveFileToLocalStorage(config *config.Config, filePath string) error {
-	// Adding the file on the storage node (local system)
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("error getting user home directory: %v", err)
-	}
-
-	localStoragePath := filepath.Join(home, ".IPFS_Local_Storage/")
-	if err := os.MkdirAll(localStoragePath, os.FileMode(config.FileRights)); err != nil {
-		return fmt.Errorf("error creating output directory : %v", err)
-	}
-
-	outputFilePath := filepath.Join(localStoragePath, filepath.Base(filePath))
-	err = MoveFile(filePath, outputFilePath)
-	if err != nil {
-		return fmt.Errorf("error copying file to output directory: %v", err)
-	}
-
-	// restore file permissions
-	if err := os.Chmod(outputFilePath, os.FileMode(config.FileRights)); err != nil {
-		return fmt.Errorf("error restoring file permissions: %v", err)
-	}
-
-	return nil
 }
