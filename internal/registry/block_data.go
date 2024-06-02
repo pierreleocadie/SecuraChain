@@ -25,6 +25,15 @@ type BlockRegistry struct {
 	Blocks []BlockData `json:"blocks"`
 }
 
+func NewBlockData(b *block.Block, fileCid path.ImmutablePath, provider peer.AddrInfo) *BlockData {
+	return &BlockData{
+		ID:       b.Header.Height,
+		Key:      block.ComputeHash(b),
+		BlockCid: fileCid.RootCid(),
+		Provider: provider,
+	}
+}
+
 // AddBlockToRegistry adds a block and the data associated to the registry.
 func AddBlockToRegistry(log *ipfsLog.ZapEventLogger, b *block.Block, config *config.Config, fileCid path.ImmutablePath, provider peer.AddrInfo) error {
 	var blockRegistery BlockRegistry
