@@ -52,3 +52,20 @@ func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipf
 	log.Debugln("Number of missing blocks donwnloaded : ", len(missingBlocks))
 	return true, missingBlocks, nil
 }
+
+func GetMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, r registry.BlockRegistry, db *blockchaindb.PebbleDB) []*registry.BlockData {
+	var missingBlocks []*registry.BlockData
+
+	for _, blockData := range r.Blocks {
+
+		if existingBlock, err := db.GetBlock(log, blockData.Key); err == nil && existingBlock != nil {
+			log.Errorln("Block already exists in the blockchain : ", blockData.Key)
+			continue
+		}
+
+		missingBlocks = append(missingBlocks, &blockData)
+	}
+
+	log.Debugln("Number of missing blocks : ", len(missingBlocks))
+	return missingBlocks
+}
