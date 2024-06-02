@@ -22,6 +22,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/internal/registry/blockmanager"
+	"github.com/pierreleocadie/SecuraChain/internal/registry/synchronization"
 	"github.com/pierreleocadie/SecuraChain/internal/visualisation"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
@@ -472,7 +473,7 @@ func main() { //nolint: funlen, gocyclo
 			log.Debugln("State : requires sync ", requiresSync)
 
 			//1 . Ask for a registry of the blockchain
-			registryBytes, senderID, err := fullnode.AskForBlockchainRegistry(log, ctx, askingBlockchainTopic, subReceiveBlockchain)
+			registryBytes, senderID, err := synchronization.AskForBlockchainRegistry(log, ctx, askingBlockchainTopic, subReceiveBlockchain)
 			if err != nil {
 				log.Debugln("Error asking the blockchain registry : %s\n", err)
 				continue
@@ -646,7 +647,7 @@ func main() { //nolint: funlen, gocyclo
 			log.Debugln("Blockchain asked by a peer ", msg.GetFrom().String())
 
 			// Send the registry of the blockchain
-			if !fullnode.SendBlocksRegistryToNetwork(log, ctx, cfg, receiveBlockchainTopic) {
+			if !synchronization.SendBlocksRegistryToNetwork(log, ctx, cfg, receiveBlockchainTopic) {
 				log.Debugln("Error sending the registry of the blockchain")
 				continue
 			}
