@@ -18,13 +18,13 @@ type Blockchain interface {
 	Close(log *ipfsLog.ZapEventLogger) error
 }
 
-// BlockchainDB wraps a Pebble database instance to store blockchain data.
-type BlockchainDB struct {
+// PebbleDB wraps a Pebble database instance to store blockchain data.
+type PebbleDB struct {
 	db *pebble.DB
 }
 
 // BlockchainDB wraps a Pebble database instance to store blockchain data.
-func NewBlockchainDB(log *ipfsLog.ZapEventLogger, dbPath string) (*BlockchainDB, error) {
+func NewBlockchainDB(log *ipfsLog.ZapEventLogger, dbPath string) (*PebbleDB, error) {
 	db, err := pebble.Open(dbPath,
 		&pebble.Options{
 			Logger: log,
@@ -42,11 +42,11 @@ func NewBlockchainDB(log *ipfsLog.ZapEventLogger, dbPath string) (*BlockchainDB,
 		return nil, fmt.Errorf("failed to open pebble database : %v", err)
 	}
 	log.Debugln("Pebble database opened successfully")
-	return &BlockchainDB{db: db}, nil
+	return &PebbleDB{db: db}, nil
 }
 
 // SaveBlock serializes and stores a given block in the database.
-func (pdb *BlockchainDB) SaveBlock(log *ipfsLog.ZapEventLogger, key []byte, b *block.Block) error {
+func (pdb *PebbleDB) SaveBlock(log *ipfsLog.ZapEventLogger, key []byte, b *block.Block) error {
 	blockBytes, err := b.Serialize()
 	if err != nil {
 		log.Errorln("error serializing block")
@@ -81,7 +81,7 @@ func (pdb *BlockchainDB) SaveBlock(log *ipfsLog.ZapEventLogger, key []byte, b *b
 }
 
 // GetBlock retrieves a block from the database using its key.
-func (pdb *BlockchainDB) GetBlock(log *ipfsLog.ZapEventLogger, key []byte) (*block.Block, error) {
+func (pdb *PebbleDB) GetBlock(log *ipfsLog.ZapEventLogger, key []byte) (*block.Block, error) {
 	blockData, closer, err := pdb.db.Get(key)
 	if err != nil {
 		if err == pebble.ErrNotFound {
@@ -104,7 +104,7 @@ func (pdb *BlockchainDB) GetBlock(log *ipfsLog.ZapEventLogger, key []byte) (*blo
 }
 
 // VerifyIntegrity verifies the integrity of the blockchain stored in the BlockchainDB based on the last block.
-func (pdb *BlockchainDB) VerifyIntegrity(log *ipfsLog.ZapEventLogger) bool {
+func (pdb *PebbleDB) VerifyIntegrity(log *ipfsLog.ZapEventLogger) bool {
 	log.Infoln("Verifying blockchain integrity")
 
 	for blockKey := pdb.GetLastBlock(log).PrevBlock; blockKey != nil; {
@@ -141,7 +141,7 @@ func (pdb *BlockchainDB) VerifyIntegrity(log *ipfsLog.ZapEventLogger) bool {
 }
 
 // GetLastBlock retrieves the most recently added block from the database.
-func (pdb *BlockchainDB) GetLastBlock(log *ipfsLog.ZapEventLogger) *block.Block {
+func (pdb *PebbleDB) GetLastBlock(log *ipfsLog.ZapEventLogger) *block.Block {
 	lastBlock, err := pdb.GetBlock(log, []byte("lastBlockKey"))
 	if err != nil {
 		log.Errorln("error retrieving last block")
@@ -152,7 +152,7 @@ func (pdb *BlockchainDB) GetLastBlock(log *ipfsLog.ZapEventLogger) *block.Block 
 }
 
 // Close closes the database connection.
-func (pdb *BlockchainDB) Close(log *ipfsLog.ZapEventLogger) error {
+func (pdb *PebbleDB) Close(log *ipfsLog.ZapEventLogger) error {
 	log.Infoln("closing pebble database")
 	return pdb.db.Close()
 }
