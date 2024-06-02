@@ -23,6 +23,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	"github.com/pierreleocadie/SecuraChain/internal/registry"
 	"github.com/pierreleocadie/SecuraChain/internal/registry/blockmanager"
+	"github.com/pierreleocadie/SecuraChain/internal/registry/filemanager"
 	"github.com/pierreleocadie/SecuraChain/internal/registry/synchronization"
 	"github.com/pierreleocadie/SecuraChain/internal/visualisation"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
@@ -672,7 +673,7 @@ func main() { //nolint: funlen, gocyclo
 
 			// Send the files of the owner
 			ownerAddressStr := fmt.Sprintf("%x", msg.Data)
-			if !fullnode.SendOwnersFiles(log, ctx, cfg, ownerAddressStr, sendFilesTopic) {
+			if !filemanager.SendOwnersFiles(log, ctx, cfg, ownerAddressStr, sendFilesTopic) {
 				log.Debugln("Error sending the files of the owner")
 				continue
 			}

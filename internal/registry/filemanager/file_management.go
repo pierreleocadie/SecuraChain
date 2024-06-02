@@ -1,4 +1,4 @@
-package fullnode
+package filemanager
 
 import (
 	"context"
