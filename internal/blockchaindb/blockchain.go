@@ -5,7 +5,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 )
 
-// Blockchain defines an interface for interacting with the blockchain storage.
+// Blockchain represents an interface for interacting with a blockchain.
 type Blockchain interface {
 	SaveBlock(log *ipfsLog.ZapEventLogger, key []byte, b *block.Block) error
 	GetBlock(log *ipfsLog.ZapEventLogger, key []byte) (*block.Block, error)

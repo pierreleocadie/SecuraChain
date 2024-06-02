@@ -8,21 +8,23 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 )
 
-// AddBlockToBlockchain adds a block to the blockchain db.
-func AddBlockToBlockchain(log *ipfsLog.ZapEventLogger, b *block.Block, db *PebbleDB) error {
+// addGenesisBlock adds the genesis block to the blockchain database.
+func addGenesisBlock(log *ipfsLog.ZapEventLogger, b *block.Block, db *PebbleDB) error {
 	// Compute the hash of the block to use as a key in the db
 	key := block.ComputeHash(b)
 
-	// Check if the block is the genesis block
-	if block.IsGenesisBlock(b) {
-		err := db.SaveBlock(log, key, b)
-		if err != nil {
-			log.Errorf("Failed to add genesis block to the db: %s\n", err)
-			return fmt.Errorf("failed to add genesis block to the db: %s", err)
-		}
-		log.Debugln("Genesis block successfully added to the blockchain")
-		return nil
+	err := db.SaveBlock(log, key, b)
+	if err != nil {
+		log.Errorf("Failed to add genesis block to the db: %s\n", err)
+		return fmt.Errorf("failed to add genesis block to the db: %s", err)
 	}
+	log.Debugln("Genesis block successfully added to the blockchain")
+	return nil
+}
+
+// addNormalBlock adds a normal block to the blockchain database.
+func addNormalBlock(log *ipfsLog.ZapEventLogger, b *block.Block, db *PebbleDB) error {
+	key := block.ComputeHash(b)
 
 	// Check if the block already exists in the db
 	_, err := db.GetBlock(log, key)
@@ -45,5 +47,12 @@ func AddBlockToBlockchain(log *ipfsLog.ZapEventLogger, b *block.Block, db *Pebbl
 	}
 	log.Warnln("Block already exists in the blockchain")
 	return fmt.Errorf("block already exists in the blockchain")
+}
 
+// AddBlockToBlockchain adds a block to the blockchain database.
+func AddBlockToBlockchain(log *ipfsLog.ZapEventLogger, b *block.Block, db *PebbleDB) error {
+	if block.IsGenesisBlock(b) {
+		return addGenesisBlock(log, b, db)
+	}
+	return addNormalBlock(log, b, db)
 }
