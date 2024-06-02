@@ -54,8 +54,8 @@ func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipf
 		}
 		log.Debugln("Block downloaded from IPFS : ", b)
 		downloadedBlocks = append(downloadedBlocks, b)
-
 	}
 
+	log.Debugln("Downloaded blocks : ", downloadedBlocks)
 	return downloadedBlocks, nil
 }
