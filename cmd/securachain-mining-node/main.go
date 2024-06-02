@@ -20,6 +20,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
+	"github.com/pierreleocadie/SecuraChain/internal/registry/blockmanager"
 	"github.com/pierreleocadie/SecuraChain/internal/visualisation"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
@@ -302,7 +303,7 @@ func main() {
 				}
 
 				// 4 . Add the block transaction to the registry
-				if !fullnode.AddBlockTransactionToRegistry(log, cfg, bReceive) {
+				if !blockmanager.AddBlockTransactionToRegistry(log, cfg, bReceive) {
 					log.Debugln("Error adding the block transactions to the registry")
 				}
 
@@ -423,7 +424,7 @@ func main() {
 				}
 
 				// 6 . Add the block transaction to the registry
-				if !fullnode.AddBlockTransactionToRegistry(log, cfg, b) {
+				if !blockmanager.AddBlockTransactionToRegistry(log, cfg, b) {
 					log.Debugln("Error adding the block transactions to the registry")
 				}
 
@@ -504,7 +505,7 @@ func main() {
 				}
 
 				// 5 . Add the block transaction to the registry
-				if !fullnode.AddBlockTransactionToRegistry(log, cfg, b) {
+				if !blockmanager.AddBlockTransactionToRegistry(log, cfg, b) {
 					log.Debugln("Error adding the block transactions to the registry")
 				}
 
