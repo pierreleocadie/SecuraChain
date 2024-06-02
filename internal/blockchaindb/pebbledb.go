@@ -19,13 +19,6 @@ func NewBlockchainDB(log *ipfsLog.ZapEventLogger, dbPath string) (*PebbleDB, err
 	db, err := pebble.Open(dbPath,
 		&pebble.Options{
 			Logger: log,
-			// FS: vfs.NewSyncingFS(vfs.Default,
-			// 	vfs.SyncingFileOptions{
-			// 		NoSyncOnClose:   false,
-			// 		BytesPerSync:    1024 * 1024,
-			// 		PreallocateSize: 0,
-			// 	},
-			// ),
 		},
 	)
 	if err != nil {
