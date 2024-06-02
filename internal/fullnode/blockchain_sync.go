@@ -46,7 +46,7 @@ func AskForBlockchainRegistry(log *ipfsLog.ZapEventLogger, ctx context.Context, 
 }
 
 // DownloadMissingBlocks attemps to download blocks that are missing in the local blockchain from IPFS.
-func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, registryBytes []byte, db *blockchaindb.BlockchainDB) (bool, []*block.Block, error) {
+func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, registryBytes []byte, db *blockchaindb.PebbleDB) (bool, []*block.Block, error) {
 	var missingBlocks []*block.Block
 
 	r, err := registry.DeserializeRegistry[registry.BlockRegistry](log, registryBytes)

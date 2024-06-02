@@ -7,7 +7,7 @@ import (
 )
 
 // AddBlockToBlockchain adds a block to the blockchain db.
-func AddBlockToBlockchain(log *ipfsLog.ZapEventLogger, b *block.Block, db *BlockchainDB) bool {
+func AddBlockToBlockchain(log *ipfsLog.ZapEventLogger, b *block.Block, db *PebbleDB) bool {
 	// Compute the hash of the block to use as a key in the db
 	key := block.ComputeHash(b)
 

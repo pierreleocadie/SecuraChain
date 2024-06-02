@@ -13,7 +13,7 @@ import (
 )
 
 // PrevBlockStored checks if the previous block is stored in the db.
-func PrevBlockStored(log *ipfsLog.ZapEventLogger, b *block.Block, db *blockchaindb.BlockchainDB) (bool, error) {
+func PrevBlockStored(log *ipfsLog.ZapEventLogger, b *block.Block, db *blockchaindb.PebbleDB) (bool, error) {
 	prevBlockStored, err := db.GetBlock(log, b.PrevBlock)
 	if err != nil {
 		log.Errorln("Failed to check for previous block in db: ", err)
