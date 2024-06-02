@@ -7,6 +7,15 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
 
+func publishMyFileRequest(log *ipfsLog.ZapEventLogger, ctx context.Context, askMyFiles *pubsub.Topic, myPublicKey []byte) error {
+	log.Debugln("Requesting for my files from the network")
+	if err := askMyFiles.Publish(ctx, myPublicKey); err != nil {
+		log.Errorln("Error publishing my files request : ", err)
+		return err
+	}
+	return nil
+}
+
 // AskForIndexingRegistry sends a request for the indexing registry over the network.
 func AskForMyFiles(log *ipfsLog.ZapEventLogger, ctx context.Context, askMyFiles *pubsub.Topic, recMyFiles *pubsub.Subscription, myPublicKey []byte) ([]byte, string, error) {
 	log.Debugln("Requesting for my files from the network")
