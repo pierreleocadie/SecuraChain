@@ -22,11 +22,5 @@ func ReceiveBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, subBlockAnno
 	// Display the block received
 	log.Debugln("Received block : ", string(msg.Data))
 
-	// Deserialize the block announcement
-	b, err := block.DeserializeBlock(msg.Data)
-	if err != nil {
-		log.Errorln("error deserializing block announcement: ", err)
-		return nil, fmt.Errorf("error deserializing block announcement: %s", err)
-	}
-	return b, nil
+	return block.DeserializeBlock(msg.Data)
 }
