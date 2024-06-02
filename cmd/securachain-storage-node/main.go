@@ -28,6 +28,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/visualisation"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
+	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -267,20 +268,37 @@ func main() { //nolint: funlen, gocyclo
 			}
 
 			log.Debugf("Downloading file %s", fileImmutablePath)
-			err = ipfs.GetFile(ctx, cfg, ipfsAPI, fileImmutablePath)
+			rootNodeFile, err := ipfs.GetFile(ctx, cfg, ipfsAPI, fileImmutablePath)
 			if err != nil {
 				log.Errorf("Failed to download file: %s", err)
 				continue
 			}
 
-			// Verify that the file we downloaded is the same as the one announced
+			// Move the file to the downloads storage
 			home, err := os.UserHomeDir()
 			if err != nil {
 				log.Errorf("Failed to get user home directory: %s", err)
 				continue
 			}
 
-			downloadedFilePath := filepath.Join(home, ".IPFS_Downloads", clientAnnouncement.FileCid.String())
+			downloadsStoragePath := filepath.Join(home, ".IPFS_Downloads/")
+
+			// Ensure the output directory exists or create it.
+			if err := os.MkdirAll(downloadsStoragePath, os.FileMode(cfg.FileRights)); err != nil {
+				log.Errorf("Error creating output directory: %v", err)
+			}
+
+			downloadedFilePath := filepath.Join(downloadsStoragePath, filepath.Base(fileImmutablePath.String()))
+
+			log.Debugln("Writing file to %s\n", downloadedFilePath)
+
+			if err := files.WriteTo(rootNodeFile, downloadedFilePath); err != nil {
+				log.Errorf("Failed to write out the fetched CID: %v", err)
+				continue
+			}
+
+			// Verify that the file we downloaded is the same as the one announced
+			downloadedFilePath = filepath.Join(home, ".IPFS_Downloads", clientAnnouncement.FileCid.String())
 			checksum, err := utils.ComputeFileChecksum(downloadedFilePath)
 			if err != nil {
 				log.Errorf("Failed to compute checksum of downloaded file: %s", err)
