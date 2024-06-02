@@ -708,7 +708,7 @@ func main() { //nolint: funlen, gocyclo
 
 			// Send the files of the owner
 			ownerAddressStr := fmt.Sprintf("%x", msg.Data)
-			if !filemanager.SendOwnersFiles(log, ctx, cfg, ownerAddressStr, sendFilesTopic) {
+			if err := filemanager.SendOwnersFiles(log, ctx, cfg, ownerAddressStr, sendFilesTopic); err != nil {
 				log.Debugln("Error sending the files of the owner")
 				continue
 			}

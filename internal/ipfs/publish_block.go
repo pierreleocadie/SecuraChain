@@ -3,7 +3,6 @@ package ipfs
 import (
 	"context"
 	"fmt"
-	"os"
 
 	files "github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
@@ -34,15 +33,8 @@ func PublishBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, config *conf
 	// Get the node ID
 	nodeId := nodeIpfs.Peerstore.PeerInfo(nodeIpfs.Identity)
 
-	// Load existing registry if it exists
-	blockRegistery, err := registry.LoadRegistryFile[registry.BlockRegistry](log, config, config.BlockRegistryPath)
-	if err != nil && !os.IsNotExist(err) {
-		log.Errorln("Error loading block registry:", err)
-		return false
-	}
-
 	// Save the block metadata to the registry
-	if err := registry.AddBlockToRegistry(log, b, config, cidFile, nodeId, blockRegistery); err != nil {
+	if err := registry.AddBlockToRegistry(log, b, config, cidFile, nodeId); err != nil {
 		log.Errorln("Error adding the block metadata to the registry")
 		return false
 	}

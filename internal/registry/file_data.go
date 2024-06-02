@@ -28,8 +28,8 @@ type IndexingRegistry struct {
 	IndexingFiles map[string][]FileRegistry
 }
 
-func NewFileRegistry(addFileTransac *transaction.AddFileTransaction) *FileRegistry {
-	return &FileRegistry{
+func NewFileRegistry(addFileTransac *transaction.AddFileTransaction) FileRegistry {
+	return FileRegistry{
 		Filename:             addFileTransac.Filename,
 		Extension:            addFileTransac.Extension,
 		FileSize:             addFileTransac.FileSize,
@@ -68,20 +68,11 @@ func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, addFi
 		}
 	}
 
-	newData := FileRegistry{
-		Filename:             addFileTransac.Filename,
-		Extension:            addFileTransac.Extension,
-		FileSize:             addFileTransac.FileSize,
-		Checksum:             addFileTransac.Checksum,
-		Providers:            []peer.AddrInfo{addFileTransac.IPFSStorageNodeAddrInfo},
-		FileCid:              addFileTransac.FileCid,
-		TransactionTimestamp: addFileTransac.AnnouncementTimestamp,
-	}
+	newData := NewFileRegistry(addFileTransac)
 	log.Debugln("New FileRegistry : ", newData)
 
 	// Add the file to the list for this user
 	r.IndexingFiles[ownerAddressStr] = append(r.IndexingFiles[ownerAddressStr], newData)
-
 	log.Debugln("[AddFileToRegistry] - File added to registry")
 
 	// Save the updated registry

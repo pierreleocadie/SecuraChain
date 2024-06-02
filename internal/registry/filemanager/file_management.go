@@ -2,6 +2,7 @@ package filemanager
 
 import (
 	"context"
+	"fmt"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -33,26 +34,20 @@ func searchMyFiles(log *ipfsLog.ZapEventLogger, config *config.Config, myPublicK
 }
 
 // SendOwnersFiles sends the files owned by a specific specific user (by his publicKey).
-func SendOwnersFiles(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, myPublicKey string, owner *pubsub.Topic) bool {
+func SendOwnersFiles(log *ipfsLog.ZapEventLogger, ctx context.Context, config *config.Config, myPublicKey string, owner *pubsub.Topic) error {
 	myFiles := searchMyFiles(log, config, myPublicKey)
-
-	// myFilesBytes, err := registry.SerializeRegistry(log, myFiles)
-	// if err != nil {
-	// 	log.Errorln("Error serializing my files : ", err)
-	// 	return false
-	// }
 
 	myFilesBytes, err := registry.SerializeRegistry(registry.RegistryMessage{OwnerPublicKey: myPublicKey, Registry: myFiles})
 	if err != nil {
 		log.Errorln("Error serializing my files : ", err)
-		return false
+		return fmt.Errorf("error serializing my files : %w", err)
 	}
 
 	if err := owner.Publish(ctx, myFilesBytes); err != nil {
 		log.Errorln("Error publishing indexing registry : ", err)
-		return false
+		return fmt.Errorf("error publishing indexing registry : %w", err)
 	}
 
 	log.Debugln("Files of owner sent")
-	return true
+	return nil
 }
