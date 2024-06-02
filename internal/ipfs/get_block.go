@@ -32,13 +32,13 @@ func GetBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.Co
 		log.Errorln("Failed to convert the file into a *block.Block: %s ", err)
 		return nil, fmt.Errorf("failed to converted the file into a *block.Block: %v", err)
 	}
-	log.Debugln("Converted the fetched CID to a block")
+	log.Debugln("Fetched CID converted to a block")
 
 	if err := os.Remove("block"); err != nil {
 		log.Errorln("Failed to remove the file 'block': %s ", err)
 		return nil, fmt.Errorf("failed to remove the file 'block': %v", err)
 	}
-	log.Debugln("Removed the file")
+	log.Debugln("file removed")
 
 	return b, err
 }
