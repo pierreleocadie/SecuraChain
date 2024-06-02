@@ -15,12 +15,11 @@ import (
 
 // GetBlock retrieves a block from IPFS using the provided CID.
 func GetBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, blockPath path.ImmutablePath) (*block.Block, error) {
-	blockFetched, err := ipfsAPI.Unixfs().Get(ctx, blockPath)
+	blockFetched, err := GetFile(ctx, ipfsAPI, blockPath)
 	if err != nil {
-		log.Errorln("Failed to fetch the block from IPFS: %s ", err)
-		return nil, fmt.Errorf("failed to fetch the block from IPFS %s", err)
+		log.Errorln("Failed to get the file: %s ", err)
+		return nil, fmt.Errorf("failed to get the file: %v", err)
 	}
-	log.Debugln("Retrieved block from IPFS: %s ", blockPath.String())
 
 	if err := files.WriteTo(blockFetched, "block"); err != nil {
 		log.Errorln("Failed to write the block into a file: %s ", err)

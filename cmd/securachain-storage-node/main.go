@@ -268,7 +268,7 @@ func main() { //nolint: funlen, gocyclo
 			}
 
 			log.Debugf("Downloading file %s", fileImmutablePath)
-			rootNodeFile, err := ipfs.GetFile(ctx, cfg, ipfsAPI, fileImmutablePath)
+			rootNodeFile, err := ipfs.GetFile(ctx, ipfsAPI, fileImmutablePath)
 			if err != nil {
 				log.Errorf("Failed to download file: %s", err)
 				continue
