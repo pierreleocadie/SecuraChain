@@ -238,8 +238,8 @@ func main() {
 				}
 
 				// 2 . Add the block to the blockchain
-				added := blockchaindb.AddBlockToBlockchain(log, bReceive, blockchain)
-				if !added {
+				if err := blockchaindb.AddBlockToBlockchain(log, bReceive, blockchain); err != nil {
+					log.Debugln("Error adding the block to the blockchain : %s\n", err)
 					continue
 				}
 
@@ -325,8 +325,8 @@ func main() {
 				}
 
 				// 4 . Add the block to the blockchain
-				added := blockchaindb.AddBlockToBlockchain(log, b, blockchain)
-				if !added {
+				if err := blockchaindb.AddBlockToBlockchain(log, b, blockchain); err != nil {
+					log.Debugln("Error adding the block to the blockchain : %s\n", err)
 					continue
 				}
 
@@ -405,8 +405,8 @@ func main() {
 				}
 
 				// 4 . Add the block to the blockchain
-				added := blockchaindb.AddBlockToBlockchain(log, b, blockchain)
-				if !added {
+				if err := blockchaindb.AddBlockToBlockchain(log, b, blockchain); err != nil {
+					log.Debugln("Error adding the block to the blockchain : %s\n", err)
 					continue
 				}
 

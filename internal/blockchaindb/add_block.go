@@ -1,13 +1,15 @@
 package blockchaindb
 
 import (
+	"fmt"
+
 	"github.com/cockroachdb/pebble"
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 )
 
 // AddBlockToBlockchain adds a block to the blockchain db.
-func AddBlockToBlockchain(log *ipfsLog.ZapEventLogger, b *block.Block, db *PebbleDB) bool {
+func AddBlockToBlockchain(log *ipfsLog.ZapEventLogger, b *block.Block, db *PebbleDB) error {
 	// Compute the hash of the block to use as a key in the db
 	key := block.ComputeHash(b)
 
@@ -16,10 +18,10 @@ func AddBlockToBlockchain(log *ipfsLog.ZapEventLogger, b *block.Block, db *Pebbl
 		err := db.SaveBlock(log, key, b)
 		if err != nil {
 			log.Errorf("Failed to add genesis block to the db: %s\n", err)
-			return false
+			return fmt.Errorf("failed to add genesis block to the db: %s", err)
 		}
 		log.Debugln("Genesis block successfully added to the blockchain")
-		return true
+		return nil
 	}
 
 	// Check if the block already exists in the db
@@ -30,18 +32,18 @@ func AddBlockToBlockchain(log *ipfsLog.ZapEventLogger, b *block.Block, db *Pebbl
 
 			if err := db.SaveBlock(log, key, b); err != nil {
 				log.Errorf("Failed to add block to the db: %s\n", err)
-				return false
+				return fmt.Errorf("failed to add block to the db: %s", err)
 			}
 
 			log.Debugln("Block successfully added to the blockchain")
-			return true
+			return nil
 		}
 
 		log.Errorf("Failed to retrieve block from the db: %s\n", err)
-		return false
+		return fmt.Errorf("failed to retrieve block from the db: %s", err)
 
 	}
 	log.Warnln("Block already exists in the blockchain")
-	return false
+	return fmt.Errorf("block already exists in the blockchain")
 
 }
