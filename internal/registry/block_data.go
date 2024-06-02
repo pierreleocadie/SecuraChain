@@ -25,8 +25,8 @@ type BlockRegistry struct {
 	Blocks []BlockData `json:"blocks"`
 }
 
-func NewBlockData(b *block.Block, fileCid path.ImmutablePath, provider peer.AddrInfo) *BlockData {
-	return &BlockData{
+func NewBlockData(b *block.Block, fileCid path.ImmutablePath, provider peer.AddrInfo) BlockData {
+	return BlockData{
 		ID:       b.Header.Height,
 		Key:      block.ComputeHash(b),
 		BlockCid: fileCid.RootCid(),
@@ -35,25 +35,12 @@ func NewBlockData(b *block.Block, fileCid path.ImmutablePath, provider peer.Addr
 }
 
 // AddBlockToRegistry adds a block and the data associated to the registry.
-func AddBlockToRegistry(log *ipfsLog.ZapEventLogger, b *block.Block, config *config.Config, fileCid path.ImmutablePath, provider peer.AddrInfo) error {
-	var blockRegistery BlockRegistry
-
-	// Load existing registry if it exists
-	blockRegistery, err := LoadRegistryFile[BlockRegistry](log, config, config.BlockRegistryPath)
-	if err != nil && !os.IsNotExist(err) {
-		log.Errorln("Error loading block registry:", err)
-		return err
-	}
-
-	newData := BlockData{
-		ID:       b.Header.Height,
-		Key:      block.ComputeHash(b),
-		BlockCid: fileCid.RootCid(),
-		Provider: provider,
-	}
+func AddBlockToRegistry(log *ipfsLog.ZapEventLogger, b *block.Block, config *config.Config, fileCid path.ImmutablePath, provider peer.AddrInfo, blockRegistery BlockRegistry) error {
+	newData := NewBlockData(b, fileCid, provider)
 	log.Debugln("New BlockData : ", newData)
 
 	blockRegistery.Blocks = append(blockRegistery.Blocks, newData)
+	log.Debugln("Block added to registry successfully")
 
 	// Save updated registry back to file
 	log.Infoln("Block registry created or updated successfully")
