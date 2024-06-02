@@ -7,7 +7,6 @@ import (
 
 // Blockchain defines an interface for interacting with the blockchain storage.
 type Blockchain interface {
-	NewBlockchainDB(log *ipfsLog.ZapEventLogger, dbPath string) (*PebbleDB, error)
 	SaveBlock(log *ipfsLog.ZapEventLogger, key []byte, b *block.Block) error
 	GetBlock(log *ipfsLog.ZapEventLogger, key []byte) (*block.Block, error)
 	VerifyIntegrity(log *ipfsLog.ZapEventLogger) bool
