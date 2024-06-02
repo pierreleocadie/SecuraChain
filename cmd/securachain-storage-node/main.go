@@ -21,6 +21,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/fullnode"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
+	"github.com/pierreleocadie/SecuraChain/internal/registry"
 	"github.com/pierreleocadie/SecuraChain/internal/registry/blockmanager"
 	"github.com/pierreleocadie/SecuraChain/internal/registry/synchronization"
 	"github.com/pierreleocadie/SecuraChain/internal/visualisation"
@@ -488,19 +489,25 @@ func main() { //nolint: funlen, gocyclo
 			blackListNode = append(blackListNode, senderID)
 			log.Debugln("Node added to the black list")
 
-			// 2 . Dowlnoad the missing blocks
-			downloaded, listOfMissingBlocks, err := fullnode.DownloadMissingBlocks(log, ctx, ipfsAPI, registryBytes, blockchain)
+			// 1.3 Convert the bytes to a block registry
+			r, err := registry.DeserializeRegistry[registry.BlockRegistry](log, registryBytes)
+			if err != nil {
+				log.Errorln("Error converting bytes to block registry : ", err)
+			}
+			log.Debugln("Registry converted to BlockRegistry : ", r)
+
+			// 2 . Get the missing blocks
+			missingBlocks := fullnode.GetMissingBlocks(log, r, blockchain)
+
+			// 2bis . Dowlnoad the missing blocks
+			downloadedBlocks, err := fullnode.DownloadMissingBlocks(log, ctx, ipfsAPI, missingBlocks)
 			if err != nil {
 				log.Debugln("Error downloading missing blocks : %s\n", err)
-			}
-
-			if !downloaded {
-				log.Debugln("Blocks not downloaded")
 				continue
 			}
 
 			// 3 . Valid the downloaded blocks
-			for _, b := range listOfMissingBlocks {
+			for _, b := range downloadedBlocks {
 				if block.IsGenesisBlock(b) {
 					if !consensus.ValidateBlock(b, nil) {
 						log.Debugln("Genesis block is invalid")
