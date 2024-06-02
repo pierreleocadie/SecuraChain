@@ -27,7 +27,7 @@ func getFileName(config *config.Config, registry interface{}) (string, error) {
 	case BlockRegistry:
 		return config.BlockRegistryPath, nil
 	default:
-		return "", fmt.Errorf("Unknown registry type")
+		return "", fmt.Errorf("unsupported registry type")
 	}
 }
 
@@ -39,15 +39,13 @@ func SaveRegistryToFile(log *ipfsLog.ZapEventLogger, config *config.Config, regi
 		return err
 	}
 
-	//name the file depending on the type of registry
-	filename := ""
-	switch registry.(type) {
-	case IndexingRegistry:
-		filename = config.IndexingRegistryPath
-	case BlockRegistry:
-		filename = config.BlockRegistryPath
+	filename, err := getFileName(config, registry)
+	if err != nil {
+		log.Errorln("Error getting file name", err)
+		return err
 	}
 
+	log.Debugln("Saving registry to file:", filename)
 	return os.WriteFile(filepath.Clean(filename), data, os.FileMode(config.FileRights))
 }
 
