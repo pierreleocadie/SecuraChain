@@ -28,6 +28,18 @@ type IndexingRegistry struct {
 	IndexingFiles map[string][]FileRegistry
 }
 
+func NewFileRegistry(addFileTransac *transaction.AddFileTransaction) *FileRegistry {
+	return &FileRegistry{
+		Filename:             addFileTransac.Filename,
+		Extension:            addFileTransac.Extension,
+		FileSize:             addFileTransac.FileSize,
+		Checksum:             addFileTransac.Checksum,
+		Providers:            []peer.AddrInfo{addFileTransac.IPFSStorageNodeAddrInfo},
+		FileCid:              addFileTransac.FileCid,
+		TransactionTimestamp: addFileTransac.AnnouncementTimestamp,
+	}
+}
+
 // AddFileToRegistry adds a file and the data associated to the registry.
 func AddFileToRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, addFileTransac *transaction.AddFileTransaction) error {
 	var r IndexingRegistry
