@@ -2,7 +2,6 @@ package registry
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -44,23 +43,6 @@ func SaveRegistryToFile(log *ipfsLog.ZapEventLogger, config *config.Config, regi
 // It returns the deserialized registry data and any error encountered during the process.
 func LoadRegistryFile[R Registeries](log *ipfsLog.ZapEventLogger, config *config.Config, filename string) (R, error) {
 	var registry R
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return registry, err
-	}
-
-	defaultFilePath := filepath.Join(home, config.SecuraChainDataPath)
-	// Ensure the output directory exists or create it.
-	if err := os.MkdirAll(defaultFilePath, os.FileMode(config.FileRights)); err != nil {
-		return registry, fmt.Errorf("error creating output directory: %v", err)
-	}
-
-	if err = os.Chdir(defaultFilePath); err != nil {
-		return registry, err
-	}
-
-	log.Debugln("Changing directory to", defaultFilePath)
 
 	data, err := os.ReadFile(filepath.Clean(filename))
 	if err != nil {
