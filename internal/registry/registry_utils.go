@@ -10,10 +10,6 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 )
 
-type Registeries interface {
-	IndexingRegistry | FileRegistry | BlockRegistry | BlockData | RegistryMessage
-}
-
 type RegistryMessage struct {
 	OwnerPublicKey string
 	Registry       []FileRegistry
