@@ -21,23 +21,6 @@ type RegistryMessage struct {
 
 // SaveRegistryToFile saves any registry to a JSON file.
 func SaveRegistryToFile(log *ipfsLog.ZapEventLogger, config *config.Config, registry interface{}) error {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-
-	defaultFilePath := filepath.Join(home, config.SecuraChainDataPath)
-	// Ensure the output directory exists or create it.
-	if err := os.MkdirAll(defaultFilePath, os.FileMode(config.FileRights)); err != nil {
-		return fmt.Errorf("error creating output directory: %v", err)
-	}
-
-	if err = os.Chdir(defaultFilePath); err != nil {
-		return err
-	}
-
-	log.Debugln("Changing directory to", defaultFilePath)
-
 	data, err := json.Marshal(registry)
 	if err != nil {
 		log.Errorln("Error serializing registry")
@@ -111,6 +94,5 @@ func DeserializeRegistry[R Registeries](log *ipfsLog.ZapEventLogger, data []byte
 	}
 
 	log.Debugln("Registry deserialized successfully")
-
 	return registry, nil
 }
