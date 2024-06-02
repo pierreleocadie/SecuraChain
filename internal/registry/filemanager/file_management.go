@@ -42,7 +42,7 @@ func SendOwnersFiles(log *ipfsLog.ZapEventLogger, ctx context.Context, config *c
 	// 	return false
 	// }
 
-	myFilesBytes, err := registry.SerializeRegistry(log, registry.RegistryMessage{OwnerPublicKey: myPublicKey, Registry: myFiles})
+	myFilesBytes, err := registry.SerializeRegistry(registry.RegistryMessage{OwnerPublicKey: myPublicKey, Registry: myFiles})
 	if err != nil {
 		log.Errorln("Error serializing my files : ", err)
 		return false

@@ -49,7 +49,7 @@ func SendBlocksRegistryToNetwork(log *ipfsLog.ZapEventLogger, ctx context.Contex
 		return false
 	}
 
-	registryBytes, err := registry.SerializeRegistry(log, r)
+	registryBytes, err := registry.SerializeRegistry(r)
 	if err != nil {
 		log.Errorln("Error serializing the registry of the blockchain : ", err)
 		return false

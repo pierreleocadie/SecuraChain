@@ -98,8 +98,7 @@ func LoadRegistryFile[R Registeries](log *ipfsLog.ZapEventLogger, config *config
 }
 
 // SerializeRegistry serializes any registry into a byte slice using JSON encoding.
-func SerializeRegistry(log *ipfsLog.ZapEventLogger, registry interface{}) ([]byte, error) {
-	log.Debugln("Serializing registry")
+func SerializeRegistry(registry interface{}) ([]byte, error) {
 	return json.Marshal(registry)
 }
 
