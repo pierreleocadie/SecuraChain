@@ -2,6 +2,7 @@ package registry
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -18,11 +19,23 @@ type RegistryMessage struct {
 	Registry       []FileRegistry
 }
 
+// getFileName returns the appropriate file name based on the type of registry.
+func getFileName(config *config.Config, registry interface{}) (string, error) {
+	switch registry.(type) {
+	case IndexingRegistry:
+		return config.IndexingRegistryPath, nil
+	case BlockRegistry:
+		return config.BlockRegistryPath, nil
+	default:
+		return "", fmt.Errorf("Unknown registry type")
+	}
+}
+
 // SaveRegistryToFile saves any registry to a JSON file.
 func SaveRegistryToFile(log *ipfsLog.ZapEventLogger, config *config.Config, registry interface{}) error {
-	data, err := json.Marshal(registry)
+	data, err := SerializeRegistry(registry)
 	if err != nil {
-		log.Errorln("Error serializing registry")
+		log.Errorln("Error serializing registry", err)
 		return err
 	}
 
