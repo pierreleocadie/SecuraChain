@@ -265,12 +265,9 @@ func main() {
 					}
 					log.Debugln("Genesis block is valid")
 				} else {
-					isPrevBlockStored, err := fullnode.PrevBlockStored(log, bReceive, blockchain)
-					if err != nil {
-						log.Debugln("error checking if previous block is stored : %s", err)
-					}
+					if err := fullnode.PrevBlockStored(log, bReceive, blockchain); err != nil {
+						log.Debugln("Error checking if previous block is stored : %s", err)
 
-					if !isPrevBlockStored {
 						pendingBlocks = append(pendingBlocks, bReceive)
 						blockProcessingEnabled = false
 						requiresSync = true // This will call the process of synchronizing the blockchain with the network
@@ -460,12 +457,10 @@ func main() {
 
 			for _, b := range sortedList {
 				// 2 . Verify if the previous block is stored in the database
-				isPrevBlockStored, err := fullnode.PrevBlockStored(log, b, blockchain)
-				if err != nil {
-					log.Debugln("Error checking if previous block is stored : %s", err)
-				}
 
-				if !isPrevBlockStored {
+				if err := fullnode.PrevBlockStored(log, b, blockchain); err != nil {
+					log.Debugln("Error checking if previous block is stored : %s", err)
+
 					pendingBlocks = []*block.Block{}
 					requiresPostSync = false
 					requiresSync = true // This will call the process of synchronizing the blockchain with the network

@@ -10,20 +10,20 @@ import (
 )
 
 // PrevBlockStored checks if the previous block is stored in the db.
-func PrevBlockStored(log *ipfsLog.ZapEventLogger, b *block.Block, db *blockchaindb.PebbleDB) (bool, error) {
+func PrevBlockStored(log *ipfsLog.ZapEventLogger, b *block.Block, db *blockchaindb.PebbleDB) error {
 	prevBlockStored, err := db.GetBlock(log, b.PrevBlock)
 	if err != nil {
 		log.Errorln("Failed to check for previous block in db: ", err)
-		return false, fmt.Errorf("failed to check for previous block in db: %s", err)
+		return fmt.Errorf("failed to check for previous block in db: %s", err)
 	}
 
 	if prevBlockStored == nil {
 		log.Debugln("Previous block not found in db")
-		return false, nil
+		return fmt.Errorf("previous block not found in db")
 	}
 
 	log.Debugln("Previous block found in db")
-	return true, nil
+	return nil
 }
 
 // SortBlockByHeight sorts the given list of blocks by their height in ascending order.
