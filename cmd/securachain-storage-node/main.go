@@ -321,11 +321,10 @@ func main() { //nolint: funlen, gocyclo
 			}
 
 			// Pin the file
-			pinned, err := ipfs.PinFile(ctx, ipfsAPI, fileImmutablePathCid)
-			if err != nil {
+			if err := ipfs.PinFile(ctx, ipfsAPI, fileImmutablePathCid); err != nil {
 				log.Errorf("Failed to pin file: %s", err)
+				continue
 			}
-			log.Debugf("File pinned: %s", pinned)
 
 			// From path.ImmutablePath to cid.Cid
 			fileRootCid := fileImmutablePathCid.RootCid()
