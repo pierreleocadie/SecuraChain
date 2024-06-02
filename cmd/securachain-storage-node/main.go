@@ -320,6 +320,12 @@ func main() { //nolint: funlen, gocyclo
 				continue
 			}
 
+			// Move the file to the local storage
+			if err := ipfs.MoveFileToLocalStorage(cfg, downloadedFilePath); err != nil {
+				log.Errorf("Failed to move file to local storage: %s", err)
+				continue
+			}
+
 			// Pin the file
 			if err := ipfs.PinFile(ctx, ipfsAPI, fileImmutablePathCid); err != nil {
 				log.Errorf("Failed to pin file: %s", err)
