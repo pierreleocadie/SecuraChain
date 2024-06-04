@@ -90,7 +90,7 @@ func computeMerkleRootForHashes(hashes [][]byte) []byte {
 }
 
 // Serialize converts the block into a byte slice
-func (b *Block) Serialize() ([]byte, error) {
+func (b Block) Serialize() ([]byte, error) {
 	aux := struct {
 		Header       Header                           `json:"header"`
 		Transactions []transaction.TransactionWrapper `json:"transactions"`
