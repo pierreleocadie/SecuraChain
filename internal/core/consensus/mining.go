@@ -30,7 +30,7 @@ func MineBlock(currentBlock *block.Block, stop chan StopMiningSignal) (bool, *bl
 			return stopSignal.Stop, stopSignal.BlockReceived
 		default:
 			currentBlock.Header.Nonce = nonce
-			hash := block.ComputeHash(currentBlock)
+			hash := block.ComputeHash(*currentBlock)
 			hashInt := new(big.Int)
 			hashInt.SetBytes(hash)
 
