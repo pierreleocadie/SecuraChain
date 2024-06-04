@@ -128,17 +128,17 @@ func (b *Block) Serialize() ([]byte, error) {
 }
 
 // DeserializeBlock converts a byte slice back into a Block
-func DeserializeBlock(data []byte) (*Block, error) {
+func DeserializeBlock(data []byte) (Block, error) {
 	var aux struct {
 		Header       Header                           `json:"header"`
 		Transactions []transaction.TransactionWrapper `json:"transactions"`
 	}
 
 	if err := json.Unmarshal(data, &aux); err != nil {
-		return nil, err
+		return Block{}, err
 	}
 
-	block := &Block{
+	block := Block{
 		Header: aux.Header,
 	}
 
@@ -150,10 +150,10 @@ func DeserializeBlock(data []byte) (*Block, error) {
 		case "DeleteFileTransaction":
 			tx = &transaction.DeleteFileTransaction{}
 		default:
-			return nil, fmt.Errorf("unknown transaction type: %v", wrappedTrx.Type)
+			return Block{}, fmt.Errorf("unknown transaction type: %v", wrappedTrx.Type)
 		}
 		if err := json.Unmarshal(wrappedTrx.Data, &tx); err != nil {
-			return nil, err
+			return Block{}, err
 		}
 		block.Transactions = append(block.Transactions, tx)
 	}
