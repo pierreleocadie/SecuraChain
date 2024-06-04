@@ -162,7 +162,7 @@ func DeserializeBlock(data []byte) (*Block, error) {
 
 // SignBlock signs the block with the given private key and adds the signature to the block header
 func (b *Block) SignBlock(privateKey ecdsa.KeyPair) error {
-	headerHash := ComputeHash(b)
+	headerHash := ComputeHash(*b)
 	signature, err := privateKey.Sign(headerHash)
 	if err != nil {
 		return err
