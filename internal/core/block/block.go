@@ -172,7 +172,7 @@ func (b *Block) SignBlock(privateKey ecdsa.KeyPair) error {
 	return nil
 }
 
-func (b *Block) GetTransactionIDsMap() map[string]transaction.Transaction {
+func (b Block) GetTransactionIDsMap() map[string]transaction.Transaction {
 	ids := make(map[string]transaction.Transaction)
 	for _, trx := range b.Transactions {
 		switch trx := trx.(type) {
