@@ -56,7 +56,7 @@ func NewBlock(transactions []transaction.Transaction, prevBlockHash []byte, heig
 }
 
 // calculateMerkleRoot computes the Merkle root of the transactions in the block
-func (b *Block) ComputeMerkleRoot() []byte {
+func (b Block) ComputeMerkleRoot() []byte {
 	var txHashes [][]byte
 	for _, tx := range b.Transactions {
 		txBytes, _ := json.Marshal(tx)
