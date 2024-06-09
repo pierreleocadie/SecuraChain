@@ -12,6 +12,7 @@ import (
 )
 
 type AddFileTransaction struct {
+	BaseTransaction
 	AnnouncementID          uuid.UUID     `json:"announcementID"`          // Announcement ID - UUID
 	OwnerAddress            []byte        `json:"ownerAddress"`            // Owner address - ECDSA public key
 	IPFSClientNodeAddrInfo  peer.AddrInfo `json:"ipfsClientNodeAddrInfo"`  // IPFS client node address info
@@ -25,7 +26,6 @@ type AddFileTransaction struct {
 	NodeAddress             []byte        `json:"nodeAddress"`             // Node address - ECDSA public key
 	NodeID                  peer.ID       `json:"nodeID"`                  // Node ID
 	IPFSStorageNodeAddrInfo peer.AddrInfo `json:"ipfsStorageNodeAddrInfo"` // IPFS storage node address info
-	BaseTransaction                       // embed BaseTransaction struct to inherit methods
 }
 
 func NewAddFileTransaction(announcement *ClientAnnouncement, fileCid cid.Cid,
@@ -61,12 +61,28 @@ func NewAddFileTransaction(announcement *ClientAnnouncement, fileCid cid.Cid,
 	}
 	transactionHash := sha256.Sum256(transactionBytes)
 
-	transaction.BaseTransaction.TransactionSignature, err = keyPair.Sign(transactionHash[:])
+	transaction.TransactionSignature, err = keyPair.Sign(transactionHash[:])
 	if err != nil {
 		return nil
 	}
 
 	return transaction
+}
+
+// Override Serialize from TransactionVerifier
+func (t AddFileTransaction) Serialize() ([]byte, error) {
+	return json.Marshal(t)
+}
+
+// Override ToBytesWithoutSignature from TransactionVerifier
+func (t AddFileTransaction) ToBytesWithoutSignature() ([]byte, error) {
+	// Remove signature from transaction before verifying
+	signature := t.TransactionSignature
+	t.TransactionSignature = nil
+
+	defer func() { t.TransactionSignature = signature }() // Restore after serialization
+
+	return json.Marshal(t)
 }
 
 func DeserializeAddFileTransaction(data []byte) (AddFileTransaction, error) {

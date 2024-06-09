@@ -9,7 +9,7 @@ import (
 type Transaction interface {
 	Serialize() ([]byte, error)
 	ToBytesWithoutSignature() ([]byte, error)
-	Verify(signature []byte, publicKey []byte) error
+	Verify(tx Transaction, signature []byte, publicKey []byte) error
 }
 
 type TransactionWrapper struct {

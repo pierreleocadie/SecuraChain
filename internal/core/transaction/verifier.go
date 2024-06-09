@@ -9,22 +9,12 @@ import (
 
 type TransactionVerifier struct{}
 
-// Dumb implementation of Serialize
-func (v TransactionVerifier) Serialize() ([]byte, error) {
-	return nil, nil
-}
-
-// Dumb implementation of ToBytesWithoutSignature
-func (v TransactionVerifier) ToBytesWithoutSignature() ([]byte, error) {
-	return nil, nil
-}
-
-func (v TransactionVerifier) Verify(signature []byte, publicKey []byte) error {
-	data, err := v.ToBytesWithoutSignature()
+func (v TransactionVerifier) Verify(tx Transaction, signature []byte, publicKey []byte) error {
+	data, err := tx.ToBytesWithoutSignature()
 	if err != nil {
 		return fmt.Errorf("failed to get transaction bytes without signature: %w", err)
 	}
-
+	fmt.Println("DEBUG HERE : ", data)
 	hash := sha256.Sum256(data)
 
 	addr, err := ecdsa.PublicKeyFromBytes(publicKey)

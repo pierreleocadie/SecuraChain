@@ -11,9 +11,9 @@ import (
 )
 
 type DeleteFileTransaction struct {
-	OwnerAddress    []byte  `json:"ownerAddress"` // Owner address - ECDSA public key
-	FileCid         cid.Cid `json:"fileCID"`      // File CID
-	BaseTransaction         // embed BaseTransaction struct to inherit methods
+	BaseTransaction
+	OwnerAddress []byte  `json:"ownerAddress"` // Owner address - ECDSA public key
+	FileCid      cid.Cid `json:"fileCID"`      // File CID
 }
 
 func NewDeleteFileTransaction(keyPair ecdsa.KeyPair, fileCid cid.Cid) *DeleteFileTransaction {
@@ -37,12 +37,26 @@ func NewDeleteFileTransaction(keyPair ecdsa.KeyPair, fileCid cid.Cid) *DeleteFil
 	}
 	transactionHash := sha256.Sum256(transactionBytes)
 
-	transaction.BaseTransaction.TransactionSignature, err = keyPair.Sign(transactionHash[:])
+	transaction.TransactionSignature, err = keyPair.Sign(transactionHash[:])
 	if err != nil {
 		return nil
 	}
 
 	return transaction
+}
+
+func (t DeleteFileTransaction) Serialize() ([]byte, error) {
+	return json.Marshal(t)
+}
+
+func (t DeleteFileTransaction) ToBytesWithoutSignature() ([]byte, error) {
+	// Remove signature from transaction before verifying
+	signature := t.TransactionSignature
+	t.TransactionSignature = nil
+
+	defer func() { t.TransactionSignature = signature }() // Restore after serialization
+
+	return json.Marshal(t)
 }
 
 func DeserializeDeleteFileTransaction(data []byte) (*DeleteFileTransaction, error) {
