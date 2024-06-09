@@ -1,7 +1,6 @@
 package block
 
 import (
-	"errors"
 	"fmt"
 	"log"
 
@@ -23,7 +22,7 @@ func VerifyBlock(currentBlock Block) error {
 	}
 
 	if !ecdsa.VerifySignature(ecdsaPublicKey, headerHash, currentBlock.Header.Signature) {
-		return errors.New("Block validation failed: Signature is invalid")
+		return fmt.Errorf("Block validation failed: Signature is invalid")
 	}
 
 	return nil
