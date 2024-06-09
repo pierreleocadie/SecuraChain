@@ -61,7 +61,7 @@ func GenFakeAddTransaction() (*AddFileTransaction, error) {
 
 	announcement := NewClientAnnouncement(ownerECDSAKeyPair, randomClientAddrInfo, randomFileCid, encryptedFilename, encryptedExtension, 1234, checksum[:])
 	time.Sleep(1 * time.Second)
-	addFileTransaction := NewAddFileTransaction(announcement, randomFileCid, false, nodeECDSAKeyPair, randomeNodeID, randomStorageAddrInfo)
+	addFileTransaction := NewAddFileTransaction(announcement, randomFileCid, nodeECDSAKeyPair, randomeNodeID, randomStorageAddrInfo)
 	bd, _ := addFileTransaction.Serialize()
 	log.Printf("Transaction: %s\n", string(bd))
 

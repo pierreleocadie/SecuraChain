@@ -11,13 +11,6 @@ import (
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
-// ClientAnnouncementFactory implements the TransactionFactory interface
-type ClientAnnouncementFactory struct{}
-
-func (f *ClientAnnouncementFactory) CreateTransaction(data []byte) (Transaction, error) {
-	return DeserializeClientAnnouncement(data)
-}
-
 type ClientAnnouncement struct {
 	AnnouncementID         uuid.UUID     `json:"announcementID"`         // Announcement ID - UUID
 	OwnerAddress           []byte        `json:"ownerAddress"`           // Owner address - ECDSA public key
@@ -29,15 +22,15 @@ type ClientAnnouncement struct {
 	Checksum               []byte        `json:"checksum"`               // Checksum - SHA256
 	OwnerSignature         []byte        `json:"ownerSignature"`         // Owner signature - ECDSA signature
 	AnnouncementTimestamp  int64         `json:"announcementTimestamp"`  // Announcement timestamp - Unix timestamp
-	Verifier                             // embed TransactionVerifier struct to inherit VerifyTransaction method
+	TransactionVerifier                  // embed TransactionVerifier struct to inherit methods
 }
 
-func (a *ClientAnnouncement) Serialize() ([]byte, error) {
+func (a ClientAnnouncement) Serialize() ([]byte, error) {
 	return json.Marshal(a)
 }
 
 // Override SpecificData for ClientAnnouncement
-func (a *ClientAnnouncement) SpecificData() ([]byte, error) {
+func (a ClientAnnouncement) ToBytesWithoutSignature() ([]byte, error) {
 	// Remove signature and serialize
 	signature := a.OwnerSignature
 	a.OwnerSignature = nil

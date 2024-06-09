@@ -25,37 +25,17 @@ type AddFileTransaction struct {
 	NodeAddress             []byte        `json:"nodeAddress"`             // Node address - ECDSA public key
 	NodeID                  peer.ID       `json:"nodeID"`                  // Node ID
 	IPFSStorageNodeAddrInfo peer.AddrInfo `json:"ipfsStorageNodeAddrInfo"` // IPFS storage node address info
-	TransactionID           uuid.UUID     `json:"transactionID"`           // Transaction ID - UUID
-	UserReliabilityIssue    bool          `json:"userReliabilityIssue"`    // User reliability issue - boolean
-	TransactionSignature    []byte        `json:"transactionSignature"`    // Transaction signature - ECDSA signature
-	TransactionTimestamp    int64         `json:"transactionTimestamp"`    // Transaction timestamp - Unix timestamp
-	Verifier                              // embed TransactionVerifier struct to inherit VerifyTransaction method
-}
-
-func (t *AddFileTransaction) Serialize() ([]byte, error) {
-	return json.Marshal(t)
-}
-
-// Override SpecificData for AddFileTransaction
-func (t *AddFileTransaction) SpecificData() ([]byte, error) {
-	// Remove signature from transaction before verifying
-	signature := t.TransactionSignature
-	t.TransactionSignature = nil
-
-	defer func() { t.TransactionSignature = signature }() // Restore after serialization
-
-	return json.Marshal(t)
+	BaseTransaction                       // embed BaseTransaction struct to inherit methods
 }
 
 func NewAddFileTransaction(announcement *ClientAnnouncement, fileCid cid.Cid,
-	userReliabilityIssue bool, keyPair ecdsa.KeyPair, nodeID peer.ID, storageNodeAddrInfo peer.AddrInfo) *AddFileTransaction {
+	keyPair ecdsa.KeyPair, nodeID peer.ID, storageNodeAddrInfo peer.AddrInfo) *AddFileTransaction {
 	nodeAddressBytes, err := keyPair.PublicKeyToBytes()
 	if err != nil {
 		return nil
 	}
 
 	transaction := &AddFileTransaction{
-		TransactionID:           uuid.New(),
 		AnnouncementID:          announcement.AnnouncementID,
 		OwnerAddress:            announcement.OwnerAddress,
 		IPFSClientNodeAddrInfo:  announcement.IPFSClientNodeAddrInfo,
@@ -69,8 +49,10 @@ func NewAddFileTransaction(announcement *ClientAnnouncement, fileCid cid.Cid,
 		NodeAddress:             nodeAddressBytes,
 		IPFSStorageNodeAddrInfo: storageNodeAddrInfo,
 		NodeID:                  nodeID,
-		UserReliabilityIssue:    userReliabilityIssue,
-		TransactionTimestamp:    time.Now().UTC().Unix(),
+		BaseTransaction: BaseTransaction{
+			TransactionID:        uuid.New(),
+			TransactionTimestamp: time.Now().UTC().Unix(),
+		},
 	}
 
 	transactionBytes, err := json.Marshal(transaction)
@@ -79,7 +61,7 @@ func NewAddFileTransaction(announcement *ClientAnnouncement, fileCid cid.Cid,
 	}
 	transactionHash := sha256.Sum256(transactionBytes)
 
-	transaction.TransactionSignature, err = keyPair.Sign(transactionHash[:])
+	transaction.BaseTransaction.TransactionSignature, err = keyPair.Sign(transactionHash[:])
 	if err != nil {
 		return nil
 	}
@@ -87,11 +69,11 @@ func NewAddFileTransaction(announcement *ClientAnnouncement, fileCid cid.Cid,
 	return transaction
 }
 
-func DeserializeAddFileTransaction(data []byte) (*AddFileTransaction, error) {
+func DeserializeAddFileTransaction(data []byte) (AddFileTransaction, error) {
 	var transaction AddFileTransaction
 	err := json.Unmarshal(data, &transaction)
 	if err != nil {
-		return nil, err
+		return AddFileTransaction{}, err
 	}
-	return &transaction, nil
+	return transaction, nil
 }
