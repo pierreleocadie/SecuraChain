@@ -17,7 +17,7 @@ func TestMineBlock(t *testing.T) {
 	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
 	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
 
-	newBlock := block.NewBlock(transactions, []byte("GenesisBlock"), 1, minerKeyPair)
+	newBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
 	stopMiningChan := make(chan StopMiningSignal)
 
 	// Mine the block
@@ -27,7 +27,7 @@ func TestMineBlock(t *testing.T) {
 	target := big.NewInt(1)
 	target.Lsh(target, uint(sha256bits-newBlock.Header.TargetBits))
 
-	hash := block.ComputeHash(newBlock)
+	hash := block.ComputeHash(*newBlock)
 	hashInt := new(big.Int)
 	hashInt.SetBytes(hash)
 

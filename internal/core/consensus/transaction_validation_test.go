@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"crypto/sha256"
+	"fmt"
 	"testing"
 	"time"
 
@@ -63,13 +64,17 @@ func TestAddFileTransactionValidator_ValidTransaction(t *testing.T) {
 
 	announcement := transaction.NewClientAnnouncement(ownerECDSAKeyPair, randomClientAddrInfo, randomFileCid, encryptedFilename, encryptedExtension, 1234, checksum[:])
 	time.Sleep(1 * time.Second)
-	addFileTransaction := transaction.NewAddFileTransaction(announcement, randomFileCid, false, nodeECDSAKeyPair, randomeNodeID, randomStorageAddrInfo)
+	addFileTransaction := transaction.NewAddFileTransaction(announcement, randomFileCid, nodeECDSAKeyPair, randomeNodeID, randomStorageAddrInfo)
 	ba, _ := announcement.Serialize()
 	t.Log(string(ba))
-	bd, _ := addFileTransaction.Serialize()
+	bd, err := addFileTransaction.Serialize()
+	if err != nil {
+		t.Errorf("Failed to serialize AddFileTransaction: %s", err)
+	}
 	t.Log(string(bd))
 
-	if !ValidateTransaction(addFileTransaction) {
+	if err := ValidateTransaction(addFileTransaction); err != nil {
+		fmt.Printf("Error: %v\n", err)
 		t.Errorf("ValidateTransaction failed for a valid AddFileTransaction")
 	}
 }
@@ -88,7 +93,7 @@ func TestDeleteFileTransactionValidator_ValidTransaction(t *testing.T) {
 	deleteFileTransaction := transaction.NewDeleteFileTransaction(ownerECDSAKeyPair, randomeFileCID)
 	time.Sleep(1 * time.Second)
 
-	if !ValidateTransaction(deleteFileTransaction) {
+	if err := ValidateTransaction(deleteFileTransaction); err != nil {
 		t.Errorf("ValidateTransaction failed for a valid DeleteFileTransaction")
 	}
 }

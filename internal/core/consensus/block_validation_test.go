@@ -26,12 +26,12 @@ func TestValidateBlock(t *testing.T) {
 		t.Errorf("Failed to sign block: %s", err)
 	}
 
-	if !ValidateBlock(prevBlock, nil) {
+	if err := ValidateBlock(*prevBlock, block.Block{}); err != nil {
 		t.Errorf("ValidateBlock failed for the genesis block")
 	}
 
 	// Create a valid block
-	prevBlockHash := block.ComputeHash(prevBlock)
+	prevBlockHash := block.ComputeHash(*prevBlock)
 
 	validBlock := block.NewBlock(transactions, prevBlockHash, 2, minerKeyPair)
 
@@ -42,7 +42,7 @@ func TestValidateBlock(t *testing.T) {
 		t.Errorf("Failed to sign block: %s", err)
 	}
 
-	if !ValidateBlock(validBlock, prevBlock) {
+	if err := ValidateBlock(*validBlock, *prevBlock); err != nil {
 		t.Errorf("ValidateBlock failed for a valid block")
 	}
 
@@ -56,7 +56,7 @@ func TestValidateBlock(t *testing.T) {
 		t.Errorf("Failed to sign block: %s", err)
 	}
 
-	if ValidateBlock(invalidBlock, validBlock) {
+	if err := ValidateBlock(*invalidBlock, *validBlock); err == nil {
 		t.Errorf("ValidateBlock succeeded for an invalid block with incorrect previous hash")
 	}
 }
