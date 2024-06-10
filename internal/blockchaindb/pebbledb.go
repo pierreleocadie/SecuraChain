@@ -15,8 +15,8 @@ type PebbleDB struct {
 	log *ipfsLog.ZapEventLogger
 }
 
-// BlockchainDB wraps a Pebble database instance to store blockchain data.
-func NewBlockchainDB(logger *ipfsLog.ZapEventLogger, dbPath string) (*PebbleDB, error) {
+// NewPebbleDB wraps a Pebble database instance to store blockchain data.
+func NewPebbleDB(logger *ipfsLog.ZapEventLogger, dbPath string) (*PebbleDB, error) {
 	db, err := pebble.Open(dbPath,
 		&pebble.Options{
 			Logger: logger,
