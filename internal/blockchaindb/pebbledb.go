@@ -11,12 +11,13 @@ import (
 
 // PebbleDB wraps a Pebble database instance to store blockchain data.
 type PebbleDB struct {
-	db  *pebble.DB
-	log *ipfsLog.ZapEventLogger
+	db             *pebble.DB
+	log            *ipfsLog.ZapEventLogger
+	blockValidator consensus.BlockValidator
 }
 
 // NewPebbleDB wraps a Pebble database instance to store blockchain data.
-func NewPebbleDB(logger *ipfsLog.ZapEventLogger, dbPath string) (*PebbleDB, error) {
+func NewPebbleDB(logger *ipfsLog.ZapEventLogger, dbPath string, bValidator consensus.BlockValidator) (*PebbleDB, error) {
 	db, err := pebble.Open(dbPath,
 		&pebble.Options{
 			Logger: logger,
@@ -26,7 +27,11 @@ func NewPebbleDB(logger *ipfsLog.ZapEventLogger, dbPath string) (*PebbleDB, erro
 		return nil, fmt.Errorf("failed to open pebble database : %v", err)
 	}
 	logger.Info("Pebble database opened successfully")
-	return &PebbleDB{db: db, log: logger}, nil
+	return &PebbleDB{
+		db:             db,
+		log:            logger,
+		blockValidator: bValidator,
+	}, nil
 }
 
 // AddBlockToBlockchain adds a block to the blockchain database.
@@ -79,7 +84,7 @@ func (pdb *PebbleDB) VerifyIntegrity() error {
 		}
 
 		if block.IsGenesisBlock(currentBlock) {
-			if err := consensus.ValidateBlock(currentBlock, block.Block{}); err != nil {
+			if err := pdb.blockValidator.Validate(currentBlock, block.Block{}); err != nil {
 				return fmt.Errorf("block validation failed: %v", err)
 			}
 			break
