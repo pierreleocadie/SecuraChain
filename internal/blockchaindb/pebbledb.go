@@ -36,7 +36,7 @@ func NewPebbleDB(logger *ipfsLog.ZapEventLogger, dbPath string, bValidator conse
 
 // AddBlockToBlockchain adds a block to the blockchain database.
 func (pdb *PebbleDB) AddBlock(b block.Block) error {
-	if block.IsGenesisBlock(b) {
+	if b.IsGenesisBlock() {
 		return pdb.addGenesisBlock(b)
 	}
 	return pdb.addNormalBlock(b)
@@ -83,7 +83,7 @@ func (pdb *PebbleDB) VerifyIntegrity() error {
 			return fmt.Errorf("error retrieving block: %v", err)
 		}
 
-		if block.IsGenesisBlock(currentBlock) {
+		if currentBlock.IsGenesisBlock() {
 			if err := pdb.blockValidator.Validate(currentBlock, block.Block{}); err != nil {
 				return fmt.Errorf("block validation failed: %v", err)
 			}
