@@ -15,6 +15,9 @@ func TestValidateBlock(t *testing.T) {
 	minerKeyPair, _ := ecdsa.NewECDSAKeyPair()  // Replace with actual key pair generation
 	transactions := []transaction.Transaction{} // Empty transaction list for simplicity
 	stopMiningChan := make(chan StopMiningSignal)
+	genesisValidator := DefaultGenesisBlockValidator{}
+	txValidatorFactory := DefaultTransactionValidatorFactory{}
+	blockValidator := NewDefaultBlockValidator(genesisValidator, txValidatorFactory)
 
 	// Create a previous block
 	prevBlock := block.NewBlock(transactions, nil, 1, minerKeyPair)
@@ -23,11 +26,11 @@ func TestValidateBlock(t *testing.T) {
 
 	err := prevBlock.SignBlock(minerKeyPair)
 	if err != nil {
-		t.Errorf("Failed to sign block: %s", err)
+		t.Errorf("failed to sign block: %s", err)
 	}
 
-	if err := ValidateBlock(*prevBlock, block.Block{}); err != nil {
-		t.Errorf("ValidateBlock failed for the genesis block")
+	if err := blockValidator.Validate(*prevBlock, block.Block{}); err != nil {
+		t.Errorf("validateBlock failed for the genesis block")
 	}
 
 	// Create a valid block
@@ -39,11 +42,11 @@ func TestValidateBlock(t *testing.T) {
 
 	err = validBlock.SignBlock(minerKeyPair)
 	if err != nil {
-		t.Errorf("Failed to sign block: %s", err)
+		t.Errorf("failed to sign block: %s", err)
 	}
 
-	if err := ValidateBlock(*validBlock, *prevBlock); err != nil {
-		t.Errorf("ValidateBlock failed for a valid block")
+	if err := blockValidator.Validate(*validBlock, *prevBlock); err != nil {
+		t.Errorf("validateBlock failed for a valid block")
 	}
 
 	// Create an invalid block (wrong previous hash)
@@ -53,10 +56,10 @@ func TestValidateBlock(t *testing.T) {
 
 	err = invalidBlock.SignBlock(minerKeyPair)
 	if err != nil {
-		t.Errorf("Failed to sign block: %s", err)
+		t.Errorf("failed to sign block: %s", err)
 	}
 
-	if err := ValidateBlock(*invalidBlock, *validBlock); err == nil {
-		t.Errorf("ValidateBlock succeeded for an invalid block with incorrect previous hash")
+	if err := blockValidator.Validate(*invalidBlock, *validBlock); err == nil {
+		t.Errorf("validateBlock succeeded for an invalid block with incorrect previous hash")
 	}
 }
