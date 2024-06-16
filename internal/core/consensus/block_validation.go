@@ -3,7 +3,6 @@ package consensus
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"math/big"
 	"reflect"
 	"time"
@@ -20,11 +19,12 @@ type GenesisBlockValidator interface {
 }
 
 type DefaultBlockValidator struct {
-	genesisValidator GenesisBlockValidator
+	genesisValidator            GenesisBlockValidator
+	transactionValidatorFactory TransactionValidatorFactory
 }
 
-func NewDefaultBlockValidator(genesisValidator GenesisBlockValidator) *DefaultBlockValidator {
-	return &DefaultBlockValidator{genesisValidator: genesisValidator}
+func NewDefaultBlockValidator(genesisValidator GenesisBlockValidator, transactionValidatorFactory TransactionValidatorFactory) *DefaultBlockValidator {
+	return &DefaultBlockValidator{genesisValidator: genesisValidator, transactionValidatorFactory: transactionValidatorFactory}
 }
 
 // ValidateBlock validates the given block
@@ -76,8 +76,11 @@ func (v DefaultBlockValidator) Validate(currentBlock, prevBlock block.Block) err
 	// If not empty, verify the block's transactions
 	if len(currentBlock.Transactions) > 0 {
 		for _, tx := range currentBlock.Transactions {
-			if err := ValidateTransaction(tx); err != nil {
-				log.Printf("Block validation failed: Transaction is invalid")
+			txValidator, err := v.transactionValidatorFactory.GetValidator(tx)
+			if err != nil {
+				return fmt.Errorf("block validation failed: Transaction type is not supported")
+			}
+			if err := txValidator.Validate(tx); err != nil {
 				return fmt.Errorf("block validation failed: Transaction is invalid")
 			}
 		}
@@ -118,8 +121,8 @@ func (v DefaultGenesisBlockValidator) Validate(genesisBlock block.Block) error {
 	return nil
 }
 
-func ValidateBlock(currentBlock, prevBlock block.Block) error {
-	genesisValidator := DefaultGenesisBlockValidator{}
-	blockValidator := NewDefaultBlockValidator(genesisValidator)
-	return blockValidator.Validate(currentBlock, prevBlock)
-}
+// func ValidateBlock(currentBlock, prevBlock block.Block) error {
+// 	genesisValidator := DefaultGenesisBlockValidator{}
+// 	blockValidator := NewDefaultBlockValidator(genesisValidator)
+// 	return blockValidator.Validate(currentBlock, prevBlock)
+// }
