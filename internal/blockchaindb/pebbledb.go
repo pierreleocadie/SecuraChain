@@ -95,7 +95,7 @@ func (pdb *PebbleDB) VerifyIntegrity() error {
 			return fmt.Errorf("previous block not found: %v", err)
 		}
 
-		if err := consensus.ValidateBlock(currentBlock, prevBlock); err != nil {
+		if err := pdb.blockValidator.Validate(currentBlock, prevBlock); err != nil {
 			return fmt.Errorf("block validation failed: %v", err)
 		}
 
