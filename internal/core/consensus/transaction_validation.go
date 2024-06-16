@@ -33,22 +33,6 @@ type TransactionValidator interface {
 	Validate(tx transaction.Transaction) error
 }
 
-func ValidateTransaction(tx transaction.Transaction) error {
-	var validator TransactionValidator
-
-	switch tx.(type) {
-	case *transaction.AddFileTransaction:
-		validator = AddFileTransactionValidator{}
-	case *transaction.DeleteFileTransaction:
-		validator = DeleteFileTransactionValidator{}
-	default:
-		// Unknown transaction type
-		return fmt.Errorf("transaction validation failed: Unknown transaction type")
-	}
-
-	return validator.Validate(tx)
-}
-
 // AddFileTransactionValidator for AddFileTransaction
 type AddFileTransactionValidator struct{}
 
