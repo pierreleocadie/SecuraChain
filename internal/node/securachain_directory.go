@@ -16,7 +16,7 @@ func CreateSecuraChainDataDirectory(log *ipfsLog.ZapEventLogger, config *config.
 		return "", fmt.Errorf("error getting the user home directory : %v", err)
 	}
 
-	defaultPath := filepath.Join(homeDir, config.SecuraChainDataPath)
+	defaultPath := filepath.Join(homeDir, config.SecurachainDataPath)
 	if err := os.MkdirAll(defaultPath, os.FileMode(config.FileRights)); err != nil {
 		log.Errorf("Error creating the SecuraChain data directory : %v", err)
 		return "", fmt.Errorf("error creating the SecuraChain data directory : %v", err)
