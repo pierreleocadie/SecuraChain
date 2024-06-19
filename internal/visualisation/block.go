@@ -11,7 +11,7 @@ type Block struct {
 
 func NewBlock(b block.Block) Block {
 	return Block{
-		Hash:  block.ComputeHash(&b),
+		Hash:  block.ComputeHash(b),
 		Block: b,
 	}
 }
