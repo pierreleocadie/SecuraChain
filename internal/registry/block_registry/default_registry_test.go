@@ -1,8 +1,10 @@
 package blockregistry
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -133,6 +135,61 @@ func TestDefaultRegistryLoading(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error adding block to registry: %v", err)
 	}
+
+	// Delete the registry file
+	err = os.Remove(registryName)
+	if err != nil {
+		t.Errorf("Error deleting registry file: %v", err)
+	}
+}
+
+func TestDefaultRegistryDeserializing(t *testing.T) {
+	// Create a mock logger
+	logger := ipfsLog.Logger("test")
+
+	// Create a mock config
+	mockConfig := &config.Config{
+		FileRights: 0700,
+	}
+
+	// Create a block registry manager
+	blockRegistryManager := NewDefaultBlockRegistryManager(logger, mockConfig, registryName)
+
+	// Create a new block registry
+	blockRegistry, err := NewDefaultBlockRegistry(logger, mockConfig, blockRegistryManager)
+	if err != nil {
+		t.Errorf("Error creating new block registry: %v", err)
+	}
+
+	// Add the block to the registry
+	fakePeerAddrInfo4, err := generateRandomAddrInfo()
+	if err != nil {
+		t.Errorf("Error generating random AddrInfo: %v", err)
+	}
+
+	err = blockRegistry.Add(generateFakeBlock(), generateFakeCID(), fakePeerAddrInfo4)
+	if err != nil {
+		t.Errorf("Error adding block to registry: %v", err)
+	}
+
+	// Serialize the registry
+	serializedRegistry, err := json.Marshal(blockRegistry)
+	if err != nil {
+		t.Errorf("Error serializing registry: %v", err)
+	}
+
+	// Deserialize the registry
+	deserializedRegistry, err := DeserializeBlockRegistry[*DefaultBlockRegistry](serializedRegistry)
+	if err != nil {
+		t.Errorf("Error deserializing registry: %v", err)
+	}
+
+	if !reflect.DeepEqual(blockRegistry.Blocks[0], deserializedRegistry.Blocks[0]) {
+		t.Errorf("Error deserializing registry: %v", err)
+	}
+
+	t.Logf("Original registry block: %v", blockRegistry.Blocks[0])
+	t.Logf("Deserialized registry block: %v", deserializedRegistry.Blocks[0])
 
 	// Delete the registry file
 	err = os.Remove(registryName)
