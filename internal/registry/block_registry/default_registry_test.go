@@ -124,12 +124,12 @@ func TestDefaultRegistryLoading(t *testing.T) {
 	}
 
 	// Add the block to the registry
-	fakePeerAddrInfo1, err := generateRandomAddrInfo()
+	fakePeerAddrInfo3, err := generateRandomAddrInfo()
 	if err != nil {
 		t.Errorf("Error generating random AddrInfo: %v", err)
 	}
 
-	err = blockRegistry.Add(generateFakeBlock(), generateFakeCID(), fakePeerAddrInfo1)
+	err = blockRegistry.Add(generateFakeBlock(), generateFakeCID(), fakePeerAddrInfo3)
 	if err != nil {
 		t.Errorf("Error adding block to registry: %v", err)
 	}
