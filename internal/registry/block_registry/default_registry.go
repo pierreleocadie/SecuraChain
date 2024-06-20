@@ -18,7 +18,7 @@ type DefaultBlockRegistry struct {
 }
 
 func NewDefaultBlockRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, registryManager BlockRegistryManager) (*DefaultBlockRegistry, error) {
-	blockRegistery, err := registryManager.Load()
+	blockRegistery, err := registryManager.Load(&DefaultBlockRegistry{})
 	if err != nil && !os.IsNotExist(err) { // Registry does not exist/failed to load
 		log.Errorln("Error loading block registry:", err)
 		return nil, err
