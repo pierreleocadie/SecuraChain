@@ -2,5 +2,5 @@ package blockregistry
 
 type BlockRegistryManager interface {
 	Save(registry BlockRegistry) error
-	Load() (BlockRegistry, error)
+	Load(registry BlockRegistry) (BlockRegistry, error)
 }
