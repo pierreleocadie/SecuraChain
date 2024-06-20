@@ -34,22 +34,21 @@ func (drm DefaultBlockRegistryManager) Save(registry BlockRegistry) error {
 	return os.WriteFile(filepath.Clean(drm.filename), data, os.FileMode(drm.config.FileRights))
 }
 
-func (drm DefaultBlockRegistryManager) Load() (BlockRegistry, error) {
-	var registry DefaultBlockRegistry
+func (drm DefaultBlockRegistryManager) Load(registry BlockRegistry) (BlockRegistry, error) {
 	data, err := os.ReadFile(filepath.Clean(drm.filename))
 	if err != nil {
 		drm.log.Errorln("Error reading file", err)
-		return &registry, err
+		return registry, err
 	}
 
 	drm.log.Debugln("Registry loaded successfully")
 
 	if err := json.Unmarshal(data, &registry); err != nil {
 		drm.log.Errorln("Error deserializing registry", err)
-		return &registry, err
+		return registry, err
 	}
 
 	drm.log.Debugln("Registry deserialized successfully")
 
-	return &registry, nil
+	return registry, nil
 }
