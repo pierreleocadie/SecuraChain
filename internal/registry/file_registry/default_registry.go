@@ -28,7 +28,15 @@ func NewDefaultFileRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, 
 
 	if err == nil { // Registry already exists
 		log.Debugln("File registry loaded successfully")
-		return fileRegistery.(*DefaultFileRegistry), nil
+		fileRegistery, ok := fileRegistery.(*DefaultFileRegistry)
+		if !ok {
+			log.Errorln("Error casting block registry")
+			return nil, err
+		}
+		fileRegistery.registryManager = registryManager
+		fileRegistery.log = log
+		fileRegistery.config = config
+		return fileRegistery, nil
 	}
 
 	return &DefaultFileRegistry{
@@ -102,14 +110,14 @@ func (r *DefaultFileRegistry) UpdateFromBlock(b block.Block) error {
 	for _, tx := range b.Transactions {
 		switch tx.(type) {
 		case *transaction.AddFileTransaction:
-			addFileTransac := tx.(transaction.AddFileTransaction)
-			if err := r.Add(addFileTransac); err != nil {
+			addFileTransac := tx.(*transaction.AddFileTransaction)
+			if err := r.Add(*addFileTransac); err != nil {
 				return fmt.Errorf("Error adding file to registry: %v", err)
 			}
 			r.log.Debugln("File added to the registry")
 		case *transaction.DeleteFileTransaction:
-			deleteFileTransac := tx.(transaction.DeleteFileTransaction)
-			if err := r.Delete(deleteFileTransac); err != nil {
+			deleteFileTransac := tx.(*transaction.DeleteFileTransaction)
+			if err := r.Delete(*deleteFileTransac); err != nil {
 				return fmt.Errorf("Error deleting file from registry: %v", err)
 			}
 			r.log.Debugln("File deleted from the registry")
