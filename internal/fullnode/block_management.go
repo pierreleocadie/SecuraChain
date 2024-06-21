@@ -2,6 +2,7 @@ package fullnode
 
 import (
 	"fmt"
+	"reflect"
 	"sort"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
@@ -10,15 +11,13 @@ import (
 )
 
 // PrevBlockStored checks if the previous block is stored in the db.
-func PrevBlockStored(log *ipfsLog.ZapEventLogger, b *block.Block, db *blockchaindb.PebbleDB) error {
-	prevBlockStored, err := db.GetBlock(log, b.PrevBlock)
+func PrevBlockStored(log *ipfsLog.ZapEventLogger, b block.Block, db blockchaindb.BlockchainDB) error {
+	prevBlockStored, err := db.GetBlock(b.PrevBlock)
 	if err != nil {
-		log.Errorln("Failed to check for previous block in db: ", err)
 		return fmt.Errorf("failed to check for previous block in db: %s", err)
 	}
 
-	if prevBlockStored == nil {
-		log.Debugln("Previous block not found in db")
+	if reflect.DeepEqual(prevBlockStored, block.Block{}) {
 		return fmt.Errorf("previous block not found in db")
 	}
 
