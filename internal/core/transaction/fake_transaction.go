@@ -14,6 +14,59 @@ import (
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
 
+func GenFakeAddTransactionWithSameOwner(ownerECDSAKeyPair ecdsa.KeyPair) (*AddFileTransaction, error) {
+	// Set up a valid AddFileTransaction
+	nodeECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create ECDSA key pair: %s", err)
+	}
+
+	ownerAesKey, err := aes.NewAESKey()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create AES key: %s", err)
+	}
+
+	randomeNodeID, err := genRandomPeerID()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create peer.ID: %s", err)
+	}
+
+	randomFileCid := merkledag.NodeWithData(unixfs.FilePBData([]byte("fileCID"), uint64(len([]byte("fileCID"))))).Cid() // Random CIDv0
+
+	checksum := sha256.Sum256([]byte("checksum"))
+	encryptedFilename, err := ownerAesKey.EncryptData([]byte("filename"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt filename: %s", err)
+	}
+
+	encryptedExtension, err := ownerAesKey.EncryptData([]byte("extension"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt extension: %s", err)
+	}
+
+	randomClientAddrInfo, err := generateRandomAddrInfo()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create random AddrInfo: %s", err)
+	}
+
+	randomStorageAddrInfo, err := generateRandomAddrInfo()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create random AddrInfo: %s", err)
+	}
+
+	announcement := NewClientAnnouncement(ownerECDSAKeyPair, randomClientAddrInfo, randomFileCid, encryptedFilename, encryptedExtension, 1234, checksum[:])
+	time.Sleep(1 * time.Second)
+	addFileTransaction := NewAddFileTransaction(announcement, randomFileCid, nodeECDSAKeyPair, randomeNodeID, randomStorageAddrInfo)
+	bd, _ := addFileTransaction.Serialize()
+	log.Printf("Transaction: %s\n", string(bd))
+
+	// if !ValidateTransaction(addFileTransaction) {
+	// 	return nil, fmt.Errorf("ValidateTransaction failed for a valid AddFileTransaction")
+	// }
+
+	return addFileTransaction, nil
+}
+
 func GenFakeAddTransaction() (*AddFileTransaction, error) {
 	// Set up a valid AddFileTransaction
 	nodeECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
@@ -79,9 +132,9 @@ func GenFakeDeleteTransaction() (*DeleteFileTransaction, error) {
 		return nil, fmt.Errorf("failed to create ECDSA key pair: %s", err)
 	}
 
-	randomeFileCID := merkledag.NodeWithData(unixfs.FilePBData([]byte("fileCID"), uint64(len([]byte("fileCID"))))).Cid() // Random CIDv0
+	randomFileCID := merkledag.NodeWithData(unixfs.FilePBData([]byte("fileCID"), uint64(len([]byte("fileCID"))))).Cid() // Random CIDv0
 
-	deleteFileTransaction := NewDeleteFileTransaction(ownerECDSAKeyPair, randomeFileCID)
+	deleteFileTransaction := NewDeleteFileTransaction(ownerECDSAKeyPair, randomFileCID)
 	time.Sleep(1 * time.Second)
 
 	return deleteFileTransaction, nil
