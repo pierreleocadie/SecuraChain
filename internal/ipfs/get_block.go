@@ -1,43 +1,36 @@
 package ipfs
 
 import (
-	"context"
 	"fmt"
 	"os"
 
 	files "github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
-	ipfsLog "github.com/ipfs/go-log/v2"
-	icore "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 )
 
 // GetBlock retrieves a block from IPFS using the provided CID.
-func GetBlock(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsAPI icore.CoreAPI, blockPath path.ImmutablePath) (block.Block, error) {
-	blockFetched, err := GetFile(ctx, ipfsAPI, blockPath)
+func (ipfs *IPFSNode) GetBlock(blockPath path.ImmutablePath) (block.Block, error) {
+	blockFetched, err := ipfs.GetFile(blockPath)
 	if err != nil {
-		log.Errorln("Failed to get the file: %s ", err)
 		return block.Block{}, fmt.Errorf("failed to get the file: %v", err)
 	}
 
 	if err := files.WriteTo(blockFetched, "block"); err != nil {
-		log.Errorln("Failed to write the block into a file: %s ", err)
 		return block.Block{}, fmt.Errorf("failed to create file for the block: %v", err)
 	}
-	log.Debugln("Wrote the block into a file")
+	ipfs.log.Debugln("Wrote the block into a file")
 
-	b, err := ConvertBytesToBlock(log, "block")
+	b, err := ConvertBytesToBlock(ipfs.log, "block")
 	if err != nil {
-		log.Errorln("Failed to convert the file into a *block.Block: %s ", err)
 		return block.Block{}, fmt.Errorf("failed to converted the file into a *block.Block: %v", err)
 	}
-	log.Debugln("Fetched CID converted to a block")
+	ipfs.log.Debugln("Fetched CID converted to a block")
 
 	if err := os.Remove("block"); err != nil {
-		log.Errorln("Failed to remove the file 'block': %s ", err)
 		return block.Block{}, fmt.Errorf("failed to remove the file 'block': %v", err)
 	}
-	log.Debugln("file removed")
+	ipfs.log.Debugln("file removed")
 
 	return b, err
 }
