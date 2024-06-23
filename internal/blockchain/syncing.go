@@ -105,10 +105,10 @@ func (s *SyncingState) SyncBlockchain() {
 	s.blockchain.nodeBlacklist = []string{}
 
 	// 8 . Change the state of the node
-	s.PostSync()
+	s.blockchain.SetState(s.blockchain.PostSyncState)
 	s.blockchain.log.Debugln("Blockchain synchronized with the network")
 }
 
 func (s *SyncingState) PostSync() {
-	s.blockchain.SetState(s.blockchain.PostSyncState)
+	// No-op for this state
 }
