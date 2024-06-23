@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"sync"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
@@ -10,6 +11,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
+	"github.com/pierreleocadie/SecuraChain/internal/observer"
 	blockregistry "github.com/pierreleocadie/SecuraChain/internal/registry/block_registry"
 	fileregistry "github.com/pierreleocadie/SecuraChain/internal/registry/file_registry"
 )
@@ -30,6 +32,9 @@ type Blockchain struct {
 	blockRegistry  blockregistry.BlockRegistry
 	log            *ipfsLog.ZapEventLogger
 	config         *config.Config
+
+	observers []observer.Observer
+	mu        sync.Mutex
 }
 
 func NewBlockchain(log *ipfsLog.ZapEventLogger, config *config.Config, ctx context.Context, ipfsNode *ipfs.IPFSNode,
@@ -46,15 +51,16 @@ func NewBlockchain(log *ipfsLog.ZapEventLogger, config *config.Config, ctx conte
 		fileRegistry:   fileRegistry,
 		blockRegistry:  blockRegistry,
 	}
-	blockchain.UpToDateState = &UpToDateState{blockchain: blockchain}
-	blockchain.SyncingState = &SyncingState{blockchain: blockchain}
-	blockchain.PostSyncState = &PostSyncState{blockchain: blockchain}
+	blockchain.UpToDateState = &UpToDateState{name: "UpToDateState", blockchain: blockchain}
+	blockchain.SyncingState = &SyncingState{name: "SyncingState", blockchain: blockchain}
+	blockchain.PostSyncState = &PostSyncState{name: "PostSyncState", blockchain: blockchain}
 	blockchain.currentState = blockchain.UpToDateState
 	return blockchain
 }
 
 func (n *Blockchain) SetState(state State) {
 	n.currentState = state
+	n.NotifyObservers()
 }
 
 func (n *Blockchain) HandleBlock(block block.Block) {
@@ -67,4 +73,33 @@ func (n *Blockchain) SyncBlockchain() {
 
 func (n *Blockchain) PostSync() {
 	n.currentState.PostSync()
+}
+
+func (n *Blockchain) GetCurrentStateName() string {
+	return n.currentState.GetCurrentStateName()
+}
+
+func (n *Blockchain) NotifyObservers() {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	for _, observer := range n.observers {
+		observer.Update(n.currentState.GetCurrentStateName())
+	}
+}
+
+func (n *Blockchain) RegisterObserver(observer observer.Observer) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.observers = append(n.observers, observer)
+}
+
+func (n *Blockchain) RemoveObserver(observer observer.Observer) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	for i, obs := range n.observers {
+		if obs == observer {
+			n.observers = append(n.observers[:i], n.observers[i+1:]...)
+			break
+		}
+	}
 }
