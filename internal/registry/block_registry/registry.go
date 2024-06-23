@@ -8,4 +8,5 @@ import (
 
 type BlockRegistry interface {
 	Add(b block.Block, fileCid path.ImmutablePath, provider peer.AddrInfo) error
+	GetBlocks() []BlockData
 }
