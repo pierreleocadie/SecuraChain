@@ -28,7 +28,7 @@ func PubsubNetworkVisualisation(ctx context.Context, ps *pubsub.PubSub, host hos
 			time.Sleep(5 * time.Second)
 			data := &visualisation.Data{
 				PeerID:   host.ID().String(),
-				NodeType: "FullNode",
+				NodeType: nodeType,
 				ConnectedPeers: func() []string {
 					peers := make([]string, 0)
 					for _, peer := range host.Network().Peers() {
