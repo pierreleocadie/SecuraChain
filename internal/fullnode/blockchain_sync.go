@@ -33,7 +33,7 @@ func GetMissingBlocks(log *ipfsLog.ZapEventLogger, r blockregistry.BlockRegistry
 }
 
 // DownloadMissingBlocks attemps to download blocks that are missing in the local blockchain from IPFS.
-func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsNode ipfs.IPFSNode, missingBlocks []blockregistry.BlockData) ([]block.Block, error) {
+func DownloadMissingBlocks(log *ipfsLog.ZapEventLogger, ctx context.Context, ipfsNode *ipfs.IPFSNode, missingBlocks []blockregistry.BlockData) ([]block.Block, error) {
 	var downloadedBlocks []block.Block
 
 	for _, blockData := range missingBlocks {
