@@ -9,6 +9,7 @@ import (
 )
 
 type SyncingState struct {
+	name       string
 	blockchain *Blockchain
 }
 
@@ -109,4 +110,8 @@ func (s *SyncingState) SyncBlockchain() {
 
 func (s *SyncingState) PostSync() {
 	// No-op for this state
+}
+
+func (s *SyncingState) GetCurrentStateName() string {
+	return s.name
 }
