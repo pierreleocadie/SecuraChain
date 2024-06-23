@@ -9,6 +9,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
+	"github.com/pierreleocadie/SecuraChain/internal/node"
 	blockregistry "github.com/pierreleocadie/SecuraChain/internal/registry/block_registry"
 	fileregistry "github.com/pierreleocadie/SecuraChain/internal/registry/file_registry"
 )
@@ -22,6 +23,7 @@ type Blockchain struct {
 	pendingBlocks  []block.Block
 	nodeBlacklist  []string
 	ipfsNode       *ipfs.IPFSNode
+	pubsubHub      *node.PubSubHub
 	blockValidator consensus.BlockValidator
 	database       blockchaindb.BlockchainDB
 	fileRegistry   fileregistry.FileRegistry
@@ -31,7 +33,7 @@ type Blockchain struct {
 }
 
 func NewBlockchain(log *ipfsLog.ZapEventLogger, config *config.Config, ctx context.Context, ipfsNode *ipfs.IPFSNode,
-	blockValidator consensus.BlockValidator, database blockchaindb.BlockchainDB,
+	pubsubHub *node.PubSubHub, blockValidator consensus.BlockValidator, database blockchaindb.BlockchainDB,
 	blockRegistry blockregistry.BlockRegistry, fileRegistry fileregistry.FileRegistry) *Blockchain {
 	blockchain := &Blockchain{
 		Ctx:            ctx,
