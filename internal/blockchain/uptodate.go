@@ -24,7 +24,7 @@ func (s *UpToDateState) HandleBlock(b block.Block) {
 			s.blockchain.log.Debugln("Error checking if previous block is stored : %s", err)
 
 			s.blockchain.pendingBlocks = append(s.blockchain.pendingBlocks, b)
-			s.blockchain.SyncBlockchain()
+			s.blockchain.SetState(s.blockchain.SyncingState)
 			return
 		}
 
@@ -47,7 +47,7 @@ func (s *UpToDateState) HandleBlock(b block.Block) {
 
 	// 3 . Verify the integrity of the blockchain
 	if err := s.blockchain.database.VerifyIntegrity(); err != nil {
-		s.SyncBlockchain()
+		s.blockchain.SetState(s.blockchain.SyncingState)
 		return
 	}
 
@@ -70,7 +70,7 @@ func (s *UpToDateState) HandleBlock(b block.Block) {
 }
 
 func (s *UpToDateState) SyncBlockchain() {
-	s.blockchain.SetState(s.blockchain.SyncingState)
+	// No-op for this state
 }
 
 func (s *UpToDateState) PostSync() {
