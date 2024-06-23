@@ -9,7 +9,7 @@ import (
 
 // prepareFileForIPFS prepares a file to be added to IPFS by creating a UnixFS node from the given path.
 // It retrieves file information and creates a serial file node for IPFS.
-func PrepareFileForIPFS(path string) (files.Node, error) {
+func (ipfs *IPFSNode) prepareFileForIPFS(path string) (files.Node, error) {
 	sanitizedPath, err := utils.SanitizePath(path)
 	if err != nil {
 		return nil, err
