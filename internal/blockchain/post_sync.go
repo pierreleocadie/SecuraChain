@@ -6,6 +6,7 @@ import (
 )
 
 type PostSyncState struct {
+	name       string
 	blockchain *Blockchain
 }
 
@@ -78,4 +79,8 @@ func (s *PostSyncState) PostSync() {
 	// 6 . Change the state of the node
 	s.blockchain.SetState(s.blockchain.UpToDateState)
 	s.blockchain.log.Debugln("Post-syncronization done")
+}
+
+func (s *PostSyncState) GetCurrentStateName() string {
+	return s.name
 }
