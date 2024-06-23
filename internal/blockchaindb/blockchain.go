@@ -9,6 +9,6 @@ type BlockchainDB interface {
 	AddBlock(b block.Block) error
 	GetBlock(key []byte) (block.Block, error)
 	VerifyIntegrity() error
-	GetLastBlock() block.Block
+	GetLastBlock() (block.Block, error)
 	Close() error
 }
