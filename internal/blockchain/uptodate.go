@@ -6,6 +6,7 @@ import (
 )
 
 type UpToDateState struct {
+	name       string
 	blockchain *Blockchain
 }
 
@@ -75,4 +76,8 @@ func (s *UpToDateState) SyncBlockchain() {
 
 func (s *UpToDateState) PostSync() {
 	// No-op for this state
+}
+
+func (s *UpToDateState) GetCurrentStateName() string {
+	return s.name
 }
