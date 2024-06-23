@@ -55,3 +55,8 @@ func (r *DefaultBlockRegistry) Add(b block.Block, fileCid path.ImmutablePath, pr
 	r.log.Infoln("Block registry created or updated successfully")
 	return r.registryManager.Save(r)
 }
+
+// GetBlocks returns the list of blocks stored in the registry.
+func (r DefaultBlockRegistry) GetBlocks() []BlockData {
+	return r.Blocks
+}
