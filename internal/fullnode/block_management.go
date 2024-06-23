@@ -26,7 +26,7 @@ func PrevBlockStored(log *ipfsLog.ZapEventLogger, b block.Block, db blockchaindb
 }
 
 // SortBlockByHeight sorts the given list of blocks by their height in ascending order.
-func SortBlockByHeight(log *ipfsLog.ZapEventLogger, waitingList []*block.Block) []*block.Block {
+func SortBlockByHeight(log *ipfsLog.ZapEventLogger, waitingList []block.Block) []block.Block {
 	sort.SliceStable(waitingList, func(i, j int) bool {
 		return waitingList[i].Height < waitingList[j].Height
 	})
