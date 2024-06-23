@@ -50,8 +50,7 @@ func (s *SyncingState) SyncBlockchain() {
 	missingBlocks := fullnode.GetMissingBlocks(s.blockchain.log, r, s.blockchain.database)
 
 	// 2bis . Dowlnoad the missing blocks
-	// TODO: Work to be done here after I find a better way to handle pubsub
-	downloadedBlocks, err := fullnode.DownloadMissingBlocks(log, ctx, ipfsAPI, missingBlocks)
+	downloadedBlocks, err := fullnode.DownloadMissingBlocks(s.blockchain.log, s.blockchain.Ctx, s.blockchain.ipfsNode, missingBlocks)
 	if err != nil {
 		s.blockchain.log.Debugln("Error downloading missing blocks : %s\n", err)
 		return
