@@ -1,6 +1,8 @@
 package blockchain
 
 import (
+	"context"
+
 	ipfsLog "github.com/ipfs/go-log/v2"
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
@@ -12,6 +14,7 @@ import (
 )
 
 type Blockchain struct {
+	Ctx            context.Context
 	UpToDateState  *UpToDateState
 	SyncingState   *SyncingState
 	PostSyncState  *PostSyncState
@@ -27,10 +30,11 @@ type Blockchain struct {
 	config         *config.Config
 }
 
-func NewBlockchain(log *ipfsLog.ZapEventLogger, config *config.Config, ipfsNode *ipfs.IPFSNode,
+func NewBlockchain(log *ipfsLog.ZapEventLogger, config *config.Config, ctx context.Context, ipfsNode *ipfs.IPFSNode,
 	blockValidator consensus.BlockValidator, database blockchaindb.BlockchainDB,
 	blockRegistry blockregistry.BlockRegistry, fileRegistry fileregistry.FileRegistry) *Blockchain {
 	blockchain := &Blockchain{
+		Ctx:            ctx,
 		pendingBlocks:  make([]block.Block, 0),
 		database:       database,
 		log:            log,
