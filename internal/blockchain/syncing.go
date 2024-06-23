@@ -20,7 +20,6 @@ func (s *SyncingState) SyncBlockchain() {
 	s.blockchain.log.Debugln("State : SyncingState")
 
 	//1 . Ask for a registry of the blockchain
-	// TODO: Work to be done here after I find a better way to handle pubsub
 	registryBytes, senderID, err := blockregistry.AskForBlockchainRegistry(s.blockchain.log, s.blockchain.Ctx, s.blockchain.pubsubHub.AskingBlockchainTopic, s.blockchain.pubsubHub.ReceiveBlockchainSub)
 	if err != nil {
 		s.blockchain.log.Debugln("Error asking the blockchain registry : %s\n", err)
