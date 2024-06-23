@@ -6,4 +6,5 @@ type State interface {
 	HandleBlock(block block.Block)
 	SyncBlockchain()
 	PostSync()
+	GetCurrentStateName() string
 }
