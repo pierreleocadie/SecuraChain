@@ -26,6 +26,7 @@ func (s *UpToDateState) HandleBlock(b block.Block) {
 			s.blockchain.log.Debugln("Error checking if previous block is stored : %s", err)
 
 			s.blockchain.pendingBlocks = append(s.blockchain.pendingBlocks, b)
+			s.blockchain.log.Debugf("UpToDateState - Block %d received and added to the pending blocks - Pending blocks list length : %d", b.Height, len(s.blockchain.pendingBlocks))
 			s.blockchain.SetState(s.blockchain.SyncingState)
 			s.blockchain.NotifyObservers()
 			return
