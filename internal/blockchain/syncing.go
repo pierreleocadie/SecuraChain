@@ -15,6 +15,7 @@ type SyncingState struct {
 
 func (s *SyncingState) HandleBlock(block block.Block) {
 	s.blockchain.pendingBlocks = append(s.blockchain.pendingBlocks, block)
+	s.blockchain.log.Debugf("SyncingState - Block %d received and added to the pending blocks - Pending blocks list length : %d", block.Height, len(s.blockchain.pendingBlocks))
 }
 
 func (s *SyncingState) SyncBlockchain() {
@@ -94,13 +95,19 @@ func (s *SyncingState) SyncBlockchain() {
 		}
 
 		// 7 . Send the block to IPFS
-		if _, _, err := s.blockchain.ipfsNode.PublishBlock(b); err != nil {
+		fileCid, nodeIPFSAddrInfo, err := s.blockchain.ipfsNode.PublishBlock(b)
+		if err != nil {
 			s.blockchain.log.Debugln("Error publishing the block to IPFS")
+		}
+
+		// 8 . Update the block registry with the block
+		if err := s.blockchain.blockRegistry.Add(b, fileCid, nodeIPFSAddrInfo); err != nil {
+			s.blockchain.log.Errorln("Error adding the block metadata to the registry")
+			return
 		}
 	}
 
-	// 7 . Clear the pending blocks and the black list
-	s.blockchain.pendingBlocks = []block.Block{}
+	// 7 . Clear the black list
 	s.blockchain.nodeBlacklist = []string{}
 
 	// 8 . Change the state of the node
