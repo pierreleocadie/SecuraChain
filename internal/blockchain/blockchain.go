@@ -26,12 +26,13 @@ type Blockchain struct {
 	nodeBlacklist  []string
 	ipfsNode       *ipfs.IPFSNode
 	pubsubHub      *node.PubSubHub
-	blockValidator consensus.BlockValidator
-	database       blockchaindb.BlockchainDB
+	BlockValidator consensus.BlockValidator
+	Database       blockchaindb.BlockchainDB
 	fileRegistry   fileregistry.FileRegistry
 	blockRegistry  blockregistry.BlockRegistry
 	log            *ipfsLog.ZapEventLogger
 	config         *config.Config
+	StopMiningChan chan consensus.StopMiningSignal
 
 	observers []observer.Observer
 	mu        sync.Mutex
@@ -39,17 +40,20 @@ type Blockchain struct {
 
 func NewBlockchain(log *ipfsLog.ZapEventLogger, config *config.Config, ctx context.Context, ipfsNode *ipfs.IPFSNode,
 	pubsubHub *node.PubSubHub, blockValidator consensus.BlockValidator, database blockchaindb.BlockchainDB,
-	blockRegistry blockregistry.BlockRegistry, fileRegistry fileregistry.FileRegistry) *Blockchain {
+	blockRegistry blockregistry.BlockRegistry, fileRegistry fileregistry.FileRegistry, stopMiningChan chan consensus.StopMiningSignal) *Blockchain {
 	blockchain := &Blockchain{
 		Ctx:            ctx,
 		pendingBlocks:  make([]block.Block, 0),
-		database:       database,
+		Database:       database,
 		log:            log,
 		config:         config,
 		ipfsNode:       ipfsNode,
-		blockValidator: blockValidator,
+		BlockValidator: blockValidator,
 		fileRegistry:   fileRegistry,
 		blockRegistry:  blockRegistry,
+		pubsubHub:      pubsubHub,
+		StopMiningChan: stopMiningChan,
+		observers:      make([]observer.Observer, 0),
 	}
 	blockchain.UpToDateState = &UpToDateState{name: "UpToDateState", blockchain: blockchain}
 	blockchain.SyncingState = &SyncingState{name: "SyncingState", blockchain: blockchain}
