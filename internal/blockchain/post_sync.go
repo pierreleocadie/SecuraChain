@@ -12,6 +12,7 @@ type PostSyncState struct {
 
 func (s *PostSyncState) HandleBlock(block block.Block) {
 	s.blockchain.pendingBlocks = append(s.blockchain.pendingBlocks, block)
+	s.blockchain.log.Debugf("PostSyncState - Block %d received and added to the pending blocks - Pending blocks list length : %d", block.Height, len(s.blockchain.pendingBlocks))
 }
 
 func (s *PostSyncState) SyncBlockchain() {
@@ -20,6 +21,8 @@ func (s *PostSyncState) SyncBlockchain() {
 
 func (s *PostSyncState) PostSync() {
 	s.blockchain.log.Debugln("State : PostSyncState")
+	s.blockchain.log.Debugln("Post-syncronization started - Pending blocks list length : %d", len(s.blockchain.pendingBlocks))
+	s.blockchain.log.Debugln("Post-syncronization started - DETAILED Pending blocks list : %v", s.blockchain.pendingBlocks)
 
 	// 1. Sort the waiting list by height of the block
 	sortedList := fullnode.SortBlockByHeight(s.blockchain.log, s.blockchain.pendingBlocks)
@@ -74,8 +77,15 @@ func (s *PostSyncState) PostSync() {
 		}
 
 		// 6 . Send the block to IPFS
-		if _, _, err := s.blockchain.ipfsNode.PublishBlock(b); err != nil {
+		fileCid, nodeIPFSAddrInfo, err := s.blockchain.ipfsNode.PublishBlock(b)
+		if err != nil {
 			s.blockchain.log.Debugln("Error publishing the block to IPFS")
+		}
+
+		// 7 . Update the block registry with the block
+		if err := s.blockchain.blockRegistry.Add(b, fileCid, nodeIPFSAddrInfo); err != nil {
+			s.blockchain.log.Errorln("Error adding the block metadata to the registry")
+			return
 		}
 	}
 	// 6 . Change the state of the node
