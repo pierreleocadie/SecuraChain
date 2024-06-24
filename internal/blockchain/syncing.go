@@ -47,7 +47,7 @@ func (s *SyncingState) SyncBlockchain() {
 	s.blockchain.log.Debugln("Registry converted to BlockRegistry : ", r)
 
 	// 2 . Get the missing blocks
-	missingBlocks := fullnode.GetMissingBlocks(s.blockchain.log, r, s.blockchain.database)
+	missingBlocks := fullnode.GetMissingBlocks(s.blockchain.log, r, s.blockchain.Database)
 
 	// 2bis . Dowlnoad the missing blocks
 	downloadedBlocks, err := fullnode.DownloadMissingBlocks(s.blockchain.log, s.blockchain.Ctx, s.blockchain.ipfsNode, missingBlocks)
@@ -59,17 +59,17 @@ func (s *SyncingState) SyncBlockchain() {
 	// 3 . Valid the downloaded blocks
 	for _, b := range downloadedBlocks {
 		if b.IsGenesisBlock() {
-			if err := s.blockchain.blockValidator.Validate(b, block.Block{}); err != nil {
+			if err := s.blockchain.BlockValidator.Validate(b, block.Block{}); err != nil {
 				s.blockchain.log.Debugln("Genesis block is invalid")
 				return
 			}
 			s.blockchain.log.Debugln("Genesis block is valid")
 		} else {
-			prevBlock, err := s.blockchain.database.GetBlock(b.PrevBlock)
+			prevBlock, err := s.blockchain.Database.GetBlock(b.PrevBlock)
 			if err != nil {
 				s.blockchain.log.Debugln("Error getting the previous block : %s\n", err)
 			}
-			if err := s.blockchain.blockValidator.Validate(b, prevBlock); err != nil {
+			if err := s.blockchain.BlockValidator.Validate(b, prevBlock); err != nil {
 				s.blockchain.log.Debugln("Block is invalid")
 				return
 			}
@@ -77,13 +77,13 @@ func (s *SyncingState) SyncBlockchain() {
 		}
 
 		// 4 . Add the block to the blockchain
-		if err := s.blockchain.database.AddBlock(b); err != nil {
+		if err := s.blockchain.Database.AddBlock(b); err != nil {
 			s.blockchain.log.Debugln("Error adding the block to the blockchain : %s\n", err)
 			return
 		}
 
 		// 5 . Verify the integrity of the blockchain
-		if err := s.blockchain.database.VerifyIntegrity(); err != nil {
+		if err := s.blockchain.Database.VerifyIntegrity(); err != nil {
 			s.blockchain.log.Debugln("Blockchain is not verified")
 			return
 		}
@@ -105,6 +105,7 @@ func (s *SyncingState) SyncBlockchain() {
 
 	// 8 . Change the state of the node
 	s.blockchain.SetState(s.blockchain.PostSyncState)
+	s.blockchain.NotifyObservers()
 	s.blockchain.log.Debugln("Blockchain synchronized with the network")
 }
 
