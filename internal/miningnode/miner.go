@@ -163,6 +163,9 @@ func (m *Miner) StartMining() {
 			// To be sure we retrieve the last block stored
 			for {
 				lastBlockStored, err = m.blockchain.Database.GetLastBlock()
+				if err != nil {
+					m.log.Errorln("Error getting the last block stored : ", err)
+				}
 				if !reflect.DeepEqual(lastBlockStored, block.Block{}) && lastBlockStored.Height >= m.currentBlock.Height {
 					break
 				}
@@ -174,4 +177,11 @@ func (m *Miner) StartMining() {
 
 func (m Miner) GetCurrentBlock() block.Block {
 	return *m.currentBlock
+}
+
+func (m *Miner) AddTransaction(trx transaction.Transaction) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.trxPool = append(m.trxPool, trx)
 }
