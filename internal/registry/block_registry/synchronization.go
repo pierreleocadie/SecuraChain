@@ -25,7 +25,7 @@ func AskForBlockchainRegistry(log *ipfsLog.ZapEventLogger, ctx context.Context, 
 				break
 			}
 			if msg != nil {
-				log.Debugln("Block registry received from : ", senderID)
+				log.Debugln("Block registry received from : ", msg.GetFrom().String())
 				log.Debugln("Block registry received : ", string(msg.Data))
 				registryBytes <- msg.Data
 				senderID <- msg.GetFrom().String()
