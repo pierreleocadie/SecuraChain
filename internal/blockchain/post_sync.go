@@ -26,28 +26,29 @@ func (s *PostSyncState) PostSync() {
 
 	for _, b := range sortedList {
 		// 2 . Verify if the previous block is stored in the database
-		if err := fullnode.PrevBlockStored(s.blockchain.log, b, s.blockchain.database); err != nil {
+		if err := fullnode.PrevBlockStored(s.blockchain.log, b, s.blockchain.Database); err != nil {
 			s.blockchain.log.Debugln("Error checking if previous block is stored : %s", err)
 
 			s.blockchain.pendingBlocks = []block.Block{}
 			s.blockchain.SetState(s.blockchain.SyncingState)
+			s.blockchain.NotifyObservers()
 			return
 		}
 
 		// 3 . Validation of the block
 		if b.IsGenesisBlock() {
-			if err := s.blockchain.blockValidator.Validate(b, block.Block{}); err != nil {
+			if err := s.blockchain.BlockValidator.Validate(b, block.Block{}); err != nil {
 				s.blockchain.log.Debugln("Genesis block is invalid")
 				continue
 			}
 			s.blockchain.log.Debugln("Genesis block is valid")
 		} else {
-			prevBlock, err := s.blockchain.database.GetBlock(b.PrevBlock)
+			prevBlock, err := s.blockchain.Database.GetBlock(b.PrevBlock)
 			if err != nil {
 				s.blockchain.log.Debugln("Error getting the previous block : %s\n", err)
 			}
 
-			if err := s.blockchain.blockValidator.Validate(b, prevBlock); err != nil {
+			if err := s.blockchain.BlockValidator.Validate(b, prevBlock); err != nil {
 				s.blockchain.log.Debugln("Block is invalid")
 				continue
 			}
@@ -55,14 +56,15 @@ func (s *PostSyncState) PostSync() {
 		}
 
 		// 4 . Add the block to the blockchain
-		if err := s.blockchain.database.AddBlock(b); err != nil {
+		if err := s.blockchain.Database.AddBlock(b); err != nil {
 			s.blockchain.log.Debugln("Error adding the block to the blockchain : %s\n", err)
 			continue
 		}
 
-		if err := s.blockchain.database.VerifyIntegrity(); err != nil {
+		if err := s.blockchain.Database.VerifyIntegrity(); err != nil {
 			s.blockchain.pendingBlocks = []block.Block{}
 			s.blockchain.SetState(s.blockchain.SyncingState)
+			s.blockchain.NotifyObservers()
 			return
 		}
 
@@ -78,6 +80,7 @@ func (s *PostSyncState) PostSync() {
 	}
 	// 6 . Change the state of the node
 	s.blockchain.SetState(s.blockchain.UpToDateState)
+	s.blockchain.NotifyObservers()
 	s.blockchain.log.Debugln("Post-syncronization done")
 }
 
