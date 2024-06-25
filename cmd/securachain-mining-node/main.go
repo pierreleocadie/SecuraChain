@@ -260,7 +260,7 @@ func main() {
 
 	// In order to launch a first mining process we will set the blockchain state with it's first current state wich is UpToDateState
 	// It will call the Update method from the miner and start the mining process
-	// chain.SetState(chain.GetState())
+	chain.SetState(chain.GetState())
 
 	/*
 	 * SERVICES
@@ -388,11 +388,11 @@ func main() {
 	}()
 
 	// Launch the first mining process
-	go func() {
-		log.Debugf("Waiting for %d seconds before starting the mining process", *waitingTime)
-		time.Sleep(time.Duration(*waitingTime) * time.Second)
-		miner.StartMining()
-	}()
+	// go func() {
+	// 	log.Debugf("Waiting for %d seconds before starting the mining process", *waitingTime)
+	// 	time.Sleep(time.Duration(*waitingTime) * time.Second)
+	// 	miner.StartMining()
+	// }()
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES
