@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"path/filepath"
-	"time"
 
 	"github.com/pierreleocadie/SecuraChain/internal/blockchain"
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
@@ -27,9 +26,9 @@ import (
 )
 
 var (
-	yamlConfigFilePath          = flag.String("config", "", "Path to the yaml config file")
-	generateKeys                = flag.Bool("genKeys", false, "Generate new ECDSA and AES keys to the paths specified in the config file")
-	waitingTime                 = flag.Int("waitingTime", 60, "Time to wait before starting the mining process and the transaction processing")
+	yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
+	generateKeys       = flag.Bool("genKeys", false, "Generate new ECDSA and AES keys to the paths specified in the config file")
+	// waitingTime                 = flag.Int("waitingTime", 60, "Time to wait before starting the mining process and the transaction processing")
 	blockReceieved              = make(chan block.Block, 100)
 	stopMiningChan              = make(chan consensus.StopMiningSignal)
 	transactionValidatorFactory = consensus.DefaultTransactionValidatorFactory{}
@@ -368,8 +367,8 @@ func main() {
 
 	// Handle the transactions received from the storage nodes
 	go func() {
-		log.Debugf("Waiting for %d seconds before starting the transaction processing", *waitingTime)
-		time.Sleep(time.Duration(*waitingTime) * time.Second)
+		// log.Debugf("Waiting for %d seconds before starting the transaction processing", *waitingTime)
+		// time.Sleep(time.Duration(*waitingTime) * time.Second)
 		for {
 			msg, err := subStorageNodeResponse.Next(ctx)
 			if err != nil {
