@@ -82,7 +82,7 @@ func (m *Miner) StartMining() {
 					m.log.Errorln("Error getting the last block stored : ", err)
 				}
 				m.previousBlock = &block.Block{}
-				err := copier.Copy(m.previousBlock, &lastBlockStored)
+				err := copier.Copy(m.previousBlock, lastBlockStored)
 				if err != nil {
 					m.log.Errorln("Error copying the last block stored : ", err)
 				}
@@ -111,7 +111,7 @@ func (m *Miner) StartMining() {
 				}
 				m.log.Info("Mining stopped early because of a new block received")
 				lastBlockStored = block.Block{} // Reset the last block stored and be sure its not nil to avoid errors with copier
-				err := copier.Copy(lastBlockStored, blockReceivedEarly)
+				err := copier.Copy(&lastBlockStored, blockReceivedEarly)
 				if err != nil {
 					m.log.Errorln("Error copying the block received early : ", err)
 				}
