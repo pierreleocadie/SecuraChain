@@ -19,40 +19,41 @@ import (
 )
 
 type Miner struct {
-	ctx            context.Context
-	cancel         context.CancelFunc
-	blockchain     *blockchain.Blockchain
-	mu             sync.Mutex
-	stopMiningChan chan consensus.StopMiningSignal
-	psh            *node.PubSubHub
-	trxPool        []transaction.Transaction
-	currentBlock   *block.Block
-	previousBlock  *block.Block
-	log            *ipfsLog.ZapEventLogger
-	ecdsaKeyPair   ecdsa.KeyPair
+	ctx                         context.Context
+	cancel                      context.CancelFunc
+	blockchain                  *blockchain.Blockchain
+	stopMiningChan              chan consensus.StopMiningSignal
+	psh                         *node.PubSubHub
+	transactionValidatorFactory consensus.TransactionValidatorFactory
+	trxPool                     []transaction.Transaction
+	mu                          sync.Mutex
+	currentBlock                *block.Block
+	previousBlock               *block.Block
+	log                         *ipfsLog.ZapEventLogger
+	ecdsaKeyPair                ecdsa.KeyPair
 }
 
-func NewMiner(log *ipfsLog.ZapEventLogger, psh *node.PubSubHub, blockchain *blockchain.Blockchain,
-	stopMiningChan chan consensus.StopMiningSignal, ecdsaKeyPair ecdsa.KeyPair) *Miner {
+func NewMiner(log *ipfsLog.ZapEventLogger, psh *node.PubSubHub, transactionValidatorFactory consensus.TransactionValidatorFactory,
+	blockchain *blockchain.Blockchain, stopMiningChan chan consensus.StopMiningSignal, ecdsaKeyPair ecdsa.KeyPair) *Miner {
 	ctx, cancel := context.WithCancel(context.Background())
 	miner := &Miner{
-		ctx:            ctx,
-		cancel:         cancel,
-		blockchain:     blockchain,
-		stopMiningChan: stopMiningChan,
-		psh:            psh,
-		trxPool:        make([]transaction.Transaction, 0),
-		log:            log,
-		ecdsaKeyPair:   ecdsaKeyPair,
+		ctx:                         ctx,
+		cancel:                      cancel,
+		blockchain:                  blockchain,
+		stopMiningChan:              stopMiningChan,
+		psh:                         psh,
+		transactionValidatorFactory: transactionValidatorFactory,
+		trxPool:                     make([]transaction.Transaction, 0),
+		previousBlock:               nil,
+		log:                         log,
+		ecdsaKeyPair:                ecdsaKeyPair,
 	}
+	miner.currentBlock = block.NewBlock(miner.trxPool, nil, 1, miner.ecdsaKeyPair)
 	blockchain.RegisterObserver(miner)
 	return miner
 }
 
 func (m *Miner) Update(state string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	if state != "UpToDateState" {
 		m.stopMiningChan <- consensus.StopMiningSignal{Stop: true, BlockReceived: block.Block{}}
 		m.cancel()
@@ -87,8 +88,10 @@ func (m *Miner) StartMining() {
 				previousBlockHash := block.ComputeHash(*m.previousBlock)
 
 				m.log.Infof("Last block stored on chain : %v at height %d", previousBlockHash, m.previousBlock.Height)
+				m.mu.Lock()
 				m.currentBlock = block.NewBlock(m.trxPool, previousBlockHash, m.previousBlock.Height+1, m.ecdsaKeyPair)
 				m.trxPool = []transaction.Transaction{}
+				m.mu.Unlock()
 			} else {
 				m.log.Infof("No block stored on chain")
 			}
@@ -100,7 +103,9 @@ func (m *Miner) StartMining() {
 					m.log.Info("Mining stopped early because synchronization is required")
 					m.log.Info("Waiting for the blockchain to be synchronized with the network")
 					m.log.Info("Putting the transactions back in the transaction pool")
+					m.mu.Lock()
 					m.trxPool = append(m.trxPool, m.currentBlock.Transactions...)
+					m.mu.Unlock()
 					continue
 				}
 				m.log.Info("Mining stopped early because of a new block received")
@@ -121,7 +126,9 @@ func (m *Miner) StartMining() {
 					blockReceivedEarlyTransactionIDs := blockReceivedEarly.GetTransactionIDsMap()
 					for trxID, trxData := range currentBlockTransactionIDs {
 						if _, ok := blockReceivedEarlyTransactionIDs[trxID]; !ok {
+							m.mu.Lock()
 							m.trxPool = append(m.trxPool, trxData)
+							m.mu.Unlock()
 						}
 					}
 				}
@@ -144,7 +151,9 @@ func (m *Miner) StartMining() {
 			if err := m.blockchain.BlockValidator.Validate(*m.currentBlock, *m.previousBlock); err != nil {
 				m.log.Warn("Block is invalid")
 				// Return transactions of the current block to the transaction pool
+				m.mu.Lock()
 				m.trxPool = append(m.trxPool, m.currentBlock.Transactions...)
+				m.mu.Unlock()
 				continue
 			}
 
@@ -179,9 +188,19 @@ func (m Miner) GetCurrentBlock() block.Block {
 	return *m.currentBlock
 }
 
-func (m *Miner) AddTransaction(trx transaction.Transaction) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (m *Miner) HandleTransaction(trx transaction.Transaction) {
+	trxValidator, err := m.transactionValidatorFactory.GetValidator(trx)
+	if err != nil {
+		m.log.Warn("Transaction type is not supported")
+		return
+	}
+	if err := trxValidator.Validate(trx); err != nil {
+		m.log.Warn("Transaction is invalid")
+		return
+	}
 
+	m.mu.Lock()
 	m.trxPool = append(m.trxPool, trx)
+	m.log.Debugf("Transaction pool size : %d", len(m.trxPool))
+	m.mu.Unlock()
 }
