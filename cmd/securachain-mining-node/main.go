@@ -29,6 +29,7 @@ import (
 var (
 	yamlConfigFilePath          = flag.String("config", "", "Path to the yaml config file")
 	generateKeys                = flag.Bool("genKeys", false, "Generate new ECDSA and AES keys to the paths specified in the config file")
+	waitingTime                 = flag.Int("waitingTime", 60, "Time to wait before starting the mining process and the transaction processing")
 	blockReceieved              = make(chan block.Block, 100)
 	stopMiningChan              = make(chan consensus.StopMiningSignal)
 	transactionValidatorFactory = consensus.DefaultTransactionValidatorFactory{}
@@ -259,7 +260,7 @@ func main() {
 
 	// In order to launch a first mining process we will set the blockchain state with it's first current state wich is UpToDateState
 	// It will call the Update method from the miner and start the mining process
-	chain.SetState(chain.GetState())
+	// chain.SetState(chain.GetState())
 
 	/*
 	 * SERVICES
@@ -367,8 +368,8 @@ func main() {
 
 	// Handle the transactions received from the storage nodes
 	go func() {
-		log.Debug("Waiting for 300 seconds before starting the transaction processing")
-		time.Sleep(300 * time.Second)
+		log.Debugf("Waiting for %d seconds before starting the transaction processing", *waitingTime)
+		time.Sleep(time.Duration(*waitingTime) * time.Second)
 		for {
 			msg, err := subStorageNodeResponse.Next(ctx)
 			if err != nil {
@@ -384,6 +385,13 @@ func main() {
 
 			miner.HandleTransaction(trx)
 		}
+	}()
+
+	// Launch the first mining process
+	go func() {
+		log.Debugf("Waiting for %d seconds before starting the mining process", *waitingTime)
+		time.Sleep(time.Duration(*waitingTime) * time.Second)
+		miner.StartMining()
 	}()
 
 	/*
