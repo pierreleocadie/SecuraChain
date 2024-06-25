@@ -100,6 +100,7 @@ func (m *Miner) StartMining() {
 			// m.currentBlock.MerkleRoot = m.currentBlock.ComputeMerkleRoot()
 			stoppedEarly, blockReceivedEarly := consensus.MineBlock(m.currentBlock, m.stopMiningChan)
 			if stoppedEarly {
+				m.log.Infof("Signal received to stop mining - Signal : %v - %v", stoppedEarly, blockReceivedEarly)
 				if reflect.DeepEqual(blockReceivedEarly, block.Block{}) {
 					m.log.Info("Mining stopped early because synchronization is required")
 					m.log.Info("Waiting for the blockchain to be synchronized with the network")
