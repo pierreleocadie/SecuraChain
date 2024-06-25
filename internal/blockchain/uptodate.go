@@ -28,7 +28,6 @@ func (s *UpToDateState) HandleBlock(b block.Block) {
 			s.blockchain.pendingBlocks = append(s.blockchain.pendingBlocks, b)
 			s.blockchain.log.Debugf("UpToDateState - Block %d received and added to the pending blocks - Pending blocks list length : %d", b.Height, len(s.blockchain.pendingBlocks))
 			s.blockchain.SetState(s.blockchain.SyncingState)
-			s.blockchain.NotifyObservers()
 			return
 		}
 
@@ -52,7 +51,6 @@ func (s *UpToDateState) HandleBlock(b block.Block) {
 	// 3 . Verify the integrity of the blockchain
 	if err := s.blockchain.Database.VerifyIntegrity(); err != nil {
 		s.blockchain.SetState(s.blockchain.SyncingState)
-		s.blockchain.NotifyObservers()
 		return
 	}
 
