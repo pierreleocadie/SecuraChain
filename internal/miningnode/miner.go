@@ -57,6 +57,7 @@ func (m *Miner) Update(state string) {
 	if state != "UpToDateState" {
 		m.stopMiningChan <- consensus.StopMiningSignal{Stop: true, BlockReceived: block.Block{}}
 		m.cancel()
+		m.log.Debugln("Signal sent to stop mining because the blockchain is not up to date")
 	} else {
 		m.ctx, m.cancel = context.WithCancel(context.Background())
 		go m.StartMining()
