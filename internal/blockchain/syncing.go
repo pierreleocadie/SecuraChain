@@ -112,7 +112,6 @@ func (s *SyncingState) SyncBlockchain() {
 
 	// 8 . Change the state of the node
 	s.blockchain.SetState(s.blockchain.PostSyncState)
-	s.blockchain.NotifyObservers()
 	s.blockchain.log.Debugln("Blockchain synchronized with the network")
 }
 
