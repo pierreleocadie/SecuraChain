@@ -113,6 +113,11 @@ func (v DefaultGenesisBlockValidator) Validate(genesisBlock block.Block) error {
 		return fmt.Errorf("block validation failed: Height is not one")
 	}
 
+	// Verify the block's previous hash is nil
+	if !bytes.Equal(genesisBlock.Header.PrevBlock, nil) {
+		return fmt.Errorf("block validation failed: Previous hash is not nil")
+	}
+
 	// Verify the block's signature is valid
 	if err := block.VerifyBlock(genesisBlock); err != nil {
 		return fmt.Errorf("block validation failed: Signature is invalid")
