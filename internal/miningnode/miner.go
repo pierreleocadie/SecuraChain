@@ -44,7 +44,7 @@ func NewMiner(log *ipfsLog.ZapEventLogger, psh *node.PubSubHub, transactionValid
 		psh:                         psh,
 		transactionValidatorFactory: transactionValidatorFactory,
 		trxPool:                     make([]transaction.Transaction, 0),
-		previousBlock:               nil,
+		previousBlock:               &block.Block{},
 		log:                         log,
 		ecdsaKeyPair:                ecdsaKeyPair,
 	}
@@ -143,7 +143,7 @@ func (m *Miner) StartMining() {
 
 			currentBlockHashEncoded := fmt.Sprintf("%x", block.ComputeHash(*m.currentBlock))
 			m.log.Infoln("Current block hash : ", currentBlockHashEncoded, " TIMESTAMP : ", m.currentBlock.Timestamp)
-			if m.previousBlock != nil {
+			if !reflect.DeepEqual(m.previousBlock, &block.Block{}) {
 				previousBlockHashEncoded := fmt.Sprintf("%x", block.ComputeHash(*m.previousBlock))
 				m.log.Infoln("Previous block hash : ", previousBlockHashEncoded, " TIMESTAMP : ", m.previousBlock.Timestamp)
 			}
