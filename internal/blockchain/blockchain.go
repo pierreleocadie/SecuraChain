@@ -67,6 +67,10 @@ func (n *Blockchain) SetState(state State) {
 	n.NotifyObservers()
 }
 
+func (n *Blockchain) GetState() State {
+	return n.currentState
+}
+
 func (n *Blockchain) HandleBlock(block block.Block) {
 	n.currentState.HandleBlock(block)
 }
