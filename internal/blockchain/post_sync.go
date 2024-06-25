@@ -34,7 +34,6 @@ func (s *PostSyncState) PostSync() {
 
 			s.blockchain.pendingBlocks = []block.Block{}
 			s.blockchain.SetState(s.blockchain.SyncingState)
-			s.blockchain.NotifyObservers()
 			return
 		}
 
@@ -67,7 +66,6 @@ func (s *PostSyncState) PostSync() {
 		if err := s.blockchain.Database.VerifyIntegrity(); err != nil {
 			s.blockchain.pendingBlocks = []block.Block{}
 			s.blockchain.SetState(s.blockchain.SyncingState)
-			s.blockchain.NotifyObservers()
 			return
 		}
 
@@ -88,9 +86,9 @@ func (s *PostSyncState) PostSync() {
 			return
 		}
 	}
+	s.blockchain.pendingBlocks = []block.Block{}
 	// 6 . Change the state of the node
 	s.blockchain.SetState(s.blockchain.UpToDateState)
-	s.blockchain.NotifyObservers()
 	s.blockchain.log.Debugln("Post-syncronization done")
 }
 
