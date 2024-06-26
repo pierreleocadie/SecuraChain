@@ -10,4 +10,5 @@ type FileRegistry interface {
 	Get(myPublicKey string) []FileData
 	UpdateFromBlock(b block.Block) error
 	Delete(deleteFileTransac transaction.DeleteFileTransaction) error
+	GetRegistry() map[string][]FileData
 }
