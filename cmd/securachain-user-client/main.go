@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"math/rand"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -24,8 +22,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
-	"github.com/pierreleocadie/SecuraChain/internal/registry"
-	"github.com/pierreleocadie/SecuraChain/internal/visualisation"
+	fileregistry "github.com/pierreleocadie/SecuraChain/internal/registry/file_registry"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
@@ -65,14 +62,9 @@ func main() { //nolint: funlen, gocyclo
 	/*
 	* IPFS NODE
 	 */
-	// Spawn an IPFS node
-	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx, cfg)
-	if err != nil {
-		log.Panicf("Failed to spawn IPFS node: %s", err)
-	}
-	// dhtAPI := ipfsAPI.Dht()
+	IPFSNode := ipfs.NewIPFSNode(ctx, log, cfg)
 
-	log.Debugf("IPFS node spawned with PeerID: %s", nodeIpfs.Identity.String())
+	log.Debugf("IPFS node spawned with PeerID: %s", IPFSNode.Node.Identity.String())
 
 	/*
 	* NODE LIBP2P
@@ -93,7 +85,16 @@ func main() { //nolint: funlen, gocyclo
 	}
 
 	// KeepRelayConnectionAlive
-	node.PubsubKeepRelayConnectionAlive(ctx, ps, host, cfg, log)
+	keepRelayConnectionAliveTopic, err := ps.Join(cfg.KeepRelayConnectionAliveStringFlag)
+	if err != nil {
+		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	// Subscribe to KeepRelayConnectionAlive topic
+	subKeepRelayConnectionAlive, err := keepRelayConnectionAliveTopic.Subscribe()
+	if err != nil {
+		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
+	}
 
 	// NetworkVisualisation
 	networkVisualisationTopic, err := ps.Join(cfg.NetworkVisualisationStringFlag)
@@ -135,6 +136,30 @@ func main() { //nolint: funlen, gocyclo
 	if err != nil {
 		log.Panicf("Failed to subscribe to SendFiles topic : %s\n", err)
 	}
+
+	pubsubHub := &node.PubSubHub{
+		ClientAnnouncementTopic:       clientAnnouncementTopic,
+		ClientAnnouncementSub:         nil,
+		StorageNodeResponseTopic:      storageNodeResponseTopic,
+		StorageNodeResponseSub:        subStorageNodeResponse,
+		KeepRelayConnectionAliveTopic: keepRelayConnectionAliveTopic,
+		KeepRelayConnectionAliveSub:   subKeepRelayConnectionAlive,
+		BlockAnnouncementTopic:        nil,
+		BlockAnnouncementSub:          nil,
+		AskingBlockchainTopic:         nil,
+		AskingBlockchainSub:           nil,
+		ReceiveBlockchainTopic:        nil,
+		ReceiveBlockchainSub:          nil,
+		AskMyFilesTopic:               askMyFilesTopic,
+		AskMyFilesSub:                 nil,
+		SendMyFilesTopic:              sendFilesTopic,
+		SendMyFilesSub:                subSendFiles,
+		NetworkVisualisationTopic:     networkVisualisationTopic,
+		NetworkVisualisationSub:       nil,
+	}
+
+	// KeepRelayConnectionAlive
+	node.PubsubKeepRelayConnectionAlive(ctx, pubsubHub, host, cfg, log)
 
 	// Handle publishing ClientAnnouncement messages
 	go func() {
@@ -218,8 +243,8 @@ func main() { //nolint: funlen, gocyclo
 			log.Debugln("Received SendFiles message from ", msg.GetFrom().String())
 			log.Debugln("SendFiles: ", string(msg.Data))
 
-			filesRegistry, err := registry.DeserializeRegistry[registry.RegistryMessage](log, msg.Data)
-			if err != nil {
+			fileRegistry := fileregistry.Message{}
+			if err = json.Unmarshal(msg.Data, &fileRegistry); err != nil {
 				log.Errorln("Error deserializing RegistryMessage : ", err)
 				continue
 			}
@@ -231,12 +256,12 @@ func main() { //nolint: funlen, gocyclo
 			}
 
 			ownerECDSAPubKeyStr := fmt.Sprintf("%x", ownerECDSAPubKeyBytes)
-			if filesRegistry.OwnerPublicKey == ownerECDSAPubKeyStr {
+			if fileRegistry.OwnerPublicKey == ownerECDSAPubKeyStr {
 				log.Debugln("Owner of the files is the current user")
 
 				fileListContainer := container.NewVBox()
 
-				for _, fileRegistry := range filesRegistry.Registry {
+				for _, fileRegistry := range fileRegistry.Registry {
 					filename, err := aesKey.DecryptData(fileRegistry.Filename)
 					if err != nil {
 						log.Errorln("Error decrypting filename : ", err)
@@ -250,7 +275,7 @@ func main() { //nolint: funlen, gocyclo
 					}
 
 					label := widget.NewLabel(string(filename) + string(fileExtension) + " - " + fileRegistry.FileCid.String())
-					downloadButton := client.DownloadButtonWidget(log, ctx, cfg, ipfsAPI, fileRegistry.FileCid, string(filename), string(fileExtension), aesKey, w)
+					downloadButton := client.DownloadButtonWidget(log, ctx, cfg, IPFSNode.API, fileRegistry.FileCid, string(filename), string(fileExtension), aesKey, w)
 
 					// Add the label and the button to a horizontal container, then to the vertical container
 					fileEntry := container.NewHBox(label, downloadButton)
@@ -260,140 +285,6 @@ func main() { //nolint: funlen, gocyclo
 				fileDialog := dialog.NewCustom("My files", "Close", fileListContainer, w)
 				fileDialog.Show()
 			}
-		}
-	}()
-
-	go func() {
-		for {
-			// Sleep for random time between 10 seconds and 1min
-			randomInt := rand.Intn(60-10+1) + 10
-			time.Sleep(time.Duration(randomInt) * time.Second)
-			data := &visualisation.Data{
-				PeerID:   host.ID().String(),
-				NodeType: "ClientNode",
-				ConnectedPeers: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range host.Network().Peers() {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				TopicsList: ps.GetTopics(),
-				KeepRelayConnectionAlive: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("KeepRelayConnectionAlive") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				BlockAnnouncement: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("BlockAnnouncement") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				AskingBlockchain: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("AskingBlockchain") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				ReceiveBlockchain: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("ReceiveBlockchain") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				ClientAnnouncement: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("ClientAnnouncement") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				StorageNodeResponse: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("StorageNodeResponse") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				FullNodeAnnouncement: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("FullNodeAnnouncement") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				AskMyFilesList: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("AskMyFilesList") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-				ReceiveMyFilesList: func() []string {
-					peers := make([]string, 0)
-					for _, peer := range ps.ListPeers("ReceiveMyFilesList") {
-						// check the connectedness of the peer
-						if host.Network().Connectedness(peer) != network.Connected {
-							continue
-						}
-						peers = append(peers, peer.String())
-					}
-					return peers
-				}(),
-			}
-			dataBytes, err := json.Marshal(data)
-			if err != nil {
-				log.Errorf("Failed to marshal NetworkVisualisation message: %s", err)
-				continue
-			}
-			err = networkVisualisationTopic.Publish(ctx, dataBytes)
-			if err != nil {
-				log.Errorf("Failed to publish NetworkVisualisation message: %s", err)
-				continue
-			}
-			log.Debugf("NetworkVisualisation message sent successfully")
 		}
 	}()
 
@@ -420,8 +311,7 @@ func main() { //nolint: funlen, gocyclo
 		selectedFileLabel,
 		&ecdsaKeyPair,
 		&aesKey,
-		nodeIpfs,
-		ipfsAPI,
+		IPFSNode,
 		clientAnnouncementChan,
 		log,
 	)
