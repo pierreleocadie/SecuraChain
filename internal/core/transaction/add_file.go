@@ -28,7 +28,7 @@ type AddFileTransaction struct {
 	IPFSStorageNodeAddrInfo peer.AddrInfo `json:"ipfsStorageNodeAddrInfo"` // IPFS storage node address info
 }
 
-func NewAddFileTransaction(announcement *ClientAnnouncement, fileCid cid.Cid,
+func NewAddFileTransaction(announcement ClientAnnouncement, fileCid cid.Cid,
 	keyPair ecdsa.KeyPair, nodeID peer.ID, storageNodeAddrInfo peer.AddrInfo) *AddFileTransaction {
 	nodeAddressBytes, err := keyPair.PublicKeyToBytes()
 	if err != nil {
