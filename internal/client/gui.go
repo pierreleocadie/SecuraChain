@@ -247,3 +247,16 @@ func DownloadButtonWidget(log *ipfsLog.ZapEventLogger, ctx context.Context, conf
 	log.Debugln("Download button created for file: ", filename+extension)
 	return downloadButton
 }
+
+func DeleteButtonWidget(log *ipfsLog.ZapEventLogger, deleteFileTrxChan chan transaction.Transaction,
+	fileCid cid.Cid, ecdsaKeyPair ecdsa.KeyPair, w fyne.Window) *widget.Button {
+
+	deleteButton := widget.NewButton("Delete", func() {
+		DeleteFile(log, fileCid, ecdsaKeyPair, deleteFileTrxChan)
+		dialog.ShowInformation("Delete Transaction", "Delete file transaction sent to the network successfully", w)
+		log.Debugln("Delete file transaction sent to the network successfully")
+	})
+
+	log.Debugln("Delete button created for file with CID: ", fileCid.String())
+	return deleteButton
+}
