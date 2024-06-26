@@ -373,7 +373,7 @@ func main() {
 
 	// Handle the transactions received from the storage nodes
 	go func() {
-		log.Debug("Waiting for %d seconds before starting the transaction processing", *waitingTime)
+		log.Debugf("Waiting for %d seconds before starting the transaction processing", *waitingTime)
 		time.Sleep(time.Duration(*waitingTime) * time.Second)
 		for {
 			msg, err := subStorageNodeResponse.Next(ctx)
@@ -416,6 +416,9 @@ func main() {
 							log.Debug("Signal cleaner - Block received have a height greater or equal to the current block")
 							stopMiningChanCleaned <- signal
 						}
+					} else {
+						log.Debug("Signal cleaner - Block received is nil - signal for synchronization")
+						stopMiningChanCleaned <- signal
 					}
 				}
 			}
@@ -424,7 +427,7 @@ func main() {
 
 	// Mining block
 	go func() {
-		log.Debug("Waiting for %d seconds before starting the transaction processing", *waitingTime)
+		log.Debugf("Waiting for %d seconds before starting the transaction processing", *waitingTime)
 		time.Sleep(time.Duration(*waitingTime) * time.Second)
 		log.Info("Mining process started")
 		lastBlockStored, err := blockchainDB.GetLastBlock()
