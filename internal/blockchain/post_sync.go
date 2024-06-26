@@ -83,7 +83,6 @@ func (s *PostSyncState) PostSync() {
 		// 7 . Update the block registry with the block
 		if err := s.blockchain.blockRegistry.Add(b, fileCid, nodeIPFSAddrInfo); err != nil {
 			s.blockchain.log.Errorln("Error adding the block metadata to the registry")
-			return
 		}
 	}
 	s.blockchain.pendingBlocks = []block.Block{}
