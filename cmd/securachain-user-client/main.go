@@ -40,6 +40,7 @@ func main() { //nolint: funlen, gocyclo
 	var aesKey aes.Key
 	var clientAnnouncementChan = make(chan transaction.ClientAnnouncement)
 	var askFilesListChan = make(chan []byte)
+	var deleteFileTrxChan = make(chan transaction.Transaction)
 
 	a := app.New()
 	w := a.NewWindow("SecuraChain User Client")
@@ -181,6 +182,25 @@ func main() { //nolint: funlen, gocyclo
 		}
 	}()
 
+	// Publish delete file transaction directly on StorageNodeResponse topic in order to get the transaction delivered to mining nodes
+	go func() {
+		for {
+			deleteFileTrx := <-deleteFileTrxChan
+			deleteFileTrxJSON, err := transaction.SerializeTransaction(deleteFileTrx)
+			if err != nil {
+				log.Errorln("Error serializing DeleteFileTransaction : ", err)
+				continue
+			}
+
+			log.Debugln("Publishing DeleteFileTransaction : ", string(deleteFileTrxJSON))
+			err = storageNodeResponseTopic.Publish(ctx, deleteFileTrxJSON)
+			if err != nil {
+				log.Errorln("Error publishing DeleteFileTransaction : ", err)
+				continue
+			}
+		}
+	}()
+
 	// Handle incoming NodeResponse messages
 	go func() {
 		for {
@@ -191,24 +211,31 @@ func main() { //nolint: funlen, gocyclo
 			}
 			log.Debugln("Received StorageNodeResponse message from ", msg.GetFrom().String())
 			log.Debugln("StorageNodeResponse: ", string(msg.Data))
-			addFileTransaction, err := transaction.DeserializeTransaction(msg.Data)
+			trx, err := transaction.DeserializeTransaction(msg.Data)
 			if err != nil {
-				log.Errorln("Error deserializing AddFileTransaction : ", err)
+				log.Errorln("Error deserializing transaction received from StorageNodeResponse : ", err)
 				continue
 			}
+
+			addFileTransaction, ok := trx.(*transaction.AddFileTransaction)
+			if !ok {
+				log.Warn("The transaction received from StorageNodeResponse is not an AddFileTransaction, it could be a different type of transaction")
+				continue
+			}
+
 			ecdsaPubKeyByte, err := ecdsaKeyPair.PublicKeyToBytes()
 			if err != nil {
 				log.Errorln("Error getting public key : ", err)
 				continue
 			}
-			if bytes.Equal(addFileTransaction.(*transaction.AddFileTransaction).OwnerAddress, ecdsaPubKeyByte) {
+			if bytes.Equal(addFileTransaction.OwnerAddress, ecdsaPubKeyByte) {
 				log.Debugln("Owner of the file is the current user")
-				filename, err := aesKey.DecryptData(addFileTransaction.(*transaction.AddFileTransaction).Filename)
+				filename, err := aesKey.DecryptData(addFileTransaction.Filename)
 				if err != nil {
 					log.Errorln("Error decrypting filename : ", err)
 					continue
 				}
-				fileExtension, err := aesKey.DecryptData(addFileTransaction.(*transaction.AddFileTransaction).Extension)
+				fileExtension, err := aesKey.DecryptData(addFileTransaction.Extension)
 				if err != nil {
 					log.Errorln("Error decrypting file extension : ", err)
 					continue
@@ -276,9 +303,10 @@ func main() { //nolint: funlen, gocyclo
 
 					label := widget.NewLabel(string(filename) + string(fileExtension) + " - " + fileRegistry.FileCid.String())
 					downloadButton := client.DownloadButtonWidget(log, ctx, cfg, IPFSNode.API, fileRegistry.FileCid, string(filename), string(fileExtension), aesKey, w)
+					deleteButton := client.DeleteButtonWidget(log, deleteFileTrxChan, fileRegistry.FileCid, ecdsaKeyPair, w)
 
 					// Add the label and the button to a horizontal container, then to the vertical container
-					fileEntry := container.NewHBox(label, downloadButton)
+					fileEntry := container.NewHBox(label, downloadButton, deleteButton)
 					fileListContainer.Add(fileEntry)
 				}
 
