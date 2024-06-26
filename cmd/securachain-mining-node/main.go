@@ -73,7 +73,7 @@ func main() {
 	blockValidator := consensus.NewDefaultBlockValidator(genesisValidator, transactionValidatorFactory)
 
 	// For the mining process
-	var previousBlock *block.Block = nil
+	var previousBlock *block.Block = &block.Block{}
 	currentBlock := block.NewBlock(trxPool, nil, 1, ecdsaKeyPair)
 
 	/*
@@ -504,7 +504,7 @@ func main() {
 
 			currentBlockHashEncoded := fmt.Sprintf("%x", block.ComputeHash(*currentBlock))
 			log.Infoln("Current block hash : ", currentBlockHashEncoded, " TIMESTAMP : ", currentBlock.Timestamp)
-			if previousBlock != nil {
+			if !reflect.DeepEqual(previousBlock, &block.Block{}) {
 				previousBlockHashEncoded := fmt.Sprintf("%x", block.ComputeHash(*previousBlock))
 				log.Infoln("Previous block hash : ", previousBlockHashEncoded, " TIMESTAMP : ", previousBlock.Timestamp)
 			}
