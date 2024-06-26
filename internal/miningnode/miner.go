@@ -22,7 +22,8 @@ type Miner struct {
 	ctx                         context.Context
 	cancel                      context.CancelFunc
 	blockchain                  *blockchain.Blockchain
-	stopMiningChan              chan consensus.StopMiningSignal
+	stopMiningChanNotCleaned    chan consensus.StopMiningSignal
+	stopMiningChanCleaned       chan consensus.StopMiningSignal
 	psh                         *node.PubSubHub
 	transactionValidatorFactory consensus.TransactionValidatorFactory
 	trxPool                     []transaction.Transaction
@@ -34,13 +35,14 @@ type Miner struct {
 }
 
 func NewMiner(log *ipfsLog.ZapEventLogger, psh *node.PubSubHub, transactionValidatorFactory consensus.TransactionValidatorFactory,
-	blockchain *blockchain.Blockchain, stopMiningChan chan consensus.StopMiningSignal, ecdsaKeyPair ecdsa.KeyPair) *Miner {
+	blockchain *blockchain.Blockchain, stopMiningChanNotCleaned chan consensus.StopMiningSignal, ecdsaKeyPair ecdsa.KeyPair) *Miner {
 	ctx, cancel := context.WithCancel(context.Background())
 	miner := &Miner{
 		ctx:                         ctx,
 		cancel:                      cancel,
 		blockchain:                  blockchain,
-		stopMiningChan:              stopMiningChan,
+		stopMiningChanNotCleaned:    stopMiningChanNotCleaned,
+		stopMiningChanCleaned:       make(chan consensus.StopMiningSignal),
 		psh:                         psh,
 		transactionValidatorFactory: transactionValidatorFactory,
 		trxPool:                     make([]transaction.Transaction, 0),
@@ -56,11 +58,30 @@ func NewMiner(log *ipfsLog.ZapEventLogger, psh *node.PubSubHub, transactionValid
 func (m *Miner) Update(state string) {
 	if state != "UpToDateState" {
 		m.log.Debugln("Signal sent to stop mining because the blockchain is not up to date")
-		m.stopMiningChan <- consensus.StopMiningSignal{Stop: true, BlockReceived: block.Block{}}
+		m.stopMiningChanCleaned <- consensus.StopMiningSignal{Stop: true, Info: "Blockchain not up to date", BlockReceived: block.Block{}}
 		// m.cancel()
 	} else {
 		m.ctx, m.cancel = context.WithCancel(context.Background())
 		go m.StartMining()
+		go m.stopMiningChanCleaner()
+	}
+}
+
+func (m *Miner) stopMiningChanCleaner() {
+	m.log.Debug("Starting the stop mining signal chan cleaner")
+	for {
+		select {
+		case <-m.ctx.Done():
+			return
+		case signal := <-m.stopMiningChanNotCleaned:
+			if signal.Stop {
+				if !reflect.DeepEqual(signal.BlockReceived, block.Block{}) {
+					if signal.BlockReceived.Height >= m.currentBlock.Height {
+						m.stopMiningChanCleaned <- signal
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -98,7 +119,7 @@ func (m *Miner) StartMining() {
 			}
 			m.log.Debug("Mining a new block")
 			// m.currentBlock.MerkleRoot = m.currentBlock.ComputeMerkleRoot()
-			stoppedEarly, blockReceivedEarly := consensus.MineBlock(m.currentBlock, m.stopMiningChan)
+			stoppedEarly, blockReceivedEarly := consensus.MineBlock(m.currentBlock, m.stopMiningChanCleaned)
 			if stoppedEarly {
 				m.log.Infof("Signal received to stop mining - Signal : %v - %v", stoppedEarly, blockReceivedEarly)
 				if reflect.DeepEqual(blockReceivedEarly, block.Block{}) {
@@ -109,34 +130,32 @@ func (m *Miner) StartMining() {
 					m.trxPool = append(m.trxPool, m.currentBlock.Transactions...)
 					m.mu.Unlock()
 					continue
-				} else if blockReceivedEarly.Height >= m.currentBlock.Height {
-					m.log.Info("Mining stopped early because of a new block received")
-					lastBlockStored = block.Block{} // Reset the last block stored and be sure its not nil to avoid errors with copier
-					err := copier.Copy(&lastBlockStored, blockReceivedEarly)
-					if err != nil {
-						m.log.Errorln("Error copying the block received early : ", err)
-					}
+				}
+				m.log.Info("Mining stopped early because of a new block received")
+				lastBlockStored = block.Block{} // Reset the last block stored and be sure its not nil to avoid errors with copier
+				err := copier.Copy(&lastBlockStored, blockReceivedEarly)
+				if err != nil {
+					m.log.Errorln("Error copying the block received early : ", err)
+				}
 
-					// If there are transactions that are in my current block but not in the received block
-					// I need to put them back in the transaction pool to be sure they are mined
-					// We can simply compare the merkle root of the two blocks to know if there are transactions that are not in the received block
-					if !bytes.Equal(m.currentBlock.MerkleRoot, blockReceivedEarly.MerkleRoot) {
-						m.log.Debug("Some transactions in the current block are not in the received block")
-						// We can simply use TransactionID to know which transactions are not in the received block
-						// We can then put them back in the transaction pool
-						currentBlockTransactionIDs := m.currentBlock.GetTransactionIDsMap()
-						blockReceivedEarlyTransactionIDs := blockReceivedEarly.GetTransactionIDsMap()
-						for trxID, trxData := range currentBlockTransactionIDs {
-							if _, ok := blockReceivedEarlyTransactionIDs[trxID]; !ok {
-								m.mu.Lock()
-								m.trxPool = append(m.trxPool, trxData)
-								m.mu.Unlock()
-							}
+				// If there are transactions that are in my current block but not in the received block
+				// I need to put them back in the transaction pool to be sure they are mined
+				// We can simply compare the merkle root of the two blocks to know if there are transactions that are not in the received block
+				if !bytes.Equal(m.currentBlock.MerkleRoot, blockReceivedEarly.MerkleRoot) {
+					m.log.Debug("Some transactions in the current block are not in the received block")
+					// We can simply use TransactionID to know which transactions are not in the received block
+					// We can then put them back in the transaction pool
+					currentBlockTransactionIDs := m.currentBlock.GetTransactionIDsMap()
+					blockReceivedEarlyTransactionIDs := blockReceivedEarly.GetTransactionIDsMap()
+					for trxID, trxData := range currentBlockTransactionIDs {
+						if _, ok := blockReceivedEarlyTransactionIDs[trxID]; !ok {
+							m.mu.Lock()
+							m.trxPool = append(m.trxPool, trxData)
+							m.mu.Unlock()
 						}
 					}
-					continue
 				}
-				m.log.Info("Signal to stop mining ignored because the block received is not higher or equal to the height of the current block")
+				continue
 			}
 
 			err = m.currentBlock.SignBlock(m.ecdsaKeyPair)
