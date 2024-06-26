@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/pierreleocadie/SecuraChain/internal/blockchain"
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
@@ -194,6 +195,12 @@ func main() {
 	}
 
 	/*
+	* PUBSUB RATE LIMITER - ANTI SPAM
+	 */
+	rateLimiterByTopic := node.NewRateLimiter(3, 10*time.Second)
+	rateLimiterBySender := node.NewRateLimiter(1, 3*time.Second)
+
+	/*
 	* BLOCK REGISTRY
 	 */
 	blockRegistryPath := filepath.Join(securaChainDataDirectory, cfg.BlockRegistryPath)
@@ -242,6 +249,12 @@ func main() {
 				log.Errorln("error getting block announcement message: ", err)
 				continue
 			}
+
+			if !rateLimiterByTopic.Allow("BlockAnnouncement") {
+				log.Warnln("Rate limit exceeded for BlockAnnouncement")
+				continue
+			}
+
 			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
 			log.Debugln("Received block : ", string(msg.Data))
 			blockAnnounced, err := block.DeserializeBlock(msg.Data)
@@ -314,6 +327,12 @@ func main() {
 			if msg.GetFrom().String() == host.ID().String() {
 				continue
 			}
+
+			if !rateLimiterBySender.Allow(msg.GetFrom().String()) {
+				log.Warnf("Rate limit exceeded for AskMyFiles")
+				continue
+			}
+
 			log.Debugln("Files asked by a peer ", msg.GetFrom().String())
 
 			// Send the files of the owner
