@@ -204,6 +204,9 @@ func (m *Miner) StartMining() {
 				}
 				time.Sleep(5 * time.Second)
 			}
+			// In order to avoid the case where we receive the signal for our own block and we stop mining
+			m.stopMiningChanCleaned = make(chan consensus.StopMiningSignal)
+			m.log.Debug("Channel stopMiningChanCleaned reset")
 		}
 	}
 }
