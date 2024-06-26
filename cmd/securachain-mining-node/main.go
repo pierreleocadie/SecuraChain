@@ -290,12 +290,6 @@ func main() {
 
 	// Service 2: Handle the block received
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				log.Errorln("Recovered in HandleBlock: ", r)
-				// Vous pouvez choisir de redémarrer la goroutine ou de faire d'autres actions de récupération ici
-			}
-		}()
 		for {
 			block := <-blockReceived
 			log.Debugln("Block received - 2: ", block)
