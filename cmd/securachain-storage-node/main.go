@@ -288,7 +288,7 @@ func main() { //nolint: funlen, gocyclo
 			}
 
 			// Verify the ClientAnnouncement
-			if err := trxClientAnnouncement.Verify(trxClientAnnouncement, trxClientAnnouncement.(transaction.ClientAnnouncement).OwnerSignature, trxClientAnnouncement.(transaction.ClientAnnouncement).OwnerAddress); err != nil {
+			if err := trxClientAnnouncement.Verify(trxClientAnnouncement, trxClientAnnouncement.(*transaction.ClientAnnouncement).OwnerSignature, trxClientAnnouncement.(*transaction.ClientAnnouncement).OwnerAddress); err != nil {
 				log.Errorf("Failed to verify ClientAnnouncement: %s", err)
 				continue
 			}
