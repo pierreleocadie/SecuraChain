@@ -9,6 +9,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
+	"github.com/pierreleocadie/SecuraChain/internal/observer"
 )
 
 // FileRegistry represents the registry for indexing files owned by a specific address.
@@ -17,6 +18,7 @@ type DefaultFileRegistry struct {
 	IndexingFiles   map[string][]FileData
 	log             *ipfsLog.ZapEventLogger
 	config          *config.Config
+	observers       []observer.Observer
 }
 
 func NewDefaultFileRegistry(log *ipfsLog.ZapEventLogger, config *config.Config, registryManager FileRegistryManager) (*DefaultFileRegistry, error) {
@@ -106,6 +108,10 @@ func (r DefaultFileRegistry) Get(myPublicKey string) []FileData {
 	return myFiles
 }
 
+func (r DefaultFileRegistry) GetRegistry() map[string][]FileData {
+	return r.IndexingFiles
+}
+
 func (r *DefaultFileRegistry) UpdateFromBlock(b block.Block) error {
 	for _, tx := range b.Transactions {
 		switch tx.(type) {
@@ -121,9 +127,29 @@ func (r *DefaultFileRegistry) UpdateFromBlock(b block.Block) error {
 				return fmt.Errorf("Error deleting file from registry: %v", err)
 			}
 			r.log.Debugln("File deleted from the registry")
+			r.NotifyObservers()
 		}
 	}
 
 	r.log.Debugln("Transactions of block updated to the registry")
 	return nil
+}
+
+func (r *DefaultFileRegistry) RegisterObserver(observer observer.Observer) {
+	r.observers = append(r.observers, observer)
+}
+
+func (r *DefaultFileRegistry) RemoveObserver(observer observer.Observer) {
+	for i, obs := range r.observers {
+		if obs == observer {
+			r.observers = append(r.observers[:i], r.observers[i+1:]...)
+			break
+		}
+	}
+}
+
+func (r *DefaultFileRegistry) NotifyObservers() {
+	for _, observer := range r.observers {
+		observer.Update("File registry updated")
+	}
 }
