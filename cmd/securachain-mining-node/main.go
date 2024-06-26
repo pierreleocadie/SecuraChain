@@ -230,6 +230,11 @@ func main() {
 	}
 
 	/*
+	* PUBSUB RATE LIMITER - ANTI SPAM
+	 */
+	rateLimiterBySender := node.NewRateLimiter(3, 5*time.Second)
+
+	/*
 	* BLOCK REGISTRY
 	 */
 	blockRegistryPath := filepath.Join(securaChainDataDirectory, cfg.BlockRegistryPath)
@@ -278,6 +283,12 @@ func main() {
 				log.Errorln("error getting block announcement message: ", err)
 				continue
 			}
+
+			if !rateLimiterBySender.Allow(msg.GetFrom().String()) {
+				log.Warnf("Rate limit exceeded for sender %s", msg.GetFrom().String())
+				continue
+			}
+
 			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
 			log.Debugln("Received block : ", string(msg.Data), " - State : ", chain.GetState().GetCurrentStateName())
 			blockAnnounced, err := block.DeserializeBlock(msg.Data)
@@ -353,6 +364,12 @@ func main() {
 			if msg.GetFrom().String() == host.ID().String() {
 				continue
 			}
+
+			if !rateLimiterBySender.Allow(msg.GetFrom().String()) {
+				log.Warnf("Rate limit exceeded for sender %s", msg.GetFrom().String())
+				continue
+			}
+
 			log.Debugln("Files asked by a peer ", msg.GetFrom().String())
 
 			// Send the files of the owner
@@ -380,6 +397,11 @@ func main() {
 			if err != nil {
 				log.Debugln("Error getting message from the network : ", err)
 				break
+			}
+
+			if !rateLimiterBySender.Allow(msg.GetFrom().String()) {
+				log.Warnf("Rate limit exceeded for sender %s", msg.GetFrom().String())
+				continue
 			}
 
 			trx, err := transaction.DeserializeTransaction(msg.Data)
