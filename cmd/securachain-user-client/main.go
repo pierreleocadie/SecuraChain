@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -159,6 +160,14 @@ func main() { //nolint: funlen, gocyclo
 		NetworkVisualisationSub:       nil,
 	}
 
+	/*
+	* PUBSUB RATE LIMITER - ANTI SPAM
+	 */
+	rateLimiterByTopic := node.NewRateLimiter(1, 10*time.Second)
+
+	/*
+	* SERVICES
+	 */
 	// KeepRelayConnectionAlive
 	node.PubsubKeepRelayConnectionAlive(ctx, pubsubHub, host, cfg, log)
 
@@ -209,8 +218,14 @@ func main() { //nolint: funlen, gocyclo
 				log.Errorf("Failed to get next message from StorageNodeResponse topic: %s", err)
 				continue
 			}
+			if !rateLimiterByTopic.Allow("StorageNodeResponse") {
+				log.Warnln("Rate limit exceeded for StorageNodeResponse topic")
+				continue
+			}
+
 			log.Debugln("Received StorageNodeResponse message from ", msg.GetFrom().String())
 			log.Debugln("StorageNodeResponse: ", string(msg.Data))
+
 			trx, err := transaction.DeserializeTransaction(msg.Data)
 			if err != nil {
 				log.Errorln("Error deserializing transaction received from StorageNodeResponse : ", err)
@@ -264,6 +279,11 @@ func main() { //nolint: funlen, gocyclo
 			msg, err := subSendFiles.Next(ctx)
 			if err != nil {
 				log.Errorf("Failed to get next message from SendFiles topic: %s", err)
+				continue
+			}
+
+			if !rateLimiterByTopic.Allow("SendFiles") {
+				log.Warnln("Rate limit exceeded for SendFiles topic")
 				continue
 			}
 
