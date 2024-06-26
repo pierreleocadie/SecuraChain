@@ -29,7 +29,7 @@ var (
 	yamlConfigFilePath = flag.String("config", "", "Path to the yaml config file")
 	generateKeys       = flag.Bool("genKeys", false, "Generate new ECDSA and AES keys to the paths specified in the config file")
 	// waitingTime                 = flag.Int("waitingTime", 60, "Time to wait before starting the mining process and the transaction processing")
-	blockReceieved              = make(chan block.Block, 100)
+	blockReceived               = make(chan block.Block, 100)
 	stopMiningChan              = make(chan consensus.StopMiningSignal)
 	transactionValidatorFactory = consensus.DefaultTransactionValidatorFactory{}
 	genesisValidator            = consensus.DefaultGenesisBlockValidator{}
@@ -259,7 +259,7 @@ func main() {
 
 	// In order to launch a first mining process we will set the blockchain state with it's first current state wich is UpToDateState
 	// It will call the Update method from the miner and start the mining process
-	chain.SetState(chain.GetState())
+	chain.NotifyObservers()
 
 	/*
 	 * SERVICES
@@ -276,20 +276,29 @@ func main() {
 				continue
 			}
 			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
-			log.Debugln("Received block : ", string(msg.Data))
+			log.Debugln("Received block : ", string(msg.Data), " - State : ", chain.GetState().GetCurrentStateName())
 			blockAnnounced, err := block.DeserializeBlock(msg.Data)
 			if err != nil {
 				log.Errorln("Error deserializing the block : ", err)
 				continue
 			}
-			blockReceieved <- blockAnnounced
+			log.Debugln("Block received - 1: ", blockAnnounced)
+			blockReceived <- blockAnnounced
+			log.Debugln("Number of blocs in the channel : ", len(blockReceived))
 		}
 	}()
 
 	// Service 2: Handle the block received
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Errorln("Recovered in HandleBlock: ", r)
+				// Vous pouvez choisir de redémarrer la goroutine ou de faire d'autres actions de récupération ici
+			}
+		}()
 		for {
-			block := <-blockReceieved
+			block := <-blockReceived
+			log.Debugln("Block received - 2: ", block)
 			chain.HandleBlock(block)
 		}
 	}()
@@ -367,8 +376,6 @@ func main() {
 
 	// Handle the transactions received from the storage nodes
 	go func() {
-		// log.Debugf("Waiting for %d seconds before starting the transaction processing", *waitingTime)
-		// time.Sleep(time.Duration(*waitingTime) * time.Second)
 		for {
 			msg, err := subStorageNodeResponse.Next(ctx)
 			if err != nil {
@@ -385,13 +392,6 @@ func main() {
 			miner.HandleTransaction(trx)
 		}
 	}()
-
-	// Launch the first mining process
-	// go func() {
-	// 	log.Debugf("Waiting for %d seconds before starting the mining process", *waitingTime)
-	// 	time.Sleep(time.Duration(*waitingTime) * time.Second)
-	// 	miner.StartMining()
-	// }()
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES
