@@ -282,7 +282,7 @@ func main() { //nolint: funlen, gocyclo
 				continue
 			}
 
-			if _, ok := trxClientAnnouncement.(transaction.ClientAnnouncement); !ok {
+			if _, ok := trxClientAnnouncement.(*transaction.ClientAnnouncement); !ok {
 				log.Errorf("Received transaction is not a ClientAnnouncement")
 				continue
 			}
@@ -293,11 +293,12 @@ func main() { //nolint: funlen, gocyclo
 				continue
 			}
 
-			clientAnnouncement, ok := trxClientAnnouncement.(transaction.ClientAnnouncement)
+			cA, ok := trxClientAnnouncement.(*transaction.ClientAnnouncement)
 			if !ok {
 				log.Errorf("Failed to convert transaction to ClientAnnouncement")
 				continue
 			}
+			clientAnnouncement := *cA
 
 			// Check if the file size is within the limit
 			if clientAnnouncement.FileSize > cfg.FileSizeLimit {
