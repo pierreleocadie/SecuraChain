@@ -59,7 +59,7 @@ func (m *Miner) Update(state string) {
 	if state != "UpToDateState" {
 		m.log.Debugln("Signal sent to stop mining because the blockchain is not up to date")
 		m.stopMiningChanCleaned <- consensus.StopMiningSignal{Stop: true, Info: "Blockchain not up to date", BlockReceived: block.Block{}}
-		// m.cancel()
+		m.cancel()
 	} else {
 		m.ctx, m.cancel = context.WithCancel(context.Background())
 		go m.StartMining()
@@ -205,8 +205,16 @@ func (m *Miner) StartMining() {
 				time.Sleep(5 * time.Second)
 			}
 			// In order to avoid the case where we receive the signal for our own block and we stop mining
-			m.stopMiningChanCleaned = make(chan consensus.StopMiningSignal)
-			m.log.Debug("Channel stopMiningChanCleaned reset")
+			// Clean the stopMiningChanCleaned
+		clearer:
+			for {
+				select {
+				case <-m.stopMiningChanCleaned:
+				default:
+					m.log.Debug("Channel stopMiningChanCleaned cleaned")
+					break clearer // Break the clearer loop
+				}
+			}
 		}
 	}
 }
