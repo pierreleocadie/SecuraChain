@@ -64,7 +64,7 @@ func TestAddFileTransactionValidator_ValidTransaction(t *testing.T) {
 
 	announcement := transaction.NewClientAnnouncement(ownerECDSAKeyPair, randomClientAddrInfo, randomFileCid, encryptedFilename, encryptedExtension, 1234, checksum[:])
 	time.Sleep(1 * time.Second)
-	addFileTransaction := transaction.NewAddFileTransaction(announcement, randomFileCid, nodeECDSAKeyPair, randomeNodeID, randomStorageAddrInfo)
+	addFileTransaction := transaction.NewAddFileTransaction(*announcement, randomFileCid, nodeECDSAKeyPair, randomeNodeID, randomStorageAddrInfo)
 	ba, _ := announcement.Serialize()
 	t.Log(string(ba))
 	bd, err := addFileTransaction.Serialize()
