@@ -61,8 +61,11 @@ func (m *Miner) Update(state string) {
 		m.stopMiningChanCleaned <- consensus.StopMiningSignal{Stop: true, Info: "Blockchain not up to date", BlockReceived: block.Block{}}
 		m.cancel()
 	} else {
+		m.log.Debugln("The blockchain is up to date again - Restarting mining")
 		m.ctx, m.cancel = context.WithCancel(context.Background())
+		m.log.Debug("Starting the mining goroutine")
 		go m.StartMining()
+		m.log.Debug("Starting the stop mining signal chan cleaner")
 		go m.stopMiningChanCleaner()
 	}
 }
@@ -88,6 +91,24 @@ func (m *Miner) stopMiningChanCleaner() {
 
 func (m *Miner) StartMining() {
 	m.log.Infoln("Mining started")
+chan1:
+	for {
+		select {
+		case <-m.stopMiningChanNotCleaned:
+		default:
+			m.log.Debug("Channel stopMiningChanNotCleaned cleaned before starting the cleaner")
+			break chan1 // Break the clearer loop
+		}
+	}
+chan2:
+	for {
+		select {
+		case <-m.stopMiningChanCleaned:
+		default:
+			m.log.Debug("Channel stopMiningChanCleaned cleaned before starting mining")
+			break chan2 // Break the clearer loop
+		}
+	}
 	lastBlockStored, err := m.blockchain.Database.GetLastBlock()
 	if err != nil {
 		m.log.Errorln("Error getting the last block stored : ", err)
