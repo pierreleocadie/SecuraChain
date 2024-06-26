@@ -21,8 +21,8 @@ func (s *PostSyncState) SyncBlockchain() {
 
 func (s *PostSyncState) PostSync() {
 	s.blockchain.log.Debugln("State : PostSyncState")
-	s.blockchain.log.Debugln("Post-syncronization started - Pending blocks list length : %d", len(s.blockchain.pendingBlocks))
-	s.blockchain.log.Debugln("Post-syncronization started - DETAILED Pending blocks list : %v", s.blockchain.pendingBlocks)
+	s.blockchain.log.Debugln("Post-synchronization started - Pending blocks list length : %d", len(s.blockchain.pendingBlocks))
+	s.blockchain.log.Debugln("Post-synchronization started - DETAILED Pending blocks list : %v", s.blockchain.pendingBlocks)
 
 	// 1. Sort the waiting list by height of the block
 	sortedList := fullnode.SortBlockByHeight(s.blockchain.log, s.blockchain.pendingBlocks)
@@ -86,9 +86,9 @@ func (s *PostSyncState) PostSync() {
 		}
 	}
 	s.blockchain.pendingBlocks = []block.Block{}
+	s.blockchain.log.Debugln("Post-synchronization done")
 	// 6 . Change the state of the node
 	s.blockchain.SetState(s.blockchain.UpToDateState)
-	s.blockchain.log.Debugln("Post-syncronization done")
 }
 
 func (s *PostSyncState) GetCurrentStateName() string {
