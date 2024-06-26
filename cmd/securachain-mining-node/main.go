@@ -435,6 +435,24 @@ func main() {
 			log.Errorln("Error getting the last block stored : ", err)
 		}
 		for {
+		chan1:
+			for {
+				select {
+				case <-stopMiningChan:
+				default:
+					log.Debug("Channel stopMiningChanNotCleaned cleaned before starting the cleaner")
+					break chan1 // Break the clearer loop
+				}
+			}
+		chan2:
+			for {
+				select {
+				case <-stopMiningChanCleaned:
+				default:
+					log.Debug("Channel stopMiningChanCleaned cleaned before starting mining")
+					break chan2 // Break the clearer loop
+				}
+			}
 			// The mining process requires the blockchain to be up to date
 			if !blockProcessingEnabled || requiresSync || requiresPostSync {
 				continue
