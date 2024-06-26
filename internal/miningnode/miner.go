@@ -56,6 +56,7 @@ func NewMiner(log *ipfsLog.ZapEventLogger, psh *node.PubSubHub, transactionValid
 }
 
 func (m *Miner) Update(state string) {
+	m.log.Infof("Miner received an update from the blockchain with state : %s", state)
 	if state != "UpToDateState" {
 		m.log.Debugln("Signal sent to stop mining because the blockchain is not up to date")
 		m.stopMiningChanCleaned <- consensus.StopMiningSignal{Stop: true, Info: "Blockchain not up to date", BlockReceived: block.Block{}}
