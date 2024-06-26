@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"time"
 
 	"os"
 	"path/filepath"
@@ -228,6 +229,12 @@ func main() { //nolint: funlen, gocyclo
 	}
 
 	/*
+	* PUBSUB RATE LIMITER - ANTI SPAM
+	 */
+	rateLimiterByTopic := node.NewRateLimiter(3, 10*time.Second)
+	rateLimiterBySender := node.NewRateLimiter(1, 3*time.Second)
+
+	/*
 	* BLOCK REGISTRY
 	 */
 	blockRegistryPath := filepath.Join(securaChainDataDirectory, cfg.BlockRegistryPath)
@@ -281,6 +288,12 @@ func main() { //nolint: funlen, gocyclo
 			if err != nil {
 				log.Errorf("Failed to get next message from clientAnnouncementStringFlag topic: %s", err)
 			}
+
+			if !rateLimiterByTopic.Allow("ClientAnnouncement") {
+				log.Warnf("Rate limit exceeded for ClientAnnouncement")
+				continue
+			}
+
 			log.Debugln("Received ClientAnnouncement message from ", msg.GetFrom().String())
 			log.Debugln("Client Announcement: ", string(msg.Data))
 			trxClientAnnouncement, err := transaction.DeserializeTransaction(msg.Data)
@@ -483,6 +496,12 @@ func main() { //nolint: funlen, gocyclo
 				log.Errorln("error getting block announcement message: ", err)
 				continue
 			}
+
+			if !rateLimiterBySender.Allow(msg.GetFrom().String()) {
+				log.Warnf("Rate limit exceeded for BlockAnnouncement")
+				continue
+			}
+
 			log.Debugln("Received block announcement message from ", msg.GetFrom().String())
 			log.Debugln("Received block : ", string(msg.Data))
 			blockAnnounced, err := block.DeserializeBlock(msg.Data)
@@ -528,6 +547,7 @@ func main() { //nolint: funlen, gocyclo
 			if msg.GetFrom().String() == host.ID().String() {
 				continue
 			}
+
 			log.Debugln("Blockchain asked by a peer ", msg.GetFrom().String())
 
 			// Send the registry of the blockchain
@@ -555,6 +575,12 @@ func main() { //nolint: funlen, gocyclo
 			if msg.GetFrom().String() == host.ID().String() {
 				continue
 			}
+
+			if !rateLimiterBySender.Allow(msg.GetFrom().String()) {
+				log.Warnf("Rate limit exceeded for AskMyFiles")
+				continue
+			}
+
 			log.Debugln("Files asked by a peer ", msg.GetFrom().String())
 
 			// Send the files of the owner
