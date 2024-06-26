@@ -1,20 +1,22 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"time"
 
+	"github.com/jinzhu/copier"
 	"github.com/pierreleocadie/SecuraChain/internal/blockchain"
 	"github.com/pierreleocadie/SecuraChain/internal/blockchaindb"
 	"github.com/pierreleocadie/SecuraChain/internal/core/block"
 	"github.com/pierreleocadie/SecuraChain/internal/core/consensus"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
-	"github.com/pierreleocadie/SecuraChain/internal/miningnode"
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	blockregistry "github.com/pierreleocadie/SecuraChain/internal/registry/block_registry"
 	fileregistry "github.com/pierreleocadie/SecuraChain/internal/registry/file_registry"
@@ -31,7 +33,12 @@ var (
 	generateKeys                = flag.Bool("genKeys", false, "Generate new ECDSA and AES keys to the paths specified in the config file")
 	waitingTime                 = flag.Int("waitingTime", 60, "Time to wait before starting the mining process and the transaction processing")
 	blockReceived               = make(chan block.Block, 100)
+	requiresSync                = false
+	requiresPostSync            = false
+	blockProcessingEnabled      = true
+	trxPool                     = []transaction.Transaction{}
 	stopMiningChan              = make(chan consensus.StopMiningSignal)
+	stopMiningChanCleaned       = make(chan consensus.StopMiningSignal)
 	transactionValidatorFactory = consensus.DefaultTransactionValidatorFactory{}
 	genesisValidator            = consensus.DefaultGenesisBlockValidator{}
 )
@@ -64,6 +71,10 @@ func main() {
 
 	// Initialize the block validator
 	blockValidator := consensus.NewDefaultBlockValidator(genesisValidator, transactionValidatorFactory)
+
+	// For the mining process
+	var previousBlock *block.Block = nil
+	currentBlock := block.NewBlock(trxPool, nil, 1, ecdsaKeyPair)
 
 	/*
 	* IPFS NODE
@@ -254,19 +265,6 @@ func main() {
 	chain := blockchain.NewBlockchain(log, cfg, ctx, IPFSNode, pubsubHub, blockValidator, blockchainDB, blockRegistry, fileRegistry, stopMiningChan)
 
 	/*
-	 * MINER
-	 */
-	miner := miningnode.NewMiner(log, pubsubHub, transactionValidatorFactory, chain, stopMiningChan, ecdsaKeyPair)
-
-	// In order to launch a first mining process we will set the blockchain state with it's first current state wich is UpToDateState
-	// It will call the Update method from the miner and start the mining process
-	go func() {
-		log.Debugf("Waiting %d seconds before starting the mining process", *waitingTime)
-		time.Sleep(time.Duration(*waitingTime) * time.Second)
-		chain.SetState(chain.GetState())
-	}()
-
-	/*
 	 * SERVICES
 	 */
 
@@ -375,7 +373,7 @@ func main() {
 
 	// Handle the transactions received from the storage nodes
 	go func() {
-		log.Debugf("Waiting %d seconds before starting the transaction processing", *waitingTime)
+		log.Debug("Waiting for %d seconds before starting the transaction processing", *waitingTime)
 		time.Sleep(time.Duration(*waitingTime) * time.Second)
 		for {
 			msg, err := subStorageNodeResponse.Next(ctx)
@@ -390,7 +388,154 @@ func main() {
 				continue
 			}
 
-			miner.HandleTransaction(trx)
+			trxValidator, err := transactionValidatorFactory.GetValidator(trx)
+			if err != nil {
+				log.Errorln("Error getting the transaction validator : ", err)
+				continue
+			}
+			if err := trxValidator.Validate(trx); err != nil {
+				log.Warnln("Transaction is invalid : ", err)
+				continue
+			}
+
+			trxPool = append(trxPool, trx)
+			log.Debugf("Transaction pool size : %d", len(trxPool))
+		}
+	}()
+
+	go func() {
+		log.Debug("Starting the stop mining signal chan cleaner")
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case signal := <-stopMiningChan:
+				if signal.Stop {
+					if !reflect.DeepEqual(signal.BlockReceived, block.Block{}) {
+						if signal.BlockReceived.Height >= currentBlock.Height {
+							log.Debug("Signal cleaner - Block received have a height greater or equal to the current block")
+							stopMiningChanCleaned <- signal
+						}
+					}
+				}
+			}
+		}
+	}()
+
+	// Mining block
+	go func() {
+		log.Debug("Waiting for %d seconds before starting the transaction processing", *waitingTime)
+		time.Sleep(time.Duration(*waitingTime) * time.Second)
+		log.Info("Mining process started")
+		lastBlockStored, err := blockchainDB.GetLastBlock()
+		if err != nil {
+			log.Errorln("Error getting the last block stored : ", err)
+		}
+		for {
+			// The mining process requires the blockchain to be up to date
+			if !blockProcessingEnabled || requiresSync || requiresPostSync {
+				continue
+			}
+			if !reflect.DeepEqual(lastBlockStored, block.Block{}) {
+				lastBlockStored, err = blockchainDB.GetLastBlock()
+				if err != nil {
+					log.Errorln("Error getting the last block stored : ", err)
+				}
+
+				previousBlock = &block.Block{}
+				// Copy(desination, source) -> destination have to be a pointer
+				err := copier.Copy(previousBlock, lastBlockStored)
+				if err != nil {
+					log.Errorln("Error copying the last block stored : ", err)
+				}
+				previousBlockHash := block.ComputeHash(*previousBlock)
+
+				log.Infof("Last block stored on chain : %v at height %d", previousBlockHash, previousBlock.Height)
+				currentBlock = block.NewBlock(trxPool, previousBlockHash, previousBlock.Height+1, ecdsaKeyPair)
+				trxPool = []transaction.Transaction{}
+			} else {
+				log.Infof("No block stored on chain")
+			}
+
+			log.Debug("Mining a new block")
+
+			stoppedEarly, blockReceivedEarly := consensus.MineBlock(currentBlock, stopMiningChanCleaned)
+			if stoppedEarly {
+				if !reflect.DeepEqual(blockReceivedEarly, block.Block{}) {
+					log.Info("Mining stopped early because synchronization is required")
+					log.Info("Waiting for the blockchain to be synchronized with the network")
+					log.Info("Putting the transactions back in the transaction pool")
+					trxPool = append(trxPool, currentBlock.Transactions...)
+					continue
+				}
+				log.Info("Mining stopped early because of a new block received")
+				lastBlockStored = block.Block{} // Reset the last block stored and be sure its not nil to avoid errors with copier
+				err := copier.Copy(&lastBlockStored, blockReceivedEarly)
+				if err != nil {
+					log.Errorln("Error copying the block received early : ", err)
+				}
+
+				// If there are transactions that are in my current block but not in the received block
+				// I need to put them back in the transaction pool to be sure they are mined
+				// We can simply compare the merkle root of the two blocks to know if there are transactions that are not in the received block
+				if !bytes.Equal(currentBlock.MerkleRoot, blockReceivedEarly.MerkleRoot) {
+					log.Debug("Some transactions in the current block are not in the received block")
+					// We can simply use TransactionID to know which transactions are not in the received block
+					// We can then put them back in the transaction pool
+					currentBlockTransactionIDs := currentBlock.GetTransactionIDsMap()
+					blockReceivedEarlyTransactionIDs := blockReceivedEarly.GetTransactionIDsMap()
+					for trxID, trxData := range currentBlockTransactionIDs {
+						if _, ok := blockReceivedEarlyTransactionIDs[trxID]; !ok {
+							trxPool = append(trxPool, trxData)
+						}
+					}
+				}
+				continue
+			}
+
+			err = currentBlock.SignBlock(ecdsaKeyPair)
+			if err != nil {
+				log.Errorln("Error signing the block : ", err)
+				continue
+			}
+
+			currentBlockHashEncoded := fmt.Sprintf("%x", block.ComputeHash(*currentBlock))
+			log.Infoln("Current block hash : ", currentBlockHashEncoded, " TIMESTAMP : ", currentBlock.Timestamp)
+			if previousBlock != nil {
+				previousBlockHashEncoded := fmt.Sprintf("%x", block.ComputeHash(*previousBlock))
+				log.Infoln("Previous block hash : ", previousBlockHashEncoded, " TIMESTAMP : ", previousBlock.Timestamp)
+			}
+			if err := blockValidator.Validate(*currentBlock, *previousBlock); err != nil {
+				log.Warn("Block is invalid")
+				// Return transactions of the current block to the transaction pool
+				trxPool = append(trxPool, currentBlock.Transactions...)
+				continue
+			}
+
+			serializedBlock, err := currentBlock.Serialize()
+			if err != nil {
+				log.Errorln("Error serializing the block : ", err)
+				continue
+			}
+			if err = blockAnnouncementTopic.Publish(ctx, serializedBlock); err != nil {
+				log.Errorln("Error publishing the block : ", err)
+				continue
+			}
+
+			log.Infof("Block mined and published with hash %v at height %d", block.ComputeHash(*currentBlock), currentBlock.Height)
+
+			// To be sure we retrieve the last block stored
+			for {
+				lastBlockStored, err = blockchainDB.GetLastBlock()
+				if err != nil {
+					log.Errorln("Error getting the last block stored : ", err)
+				}
+
+				if !reflect.DeepEqual(lastBlockStored, block.Block{}) && lastBlockStored.Height >= currentBlock.Height {
+					break
+				}
+				time.Sleep(5 * time.Second)
+			}
 		}
 	}()
 
