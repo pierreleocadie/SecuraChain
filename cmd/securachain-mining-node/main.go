@@ -263,7 +263,7 @@ func main() {
 	go func() {
 		log.Debugf("Waiting %d seconds before starting the mining process", *waitingTime)
 		time.Sleep(time.Duration(*waitingTime) * time.Second)
-		chain.NotifyObservers()
+		chain.SetState(chain.GetState())
 	}()
 
 	/*
