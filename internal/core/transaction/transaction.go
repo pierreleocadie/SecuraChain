@@ -43,6 +43,8 @@ func DeserializeTransaction(data []byte) (Transaction, error) {
 		tx = &AddFileTransaction{}
 	case "DeleteFileTransaction":
 		tx = &DeleteFileTransaction{}
+	case "ClientAnnouncement":
+		tx = &ClientAnnouncement{}
 	default:
 		return nil, fmt.Errorf("unknown transaction type: %s", wrapper.Type)
 	}
