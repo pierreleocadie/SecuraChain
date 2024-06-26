@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"math/rand"
 	"net/http"
 	"reflect"
 	"sync"
@@ -281,8 +280,8 @@ func main() { //nolint: funlen
 	go func() {
 		for {
 			// Sleep for random time between 10 seconds and 1min
-			randomInt := rand.Intn(60-10+1) + 10
-			time.Sleep(time.Duration(randomInt) * time.Second)
+			// randomInt := rand.Intn(60-10+1) + 10
+			// time.Sleep(time.Duration(randomInt) * time.Second)
 			data := &visualisation.Data{
 				PeerID:   host.ID().String(),
 				NodeType: "ObserverNode",
