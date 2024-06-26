@@ -13,6 +13,7 @@ const (
 
 type StopMiningSignal struct {
 	Stop          bool
+	Info          string
 	BlockReceived block.Block
 }
 
