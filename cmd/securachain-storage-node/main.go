@@ -20,6 +20,7 @@ import (
 	"github.com/pierreleocadie/SecuraChain/internal/node"
 	blockregistry "github.com/pierreleocadie/SecuraChain/internal/registry/block_registry"
 	fileregistry "github.com/pierreleocadie/SecuraChain/internal/registry/file_registry"
+	"github.com/pierreleocadie/SecuraChain/internal/storagenode"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
 
 	"github.com/ipfs/boxo/files"
@@ -245,6 +246,12 @@ func main() { //nolint: funlen, gocyclo
 	if err != nil {
 		log.Warnln("Error creating or opening a file registry : %s\n", err)
 	}
+
+	/*
+	 * STORAGE GARBAGE COLLECTOR
+	 */
+	storageGarbageCollector := storagenode.NewStorageGarbageCollector(log, cfg, fileRegistry)
+	fileRegistry.RegisterObserver(storageGarbageCollector)
 
 	/*
 	 * BLOCKCHAIN DATABASE
