@@ -38,7 +38,7 @@ func main() { //nolint: funlen, gocyclo
 
 	var ecdsaKeyPair ecdsa.KeyPair
 	var aesKey aes.Key
-	var clientAnnouncementChan = make(chan *transaction.ClientAnnouncement)
+	var clientAnnouncementChan = make(chan transaction.ClientAnnouncement)
 	var askFilesListChan = make(chan []byte)
 
 	a := app.New()
@@ -165,7 +165,7 @@ func main() { //nolint: funlen, gocyclo
 	go func() {
 		for {
 			clientAnnouncement := <-clientAnnouncementChan
-			clientAnnouncementJSON, err := transaction.SerializeTransaction(clientAnnouncement)
+			clientAnnouncementJSON, err := transaction.SerializeTransaction(&clientAnnouncement)
 			// clientAnnouncementPath := path.FromCid(clientAnnouncement.FileCid)
 			if err != nil {
 				log.Errorln("Error serializing ClientAnnouncement : ", err)
