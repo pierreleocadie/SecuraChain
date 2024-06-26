@@ -26,8 +26,9 @@ func MineBlock(currentBlock *block.Block, stop chan StopMiningSignal) (bool, blo
 	for nonce := uint32(0); nonce < maxNonce; nonce++ {
 		select {
 		case stopSignal := <-stop:
-			// Stopped early
-			return stopSignal.Stop, stopSignal.BlockReceived
+			if stopSignal.Stop && stopSignal.BlockReceived.Height >= currentBlock.Height {
+				return stopSignal.Stop, stopSignal.BlockReceived
+			}
 		default:
 			currentBlock.Header.Nonce = nonce
 			hash := block.ComputeHash(*currentBlock)
