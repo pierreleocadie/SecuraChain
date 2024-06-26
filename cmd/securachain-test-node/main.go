@@ -59,7 +59,40 @@ func main() { //nolint: funlen
 	}
 
 	// KeepRelayConnectionAlive
-	node.PubsubKeepRelayConnectionAlive(ctx, ps, h, cfg, log)
+	keepRelayConnectionAliveTopic, err := ps.Join(cfg.KeepRelayConnectionAliveStringFlag)
+	if err != nil {
+		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	// Subscribe to KeepRelayConnectionAlive topic
+	subKeepRelayConnectionAlive, err := keepRelayConnectionAliveTopic.Subscribe()
+	if err != nil {
+		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	pubsubHub := &node.PubSubHub{
+		ClientAnnouncementTopic:       nil,
+		ClientAnnouncementSub:         nil,
+		StorageNodeResponseTopic:      nil,
+		StorageNodeResponseSub:        nil,
+		KeepRelayConnectionAliveTopic: keepRelayConnectionAliveTopic,
+		KeepRelayConnectionAliveSub:   subKeepRelayConnectionAlive,
+		BlockAnnouncementTopic:        nil,
+		BlockAnnouncementSub:          nil,
+		AskingBlockchainTopic:         nil,
+		AskingBlockchainSub:           nil,
+		ReceiveBlockchainTopic:        nil,
+		ReceiveBlockchainSub:          nil,
+		AskMyFilesTopic:               nil,
+		AskMyFilesSub:                 nil,
+		SendMyFilesTopic:              nil,
+		SendMyFilesSub:                nil,
+		NetworkVisualisationTopic:     nil,
+		NetworkVisualisationSub:       nil,
+	}
+
+	// KeepRelayConnectionAlive
+	node.PubsubKeepRelayConnectionAlive(ctx, pubsubHub, h, cfg, log)
 
 	/*
 	* DISPLAY PEER CONNECTEDNESS CHANGES
