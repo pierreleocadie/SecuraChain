@@ -18,7 +18,7 @@ import (
 
 func SendFile(ctx context.Context, cfg *config.Config, selectedFile string, //nolint: funlen
 	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, ipfsNode *ipfs.IPFSNode,
-	clientAnnouncementChan chan *transaction.ClientAnnouncement,
+	clientAnnouncementChan chan transaction.ClientAnnouncement,
 	log *ipfsLog.ZapEventLogger) error {
 	// -1. Check if the ECDSA key pair and the AES key are loaded
 	err := checkKeys(ecdsaKeyPair, aesKey)
@@ -83,7 +83,7 @@ func SendFile(ctx context.Context, cfg *config.Config, selectedFile string, //no
 	)
 
 	// 7. Send the ClientAnnouncement to the channel
-	clientAnnouncementChan <- clientAnnouncement
+	clientAnnouncementChan <- *clientAnnouncement
 	log.Debugln("ClientAnnouncement sent to the channel")
 
 	return nil
