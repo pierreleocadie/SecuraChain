@@ -165,7 +165,7 @@ func main() { //nolint: funlen, gocyclo
 	go func() {
 		for {
 			clientAnnouncement := <-clientAnnouncementChan
-			clientAnnouncementJSON, err := clientAnnouncement.Serialize()
+			clientAnnouncementJSON, err := transaction.SerializeTransaction(clientAnnouncement)
 			// clientAnnouncementPath := path.FromCid(clientAnnouncement.FileCid)
 			if err != nil {
 				log.Errorln("Error serializing ClientAnnouncement : ", err)
