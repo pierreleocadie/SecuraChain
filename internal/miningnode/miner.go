@@ -77,6 +77,7 @@ func (m *Miner) stopMiningChanCleaner() {
 			if signal.Stop {
 				if !reflect.DeepEqual(signal.BlockReceived, block.Block{}) {
 					if signal.BlockReceived.Height >= m.currentBlock.Height {
+						m.log.Debug("Signal cleaner - Block received have a height greater or equal to the current block")
 						m.stopMiningChanCleaned <- signal
 					}
 				}
