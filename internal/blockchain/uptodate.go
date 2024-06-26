@@ -82,7 +82,7 @@ func (s *UpToDateState) HandleBlock(b block.Block) {
 		// 		}
 		// 	}
 		// }
-		s.blockchain.StopMiningChan <- consensus.StopMiningSignal{Stop: true, BlockReceived: b}
+		s.blockchain.StopMiningChan <- consensus.StopMiningSignal{Stop: true, Info: "Block received from the network", BlockReceived: b}
 	}
 }
 
