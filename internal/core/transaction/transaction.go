@@ -1,41 +1,15 @@
 package transaction
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"reflect"
-
-	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 )
-
-// TransactionVerifier is the base struct for verifying transactions
-type Verifier struct{}
-
-// SpecificData method should be overridden by each specific transaction type
-func (t *Verifier) SpecificData() ([]byte, error) {
-	return nil, nil // Default implementation, should be overridden
-}
-
-func (t *Verifier) VerifyTransaction(tx Transaction, signature []byte, publicKey []byte) bool {
-	data, err := tx.SpecificData()
-	if err != nil {
-		return false
-	}
-
-	hash := sha256.Sum256(data)
-
-	ownerAddr, err := ecdsa.PublicKeyFromBytes(publicKey)
-	if err != nil {
-		return false
-	}
-
-	return ecdsa.VerifySignature(ownerAddr, hash[:], signature)
-}
 
 type Transaction interface {
 	Serialize() ([]byte, error)
-	SpecificData() ([]byte, error)
+	ToBytesWithoutSignature() ([]byte, error)
+	Verify(tx Transaction, signature []byte, publicKey []byte) error
 }
 
 type TransactionWrapper struct {
@@ -44,7 +18,7 @@ type TransactionWrapper struct {
 }
 
 func SerializeTransaction(tx Transaction) ([]byte, error) {
-	data, err := tx.Serialize()
+	data, err := json.Marshal(tx)
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +43,8 @@ func DeserializeTransaction(data []byte) (Transaction, error) {
 		tx = &AddFileTransaction{}
 	case "DeleteFileTransaction":
 		tx = &DeleteFileTransaction{}
+	case "ClientAnnouncement":
+		tx = &ClientAnnouncement{}
 	default:
 		return nil, fmt.Errorf("unknown transaction type: %s", wrapper.Type)
 	}

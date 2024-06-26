@@ -5,35 +5,22 @@ import (
 	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/network"
 )
 
 func PubsubKeepRelayConnectionAlive(ctx context.Context,
-	ps *pubsub.PubSub, host host.Host, cfg *config.Config, log *ipfsLog.ZapEventLogger) {
+	psh *PubSubHub, host host.Host, cfg *config.Config, log *ipfsLog.ZapEventLogger) {
 	// Run KeepRelayConnectionAlive only if its behind a NAT
 	if !network.NATDiscovery(log) {
 		return
 	}
 
-	// KeepRelayConnectionAlive
-	keepRelayConnectionAliveTopic, err := ps.Join(cfg.KeepRelayConnectionAliveStringFlag)
-	if err != nil {
-		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
-	}
-
-	// Subscribe to KeepRelayConnectionAlive topic
-	subKeepRelayConnectionAlive, err := keepRelayConnectionAliveTopic.Subscribe()
-	if err != nil {
-		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
-	}
-
 	// Handle incoming KeepRelayConnectionAlive messages
 	go func() {
 		for {
-			msg, err := subKeepRelayConnectionAlive.Next(ctx)
+			msg, err := psh.KeepRelayConnectionAliveSub.Next(ctx)
 			if err != nil {
 				log.Errorf("Failed to get next message from KeepRelayConnectionAlive topic: %s", err)
 				continue
@@ -50,7 +37,7 @@ func PubsubKeepRelayConnectionAlive(ctx context.Context,
 	go func() {
 		for {
 			time.Sleep(cfg.KeepRelayConnectionAliveInterval)
-			err := keepRelayConnectionAliveTopic.Publish(ctx, network.GeneratePacket(host.ID()))
+			err := psh.KeepRelayConnectionAliveTopic.Publish(ctx, network.GeneratePacket(host.ID()))
 			if err != nil {
 				log.Errorf("Failed to publish KeepRelayConnectionAlive message: %s", err)
 				continue

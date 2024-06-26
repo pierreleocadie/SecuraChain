@@ -17,7 +17,7 @@ func IntToHex(num int64) []byte {
 }
 
 // calculateHash calculates the hash of a block
-func ComputeHash(block *Block) []byte {
+func ComputeHash(block Block) []byte {
 	headerBytes := bytes.Join(
 		[][]byte{
 			IntToHex(int64(block.Header.Version)),

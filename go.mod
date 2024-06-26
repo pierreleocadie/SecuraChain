@@ -8,7 +8,10 @@ require (
 	github.com/ipfs/boxo v0.18.0
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-log/v2 v2.5.1
+	github.com/ipfs/go-merkledag v0.11.0
+	github.com/ipfs/go-unixfs v0.4.5
 	github.com/ipfs/kubo v0.26.0
+	github.com/jinzhu/copier v0.4.0
 	github.com/libp2p/go-libp2p v0.33.0
 	github.com/libp2p/go-libp2p-kad-dht v0.25.2
 	github.com/libp2p/go-libp2p-pubsub v0.10.0
@@ -23,11 +26,14 @@ require (
 	github.com/cockroachdb/redact v1.1.5 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
 	github.com/getsentry/sentry-go v0.27.0 // indirect
-	github.com/jinzhu/copier v0.4.0 // indirect
+	github.com/ipfs/go-blockservice v0.5.0 // indirect
+	github.com/ipfs/go-ipfs-exchange-interface v0.2.0 // indirect
+	github.com/ipfs/go-verifcid v0.0.2 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
 )
 
 require (
@@ -185,7 +191,7 @@ require (
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/pprof v0.0.0-20240227163752-401108e1b7e7 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
-	github.com/gorilla/websocket v1.5.1 // indirect
+	github.com/gorilla/websocket v1.5.1
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect

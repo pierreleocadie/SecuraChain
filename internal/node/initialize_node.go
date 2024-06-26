@@ -1,12 +1,9 @@
 package node
 
 import (
-	"context"
 	"time"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
-	"github.com/ipfs/kubo/core"
-	iface "github.com/ipfs/kubo/core/coreiface"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -16,7 +13,6 @@ import (
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
-	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/internal/network"
 )
 
@@ -144,16 +140,4 @@ func Initialize(log *ipfsLog.ZapEventLogger, cfg config.Config) host.Host { //no
 	log.Infof("Host protocols are: %v", h.Mux().Protocols())
 
 	return h
-}
-
-func InitializeIPFSNode(ctx context.Context, cfg *config.Config, log *ipfsLog.ZapEventLogger) (iface.CoreAPI, *core.IpfsNode) {
-	// Spawn an IPFS node
-	ipfsAPI, nodeIpfs, err := ipfs.SpawnNode(ctx, cfg)
-	if err != nil {
-		log.Panicf("Failed to spawn IPFS node: %s", err)
-	}
-
-	log.Debugf("IPFS node spawned with PeerID: %s", nodeIpfs.Identity.String())
-
-	return ipfsAPI, nodeIpfs
 }

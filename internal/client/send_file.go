@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	ipfsLog "github.com/ipfs/go-log/v2"
-	"github.com/ipfs/kubo/core"
-	iface "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
 	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
@@ -19,8 +17,8 @@ import (
 )
 
 func SendFile(ctx context.Context, cfg *config.Config, selectedFile string, //nolint: funlen
-	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, nodeIpfs *core.IpfsNode, ipfsAPI iface.CoreAPI,
-	clientAnnouncementChan chan *transaction.ClientAnnouncement,
+	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, ipfsNode *ipfs.IPFSNode,
+	clientAnnouncementChan chan transaction.ClientAnnouncement,
 	log *ipfsLog.ZapEventLogger) error {
 	// -1. Check if the ECDSA key pair and the AES key are loaded
 	err := checkKeys(ecdsaKeyPair, aesKey)
@@ -67,7 +65,7 @@ func SendFile(ctx context.Context, cfg *config.Config, selectedFile string, //no
 	fileSize := fileStat.Size()
 
 	// 5. Add the encrypted file to IPFS
-	encryptedFileCid, err := ipfs.AddFile(ctx, cfg, ipfsAPI, encryptedFilePath)
+	encryptedFileCid, err := ipfsNode.AddFile(encryptedFilePath)
 	if err != nil {
 		log.Errorf("failed to add file to IPFS: %s", err)
 		return fmt.Errorf("failed to add file to IPFS: %s", err)
@@ -76,7 +74,7 @@ func SendFile(ctx context.Context, cfg *config.Config, selectedFile string, //no
 	// 6. Create a new ClientAnnouncement
 	clientAnnouncement := transaction.NewClientAnnouncement(
 		*ecdsaKeyPair,
-		nodeIpfs.Peerstore.PeerInfo(nodeIpfs.Identity),
+		ipfsNode.Node.Peerstore.PeerInfo(ipfsNode.Node.Identity),
 		encryptedFileCid.RootCid(),
 		encryptedFilename,
 		encryptedExtension,
@@ -85,7 +83,7 @@ func SendFile(ctx context.Context, cfg *config.Config, selectedFile string, //no
 	)
 
 	// 7. Send the ClientAnnouncement to the channel
-	clientAnnouncementChan <- clientAnnouncement
+	clientAnnouncementChan <- *clientAnnouncement
 	log.Debugln("ClientAnnouncement sent to the channel")
 
 	return nil

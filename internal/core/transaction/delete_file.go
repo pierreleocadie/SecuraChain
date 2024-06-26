@@ -11,27 +11,9 @@ import (
 )
 
 type DeleteFileTransaction struct {
-	TransactionID        uuid.UUID `json:"transactionID"`        // Transaction ID - UUID
-	OwnerAddress         []byte    `json:"ownerAddress"`         // Owner address - ECDSA public key
-	FileCid              cid.Cid   `json:"fileCID"`              // File CID
-	TransactionSignature []byte    `json:"transactionSignature"` // Transaction signature - ECDSA signature
-	TransactionTimestamp int64     `json:"transactionTimestamp"` // Transaction timestamp - Unix timestamp
-	Verifier                       // embed TransactionVerifier struct to inherit VerifyTransaction method
-}
-
-func (t *DeleteFileTransaction) Serialize() ([]byte, error) {
-	return json.Marshal(t)
-}
-
-// Override SpecificData for DeleteFileTransaction
-func (t *DeleteFileTransaction) SpecificData() ([]byte, error) {
-	// Remove signature from transaction before verifying
-	signature := t.TransactionSignature
-	t.TransactionSignature = []byte{}
-
-	defer func() { t.TransactionSignature = signature }() // Restore after serialization
-
-	return json.Marshal(t)
+	BaseTransaction
+	OwnerAddress []byte  `json:"ownerAddress"` // Owner address - ECDSA public key
+	FileCid      cid.Cid `json:"fileCID"`      // File CID
 }
 
 func NewDeleteFileTransaction(keyPair ecdsa.KeyPair, fileCid cid.Cid) *DeleteFileTransaction {
@@ -41,10 +23,12 @@ func NewDeleteFileTransaction(keyPair ecdsa.KeyPair, fileCid cid.Cid) *DeleteFil
 	}
 
 	transaction := &DeleteFileTransaction{
-		TransactionID:        uuid.New(),
-		OwnerAddress:         ownerAddressBytes,
-		FileCid:              fileCid,
-		TransactionTimestamp: time.Now().UTC().Unix(),
+		OwnerAddress: ownerAddressBytes,
+		FileCid:      fileCid,
+		BaseTransaction: BaseTransaction{
+			TransactionID:        uuid.New(),
+			TransactionTimestamp: time.Now().UTC().Unix(),
+		},
 	}
 
 	transactionBytes, err := json.Marshal(transaction)
@@ -59,6 +43,20 @@ func NewDeleteFileTransaction(keyPair ecdsa.KeyPair, fileCid cid.Cid) *DeleteFil
 	}
 
 	return transaction
+}
+
+func (t DeleteFileTransaction) Serialize() ([]byte, error) {
+	return json.Marshal(t)
+}
+
+func (t DeleteFileTransaction) ToBytesWithoutSignature() ([]byte, error) {
+	// Remove signature from transaction before verifying
+	signature := t.TransactionSignature
+	t.TransactionSignature = nil
+
+	defer func() { t.TransactionSignature = signature }() // Restore after serialization
+
+	return json.Marshal(t)
 }
 
 func DeserializeDeleteFileTransaction(data []byte) (*DeleteFileTransaction, error) {

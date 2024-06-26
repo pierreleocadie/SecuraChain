@@ -1,11 +1,8 @@
 package ipfs
 
 import (
-	"context"
 	"fmt"
 	"strconv"
-
-	"github.com/ipfs/kubo/core"
 )
 
 const (
@@ -18,9 +15,9 @@ const (
 /*
 * MEMORY SHARE TO THE BLOCKCHAIN BY THE NODE
  */
-func ChangeStorageMax(nodeIpfs *core.IpfsNode, memorySpace uint) (bool, error) {
+func (ipfs *IPFSNode) ChangeStorageMax(memorySpace uint) (bool, error) {
 	// Get the config file of the IPFS node
-	configFileIPFS, err := nodeIpfs.Repo.Config()
+	configFileIPFS, err := ipfs.Node.Repo.Config()
 	if err != nil {
 		return false, fmt.Errorf("failed to get IPFS config: %s", err)
 	}
@@ -37,12 +34,12 @@ func ChangeStorageMax(nodeIpfs *core.IpfsNode, memorySpace uint) (bool, error) {
 
 	// Update the StorageMax
 	configFileIPFS.Datastore.StorageMax = fmt.Sprintf("%dGB", memorySpace)
-	if err := nodeIpfs.Repo.SetConfig(configFileIPFS); err != nil {
+	if err := ipfs.Node.Repo.SetConfig(configFileIPFS); err != nil {
 		return false, fmt.Errorf("failed to set IPFS config: %s", err)
 	}
 
 	// Get the config file of the IPFS node to verify new StorageMax
-	configFileIPFS2, err := nodeIpfs.Repo.Config()
+	configFileIPFS2, err := ipfs.Node.Repo.Config()
 	if err != nil {
 		return false, fmt.Errorf("failed to get IPFS config: %s", err)
 	}
@@ -59,13 +56,13 @@ func ChangeStorageMax(nodeIpfs *core.IpfsNode, memorySpace uint) (bool, error) {
 	return true, nil
 }
 
-func FreeMemoryAvailable(ctx context.Context, nodeIpfs *core.IpfsNode) (uint64, error) {
-	spaceUsed, err := nodeIpfs.Repo.GetStorageUsage(ctx)
+func (ipfs *IPFSNode) FreeMemoryAvailable() (uint64, error) {
+	spaceUsed, err := ipfs.Node.Repo.GetStorageUsage(ipfs.Ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get the number of bytes stored: %s", err)
 	}
 
-	configFileIPFS, err := nodeIpfs.Repo.Config()
+	configFileIPFS, err := ipfs.Node.Repo.Config()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get IPFS config: %s", err)
 	}
@@ -82,8 +79,8 @@ func FreeMemoryAvailable(ctx context.Context, nodeIpfs *core.IpfsNode) (uint64, 
 	return freeMemoryAvailable, nil
 }
 
-func MemoryUsed(ctx context.Context, nodeIpfs *core.IpfsNode) (uint64, error) {
-	spaceUsed, err := nodeIpfs.Repo.GetStorageUsage(ctx)
+func (ipfs *IPFSNode) MemoryUsed() (uint64, error) {
+	spaceUsed, err := ipfs.Node.Repo.GetStorageUsage(ipfs.Ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get the number of bytes stored: %s", err)
 	}

@@ -56,7 +56,7 @@ func NewBlock(transactions []transaction.Transaction, prevBlockHash []byte, heig
 }
 
 // calculateMerkleRoot computes the Merkle root of the transactions in the block
-func (b *Block) ComputeMerkleRoot() []byte {
+func (b Block) ComputeMerkleRoot() []byte {
 	var txHashes [][]byte
 	for _, tx := range b.Transactions {
 		txBytes, _ := json.Marshal(tx)
@@ -90,7 +90,7 @@ func computeMerkleRootForHashes(hashes [][]byte) []byte {
 }
 
 // Serialize converts the block into a byte slice
-func (b *Block) Serialize() ([]byte, error) {
+func (b Block) Serialize() ([]byte, error) {
 	aux := struct {
 		Header       Header                           `json:"header"`
 		Transactions []transaction.TransactionWrapper `json:"transactions"`
@@ -128,17 +128,17 @@ func (b *Block) Serialize() ([]byte, error) {
 }
 
 // DeserializeBlock converts a byte slice back into a Block
-func DeserializeBlock(data []byte) (*Block, error) {
+func DeserializeBlock(data []byte) (Block, error) {
 	var aux struct {
 		Header       Header                           `json:"header"`
 		Transactions []transaction.TransactionWrapper `json:"transactions"`
 	}
 
 	if err := json.Unmarshal(data, &aux); err != nil {
-		return nil, err
+		return Block{}, err
 	}
 
-	block := &Block{
+	block := Block{
 		Header: aux.Header,
 	}
 
@@ -150,10 +150,10 @@ func DeserializeBlock(data []byte) (*Block, error) {
 		case "DeleteFileTransaction":
 			tx = &transaction.DeleteFileTransaction{}
 		default:
-			return nil, fmt.Errorf("unknown transaction type: %v", wrappedTrx.Type)
+			return Block{}, fmt.Errorf("unknown transaction type: %v", wrappedTrx.Type)
 		}
 		if err := json.Unmarshal(wrappedTrx.Data, &tx); err != nil {
-			return nil, err
+			return Block{}, err
 		}
 		block.Transactions = append(block.Transactions, tx)
 	}
@@ -162,7 +162,7 @@ func DeserializeBlock(data []byte) (*Block, error) {
 
 // SignBlock signs the block with the given private key and adds the signature to the block header
 func (b *Block) SignBlock(privateKey ecdsa.KeyPair) error {
-	headerHash := ComputeHash(b)
+	headerHash := ComputeHash(*b)
 	signature, err := privateKey.Sign(headerHash)
 	if err != nil {
 		return err
@@ -172,7 +172,7 @@ func (b *Block) SignBlock(privateKey ecdsa.KeyPair) error {
 	return nil
 }
 
-func (b *Block) GetTransactionIDsMap() map[string]transaction.Transaction {
+func (b Block) GetTransactionIDsMap() map[string]transaction.Transaction {
 	ids := make(map[string]transaction.Transaction)
 	for _, trx := range b.Transactions {
 		switch trx := trx.(type) {
@@ -188,7 +188,7 @@ func (b *Block) GetTransactionIDsMap() map[string]transaction.Transaction {
 }
 
 // IsGenesisBlock checks if the block is the genesis block
-func IsGenesisBlock(b *Block) bool {
+func (b Block) IsGenesisBlock() bool {
 	if b.PrevBlock == nil && b.Header.Height == 1 {
 		return true
 	}

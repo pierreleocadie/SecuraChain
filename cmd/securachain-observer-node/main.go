@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"math/rand"
 	"net/http"
 	"reflect"
 	"sync"
@@ -92,19 +91,25 @@ func main() { //nolint: funlen
 	}
 
 	/*
-	* PUBSUB
+	* PUBSUB TOPICS AND SUBSCRIPTIONS
 	 */
-	ps, err := pubsub.NewGossipSub(ctx, host) // pubsub.WithValidateQueueSize(1000),
-	// pubsub.WithPeerOutboundQueueSize(1000),
-	// pubsub.WithValidateWorkers(runtime.NumCPU()*2),
-	// pubsub.WithValidateThrottle(8192*2),
+	ps, err := pubsub.NewGossipSub(ctx, host)
 
 	if err != nil {
 		log.Panicf("Failed to create GossipSub: %s", err)
 	}
 
 	// KeepRelayConnectionAlive
-	node.PubsubKeepRelayConnectionAlive(ctx, ps, host, cfg, log)
+	keepRelayConnectionAliveTopic, err := ps.Join(cfg.KeepRelayConnectionAliveStringFlag)
+	if err != nil {
+		log.Warnf("Failed to join KeepRelayConnectionAlive topic: %s", err)
+	}
+
+	// Subscribe to KeepRelayConnectionAlive topic
+	subKeepRelayConnectionAlive, err := keepRelayConnectionAliveTopic.Subscribe()
+	if err != nil {
+		log.Warnf("Failed to subscribe to KeepRelayConnectionAlive topic: %s", err)
+	}
 
 	// NetworkVisualisation
 	networkVisualisationTopic, err := ps.Join(cfg.NetworkVisualisationStringFlag)
@@ -187,6 +192,34 @@ func main() { //nolint: funlen
 		log.Errorf("Failed to subscribe to StorageNodeResponse topic: %s", err)
 	}
 
+	pubsubHub := &node.PubSubHub{
+		ClientAnnouncementTopic:       clientAnnouncementTopic,
+		ClientAnnouncementSub:         subClientAnnouncement,
+		StorageNodeResponseTopic:      storageNodeResponseTopic,
+		StorageNodeResponseSub:        subStorageNodeResponse,
+		KeepRelayConnectionAliveTopic: keepRelayConnectionAliveTopic,
+		KeepRelayConnectionAliveSub:   subKeepRelayConnectionAlive,
+		BlockAnnouncementTopic:        blockAnnouncementTopic,
+		BlockAnnouncementSub:          subBlockAnnouncement,
+		AskingBlockchainTopic:         askingBlockchainTopic,
+		AskingBlockchainSub:           subAskingBlockchain,
+		ReceiveBlockchainTopic:        receiveBlockchainTopic,
+		ReceiveBlockchainSub:          subReceiveBlockchain,
+		AskMyFilesTopic:               askMyFilesTopic,
+		AskMyFilesSub:                 subAskMyFiles,
+		SendMyFilesTopic:              sendFilesTopic,
+		SendMyFilesSub:                subSendFiles,
+		NetworkVisualisationTopic:     networkVisualisationTopic,
+		NetworkVisualisationSub:       subNetworkVisualisation,
+	}
+
+	/*
+	* SERVICES
+	 */
+
+	// KeepRelayConnectionAlive
+	node.PubsubKeepRelayConnectionAlive(ctx, pubsubHub, host, cfg, log)
+
 	// Before starting we need to add each bootstrap peers data to the mapData
 	// and data slice to avoid problems with the visualisation of the network
 	// if we have an only node in the network connected to all the bootstrap peers
@@ -247,8 +280,8 @@ func main() { //nolint: funlen
 	go func() {
 		for {
 			// Sleep for random time between 10 seconds and 1min
-			randomInt := rand.Intn(60-10+1) + 10
-			time.Sleep(time.Duration(randomInt) * time.Second)
+			// randomInt := rand.Intn(60-10+1) + 10
+			// time.Sleep(time.Duration(randomInt) * time.Second)
 			data := &visualisation.Data{
 				PeerID:   host.ID().String(),
 				NodeType: "ObserverNode",
@@ -477,7 +510,7 @@ func main() { //nolint: funlen
 			if err != nil {
 				log.Warnf("Failed to deserialize block: %s", err)
 			}
-			visualisationBlock := visualisation.NewBlock(*bReceive)
+			visualisationBlock := visualisation.NewBlock(bReceive)
 			visualisationBlockBytes, err := json.Marshal(visualisationBlock)
 			if err != nil {
 				log.Warnf("Failed to marshal visualisation block: %s", err)

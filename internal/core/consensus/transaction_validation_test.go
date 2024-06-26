@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"crypto/sha256"
+	"fmt"
 	"testing"
 	"time"
 
@@ -20,22 +21,22 @@ func TestAddFileTransactionValidator_ValidTransaction(t *testing.T) {
 	// Set up a valid AddFileTransaction
 	nodeECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
 	if err != nil {
-		t.Errorf("Failed to create ECDSA key pair: %s", err)
+		t.Errorf("failed to create ECDSA key pair: %s", err)
 	}
 
 	ownerECDSAKeyPair, err := ecdsa.NewECDSAKeyPair()
 	if err != nil {
-		t.Errorf("Failed to create ECDSA key pair: %s", err)
+		t.Errorf("failed to create ECDSA key pair: %s", err)
 	}
 
 	ownerAesKey, err := aes.NewAESKey()
 	if err != nil {
-		t.Errorf("Failed to create AES key: %s", err)
+		t.Errorf("failed to create AES key: %s", err)
 	}
 
 	randomeNodeID, err := generateRandomPeerID()
 	if err != nil {
-		t.Errorf("Failed to create peer.ID: %s", err)
+		t.Errorf("failed to create peer.ID: %s", err)
 	}
 
 	randomFileCid := merkledag.NodeWithData(unixfs.FilePBData([]byte("fileCID"), uint64(len([]byte("fileCID"))))).Cid() // Random CIDv0
@@ -43,34 +44,43 @@ func TestAddFileTransactionValidator_ValidTransaction(t *testing.T) {
 	checksum := sha256.Sum256([]byte("checksum"))
 	encryptedFilename, err := ownerAesKey.EncryptData([]byte("filename"))
 	if err != nil {
-		t.Errorf("Failed to encrypt filename: %s", err)
+		t.Errorf("failed to encrypt filename: %s", err)
 	}
 
 	encryptedExtension, err := ownerAesKey.EncryptData([]byte("extension"))
 	if err != nil {
-		t.Errorf("Failed to encrypt extension: %s", err)
+		t.Errorf("failed to encrypt extension: %s", err)
 	}
 
 	randomClientAddrInfo, err := generateRandomAddrInfo()
 	if err != nil {
-		t.Errorf("Failed to create random AddrInfo: %s", err)
+		t.Errorf("failed to create random AddrInfo: %s", err)
 	}
 
 	randomStorageAddrInfo, err := generateRandomAddrInfo()
 	if err != nil {
-		t.Errorf("Failed to create random AddrInfo: %s", err)
+		t.Errorf("failed to create random AddrInfo: %s", err)
 	}
 
 	announcement := transaction.NewClientAnnouncement(ownerECDSAKeyPair, randomClientAddrInfo, randomFileCid, encryptedFilename, encryptedExtension, 1234, checksum[:])
 	time.Sleep(1 * time.Second)
-	addFileTransaction := transaction.NewAddFileTransaction(announcement, randomFileCid, false, nodeECDSAKeyPair, randomeNodeID, randomStorageAddrInfo)
+	addFileTransaction := transaction.NewAddFileTransaction(*announcement, randomFileCid, nodeECDSAKeyPair, randomeNodeID, randomStorageAddrInfo)
 	ba, _ := announcement.Serialize()
 	t.Log(string(ba))
-	bd, _ := addFileTransaction.Serialize()
+	bd, err := addFileTransaction.Serialize()
+	if err != nil {
+		t.Errorf("failed to serialize AddFileTransaction: %s", err)
+	}
 	t.Log(string(bd))
 
-	if !ValidateTransaction(addFileTransaction) {
-		t.Errorf("ValidateTransaction failed for a valid AddFileTransaction")
+	txValidatorFactory := DefaultTransactionValidatorFactory{}
+	txValidator, err := txValidatorFactory.GetValidator(addFileTransaction)
+	if err != nil {
+		t.Errorf("failed to get AddFileTransaction validator: %s", err)
+	}
+	if err := txValidator.Validate(addFileTransaction); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		t.Errorf("validateTransaction failed for a valid AddFileTransaction")
 	}
 }
 
@@ -88,7 +98,12 @@ func TestDeleteFileTransactionValidator_ValidTransaction(t *testing.T) {
 	deleteFileTransaction := transaction.NewDeleteFileTransaction(ownerECDSAKeyPair, randomeFileCID)
 	time.Sleep(1 * time.Second)
 
-	if !ValidateTransaction(deleteFileTransaction) {
+	txValidatorFactory := DefaultTransactionValidatorFactory{}
+	txValidator, err := txValidatorFactory.GetValidator(deleteFileTransaction)
+	if err != nil {
+		t.Errorf("Failed to get AddFileTransaction validator: %s", err)
+	}
+	if err := txValidator.Validate(deleteFileTransaction); err != nil {
 		t.Errorf("ValidateTransaction failed for a valid DeleteFileTransaction")
 	}
 }
