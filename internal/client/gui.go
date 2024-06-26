@@ -7,10 +7,10 @@ import (
 
 	"github.com/ipfs/go-cid"
 	ipfsLog "github.com/ipfs/go-log/v2"
-	"github.com/ipfs/kubo/core"
 	icore "github.com/ipfs/kubo/core/coreiface"
 	"github.com/pierreleocadie/SecuraChain/internal/config"
 	"github.com/pierreleocadie/SecuraChain/internal/core/transaction"
+	"github.com/pierreleocadie/SecuraChain/internal/ipfs"
 	"github.com/pierreleocadie/SecuraChain/pkg/aes"
 	"github.com/pierreleocadie/SecuraChain/pkg/ecdsa"
 	"github.com/pierreleocadie/SecuraChain/pkg/utils"
@@ -200,7 +200,7 @@ func AskFilesListButton(w fyne.Window, cfg *config.Config, ecdsaKeyPair *ecdsa.K
 }
 
 func SendFileButton(ctx context.Context, cfg *config.Config, w fyne.Window, selectedFile *widget.Label,
-	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, nodeIpfs *core.IpfsNode, ipfsAPI icore.CoreAPI,
+	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, ipfsNode *ipfs.IPFSNode,
 	clientAnnouncementChan chan *transaction.ClientAnnouncement,
 	log *ipfsLog.ZapEventLogger) *widget.Button {
 	return widget.NewButton("Send File", func() {
@@ -216,7 +216,7 @@ func SendFileButton(ctx context.Context, cfg *config.Config, w fyne.Window, sele
 			return
 		}
 
-		err := SendFile(ctx, cfg, selectedFile.Text, ecdsaKeyPair, aesKey, nodeIpfs, ipfsAPI, clientAnnouncementChan, log)
+		err := SendFile(ctx, cfg, selectedFile.Text, ecdsaKeyPair, aesKey, ipfsNode, clientAnnouncementChan, log)
 		if err != nil {
 			log.Errorln("Error sending file : ", err)
 			dialog.ShowError(err, w)
