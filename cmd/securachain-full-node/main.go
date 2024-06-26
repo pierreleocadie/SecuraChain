@@ -261,14 +261,14 @@ func main() {
 		}
 	}()
 
-	// Service 3 : Syncronization
+	// Service 3 : synchronization
 	go func() {
 		for {
 			chain.SyncBlockchain()
 		}
 	}()
 
-	// Service 4 : Post-syncronization
+	// Service 4 : Post-synchronization
 	go func() {
 		for {
 			chain.PostSync()
