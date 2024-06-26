@@ -201,7 +201,7 @@ func AskFilesListButton(w fyne.Window, cfg *config.Config, ecdsaKeyPair *ecdsa.K
 
 func SendFileButton(ctx context.Context, cfg *config.Config, w fyne.Window, selectedFile *widget.Label,
 	ecdsaKeyPair *ecdsa.KeyPair, aesKey *aes.Key, ipfsNode *ipfs.IPFSNode,
-	clientAnnouncementChan chan *transaction.ClientAnnouncement,
+	clientAnnouncementChan chan transaction.ClientAnnouncement,
 	log *ipfsLog.ZapEventLogger) *widget.Button {
 	return widget.NewButton("Send File", func() {
 		if *ecdsaKeyPair == nil {
